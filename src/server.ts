@@ -10,6 +10,7 @@ import labsRouter from './modules/labs';
 import observationsRouter from './modules/observations';
 import insightsRouter from './modules/insights';
 import auditRouter from './modules/audit';
+import { docsRouter } from './docs/openapi';
 
 export const apiRouter = Router();
 
@@ -26,5 +27,6 @@ apiRouter.use('/labs', labsRouter);
 apiRouter.use(observationsRouter);
 apiRouter.use('/insights', insightsRouter);
 apiRouter.use('/audit', auditRouter);
+apiRouter.use(docsRouter);
 
 export default apiRouter;
