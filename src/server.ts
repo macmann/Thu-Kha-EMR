@@ -17,10 +17,13 @@ apiRouter.use('/auth', authRouter);
 apiRouter.use(visitsRouter);
 apiRouter.use('/patients', patientsRouter);
 apiRouter.use('/doctors', doctorsRouter);
+apiRouter.use(diagnosesRouter);
 apiRouter.use('/diagnoses', diagnosesRouter);
+apiRouter.use(medicationsRouter);
 apiRouter.use('/medications', medicationsRouter);
+apiRouter.use(labsRouter);
 apiRouter.use('/labs', labsRouter);
-apiRouter.use('/observations', observationsRouter);
+apiRouter.use(observationsRouter);
 apiRouter.use('/insights', insightsRouter);
 apiRouter.use('/audit', auditRouter);
 
