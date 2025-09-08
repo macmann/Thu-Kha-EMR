@@ -1,3 +1,7 @@
-node_modules/
+node_modules
+dist
+dist_client
 .env
-.DS_Store
+
+# Optional: lockfile generated during testing
+npm-debug.log*
