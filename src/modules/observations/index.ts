@@ -3,6 +3,7 @@ import { PrismaClient, Prisma, Observation } from '@prisma/client';
 import { z } from 'zod';
 import { requireAuth, requireRole } from '../auth';
 import type { AuthRequest } from '../auth/middleware';
+import { logDataChange } from '../audit';
 
 const prisma = new PrismaClient();
 const router = Router();
@@ -38,6 +39,7 @@ router.post('/visits/:id/observations', requireAuth, requireRole('Doctor'), asyn
       ...parsed.data,
     },
   });
+  await logDataChange(req.user!.userId, 'observation', obs.obsId, undefined, obs);
   res.status(201).json(obs);
 });
 

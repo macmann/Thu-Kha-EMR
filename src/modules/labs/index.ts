@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { requireAuth, requireRole } from '../auth';
 import type { AuthRequest } from '../auth/middleware';
+import { logDataChange } from '../audit';
 
 const prisma = new PrismaClient();
 const router = Router();
@@ -27,6 +28,7 @@ router.post('/visits/:id/labs', requireAuth, requireRole('Doctor', 'Admin'), asy
     return res.status(400).json({ error: parsed.error.flatten() });
   }
   const lab = await prisma.labResult.create({ data: { visitId: id, ...parsed.data } });
+  await logDataChange(req.user!.userId, 'lab', lab.labId, undefined, lab);
   res.status(201).json(lab);
 });
 
