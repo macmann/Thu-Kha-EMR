@@ -1,9 +1,9 @@
 import { Router } from 'express';
 
 import authRouter from './modules/auth';
+import visitsRouter from './modules/visits';
 import patientsRouter from './modules/patients';
 import doctorsRouter from './modules/doctors';
-import visitsRouter from './modules/visits';
 import diagnosesRouter from './modules/diagnoses';
 import medicationsRouter from './modules/medications';
 import labsRouter from './modules/labs';
@@ -14,9 +14,9 @@ import auditRouter from './modules/audit';
 export const apiRouter = Router();
 
 apiRouter.use('/auth', authRouter);
+apiRouter.use(visitsRouter);
 apiRouter.use('/patients', patientsRouter);
 apiRouter.use('/doctors', doctorsRouter);
-apiRouter.use('/visits', visitsRouter);
 apiRouter.use('/diagnoses', diagnosesRouter);
 apiRouter.use('/medications', medicationsRouter);
 apiRouter.use('/labs', labsRouter);
