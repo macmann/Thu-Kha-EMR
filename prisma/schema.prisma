@@ -10,3 +10,147 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Gender {
+  M
+  F
+}
+
+enum Role {
+  Doctor
+  Admin
+  Auditor
+}
+
+model Patient {
+  patientId  String   @id @default(uuid()) @db.Uuid
+  name       String
+  dob        DateTime @db.Date
+  gender     Gender
+  contact    String?
+  insurance  String?
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  visits      Visit[]
+  observations Observation[]
+}
+
+model Doctor {
+  doctorId  String   @id @default(uuid()) @db.Uuid
+  name      String
+  department String
+  createdAt DateTime @default(now())
+
+  visits      Visit[]
+  observations Observation[]
+}
+
+model Visit {
+  visitId   String   @id @default(uuid()) @db.Uuid
+  patientId String
+  visitDate DateTime @db.Date
+  doctorId  String
+  department String
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [patientId])
+  doctor  Doctor  @relation(fields: [doctorId], references: [doctorId])
+  diagnoses   Diagnosis[]
+  medications Medication[]
+  labResults  LabResult[]
+  observations Observation[]
+
+  @@index([patientId, visitDate(sort: Desc)])
+  @@index([doctorId, visitDate(sort: Desc)])
+}
+
+model Diagnosis {
+  diagId   String   @id @default(uuid()) @db.Uuid
+  visitId  String
+  diagnosis String
+  createdAt DateTime @default(now())
+
+  visit Visit @relation(fields: [visitId], references: [visitId])
+}
+
+model Medication {
+  medId       String   @id @default(uuid()) @db.Uuid
+  visitId     String
+  drugName    String
+  dosage      String?
+  instructions String?
+  createdAt   DateTime @default(now())
+
+  visit Visit @relation(fields: [visitId], references: [visitId])
+}
+
+model LabResult {
+  labId          String   @id @default(uuid()) @db.Uuid
+  visitId        String
+  testName       String
+  resultValue    Float?
+  unit           String?
+  referenceRange String?
+  testDate       DateTime? @db.Date
+  createdAt      DateTime @default(now())
+
+  visit Visit @relation(fields: [visitId], references: [visitId])
+}
+
+model Observation {
+  obsId       String   @id @default(uuid()) @db.Uuid
+  visitId     String
+  patientId   String
+  doctorId    String
+  noteText    String
+  bpSystolic  Int?
+  bpDiastolic Int?
+  heartRate   Int?
+  temperatureC Float?
+  spo2        Int?
+  bmi         Float?
+  createdAt   DateTime @default(now())
+
+  visit   Visit  @relation(fields: [visitId], references: [visitId])
+  patient Patient @relation(fields: [patientId], references: [patientId])
+  doctor  Doctor  @relation(fields: [doctorId], references: [doctorId])
+
+  @@index([patientId, doctorId, createdAt(sort: Desc)])
+}
+
+model User {
+  userId       String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String
+  role         Role
+  status       String   @default("active")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
+
+  sessions Session[]
+}
+
+model Session {
+  sessionId        String   @id @default(uuid()) @db.Uuid
+  userId           String
+  refreshTokenHash String
+  issuedAt         DateTime
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  ip               String?
+  ua               String?
+
+  user User @relation(fields: [userId], references: [userId])
+}
+
+model AuthAudit {
+  id      String   @id @default(uuid()) @db.Uuid
+  userId  String?  @db.Uuid
+  event   String
+  outcome String
+  meta    Json?
+  ts      DateTime @default(now())
+}
+
+
