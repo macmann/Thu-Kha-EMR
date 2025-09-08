@@ -52,3 +52,20 @@ git push -u origin main
 - Do **not** commit `.env`. Your API keys must remain secret.
 - The sample uses the **Responses API** to request plain JavaScript code.
 - Adjust the `input` instruction in `src/index.js` for different languages or formatting (e.g., Python-only).
+
+## Database Setup with Aiven and Prisma
+
+This project uses Prisma with a PostgreSQL database. You can quickly provision a database using [Aiven](https://aiven.io).
+
+1. Create a PostgreSQL service in Aiven.
+2. Set the provided connection string as `DATABASE_URL` in your `.env`. The URL **must** include `sslmode=require`:
+   ```
+   DATABASE_URL=postgres://USER:PASSWORD@HOST:PORT/DB?sslmode=require
+   ```
+3. Apply database migrations and generate the Prisma client:
+   ```
+   npm run prisma:migrate
+   npm run prisma:generate
+   ```
+
+The initial migration enables the `pgcrypto`, `pg_trgm`, and `btree_gin` extensions required by the project.
