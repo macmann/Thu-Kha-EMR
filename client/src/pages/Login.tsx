@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthProvider';
 import LoginCard from '../components/LoginCard';
 import PageLayout from '../components/PageLayout';
+import NavigationButtons from '../components/NavigationButtons';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -46,6 +47,7 @@ export default function Login() {
         </div>
       )}
       <LoginCard onSubmit={handleSubmit} values={values} onChange={handleChange} />
+      <NavigationButtons />
     </PageLayout>
   );
 }
