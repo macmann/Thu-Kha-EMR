@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import NavigationButtons from '../components/NavigationButtons';
 import {
   getPatient,
   listPatientVisits,
@@ -198,6 +199,7 @@ export default function PatientDetail() {
         </div>
 
         {activeTab === 'summary' ? renderSummary() : renderVisits()}
+        <NavigationButtons />
       </div>
     </div>
   );

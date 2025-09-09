@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { cohort, type CohortResult } from '../api/client';
 import PageLayout from '../components/PageLayout';
+import NavigationButtons from '../components/NavigationButtons';
 
 export default function Cohort() {
   const [testName, setTestName] = useState('');
@@ -112,6 +113,7 @@ export default function Cohort() {
           </tbody>
         </table>
       )}
+      <NavigationButtons />
     </PageLayout>
   );
 }
