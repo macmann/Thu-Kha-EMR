@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { cohort, type CohortResult } from '../api/client';
+import PageLayout from '../components/PageLayout';
 
 export default function Cohort() {
   const [testName, setTestName] = useState('');
@@ -30,7 +31,7 @@ export default function Cohort() {
   }
 
   return (
-    <div>
+    <PageLayout>
       <h1>Cohort Insights</h1>
       <form onSubmit={handleSubmit} style={{ marginBottom: '1rem' }}>
         <div>
@@ -111,7 +112,7 @@ export default function Cohort() {
           </tbody>
         </table>
       )}
-    </div>
+    </PageLayout>
   );
 }
 
