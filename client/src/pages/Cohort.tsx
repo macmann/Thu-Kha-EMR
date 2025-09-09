@@ -1,15 +1,5 @@
 import { useState } from 'react';
-import { fetchJSON } from '../api/http';
-
-interface CohortResult {
-  patientId: string;
-  name: string;
-  lastMatchingLab: {
-    value: number;
-    date: string;
-    visitId: string;
-  };
-}
+import { cohort, type CohortResult } from '../api/client';
 
 export default function Cohort() {
   const [testName, setTestName] = useState('');
@@ -25,13 +15,12 @@ export default function Cohort() {
     setError(null);
     setLoading(true);
     try {
-      const params = new URLSearchParams({
+      const data = await cohort({
         test_name: testName,
-        op,
-        value,
-        months,
+        op: op as any,
+        value: parseFloat(value),
+        months: parseInt(months, 10),
       });
-      const data = await fetchJSON(`/insights/cohort?${params.toString()}`);
       setResults(data);
     } catch (err: any) {
       setError(err.message || 'Failed to load cohort');

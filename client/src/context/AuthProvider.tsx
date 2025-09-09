@@ -1,10 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import {
-  fetchJSON,
-  getAccessToken,
-  setAccessToken,
-  subscribeAccessToken,
-} from '../api/http';
+import { getAccessToken, setAccessToken, subscribeAccessToken } from '../api/http';
+import { login as apiLogin, type Tokens } from '../api/client';
 
 interface User {
   userId: string;
@@ -35,11 +31,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const login = async (email: string, password: string) => {
-    const data = await fetchJSON('/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
+    const data: Tokens = await apiLogin(email, password);
     setAccessToken(data.accessToken);
     const payload: { sub: string; role: string } = JSON.parse(
       atob(data.accessToken.split('.')[1]),

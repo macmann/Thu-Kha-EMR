@@ -1,0 +1,170 @@
+import { fetchJSON } from './http';
+
+export interface Patient {
+  patientId: string;
+  name: string;
+  dob: string;
+  insurance: string | null;
+}
+
+export interface Diagnosis {
+  diagnosis: string;
+}
+
+export interface Medication {
+  drugName: string;
+  dosage?: string;
+  instructions?: string;
+}
+
+export interface LabResult {
+  testName: string;
+  resultValue: number | null;
+  unit: string | null;
+  testDate: string | null;
+}
+
+export interface Observation {
+  obsId: string;
+  noteText: string;
+  bpSystolic?: number;
+  bpDiastolic?: number;
+  heartRate?: number;
+  temperatureC?: number;
+  spo2?: number;
+  bmi?: number;
+  createdAt: string;
+}
+
+export interface Visit {
+  visitId: string;
+  patientId: string;
+  visitDate: string;
+  department: string;
+  reason?: string;
+}
+
+export interface VisitSummary {
+  visitId: string;
+  visitDate: string;
+  diagnoses: Diagnosis[];
+  medications: Medication[];
+  labResults: LabResult[];
+  observations: Observation[];
+}
+
+export interface PatientSummary extends Patient {
+  visits: VisitSummary[];
+}
+
+export interface VisitDetail extends Visit {
+  diagnoses: Diagnosis[];
+  medications: Medication[];
+  labResults: LabResult[];
+  observations: Observation[];
+}
+
+export interface CohortResult {
+  patientId: string;
+  name: string;
+  lastMatchingLab: {
+    value: number;
+    date: string;
+    visitId: string;
+  };
+}
+
+export interface Tokens {
+  accessToken: string;
+}
+
+export async function login(email: string, password: string): Promise<Tokens> {
+  return fetchJSON('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export async function searchPatients(query: string): Promise<Patient[]> {
+  return fetchJSON(`/patients?query=${encodeURIComponent(query)}`);
+}
+
+export async function getPatient(
+  id: string,
+  params?: { include?: 'summary' },
+): Promise<Patient | PatientSummary> {
+  const qs = new URLSearchParams();
+  if (params?.include) qs.set('include', params.include);
+  const suffix = qs.toString();
+  return fetchJSON(`/patients/${id}${suffix ? `?${suffix}` : ''}`);
+}
+
+export async function listPatientVisits(id: string): Promise<Visit[]> {
+  return fetchJSON(`/patients/${id}/visits`);
+}
+
+export async function getVisit(id: string): Promise<VisitDetail> {
+  return fetchJSON(`/visits/${id}`);
+}
+
+export interface AddObservationPayload {
+  noteText: string;
+  bpSystolic?: number;
+  bpDiastolic?: number;
+  heartRate?: number;
+  temperatureC?: number;
+  spo2?: number;
+  bmi?: number;
+}
+
+export async function addObservation(
+  visitId: string,
+  payload: AddObservationPayload,
+): Promise<Observation> {
+  return fetchJSON(`/visits/${visitId}/observations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export interface ListPatientObservationsParams {
+  author?: 'me' | 'any';
+  before_visit?: string;
+  exclude_visit?: string;
+  order?: 'asc' | 'desc';
+  limit?: number;
+  offset?: number;
+}
+
+export async function listPatientObservations(
+  patientId: string,
+  params: ListPatientObservationsParams,
+): Promise<Observation[]> {
+  const qs = new URLSearchParams();
+  if (params.author) qs.set('author', params.author);
+  if (params.before_visit) qs.set('before_visit', params.before_visit);
+  if (params.exclude_visit) qs.set('exclude_visit', params.exclude_visit);
+  if (params.order) qs.set('order', params.order);
+  if (params.limit !== undefined) qs.set('limit', String(params.limit));
+  if (params.offset !== undefined) qs.set('offset', String(params.offset));
+  const suffix = qs.toString();
+  return fetchJSON(`/patients/${patientId}/observations${suffix ? `?${suffix}` : ''}`);
+}
+
+export interface CohortParams {
+  test_name: string;
+  op?: 'gt' | 'gte' | 'lt' | 'lte' | 'eq';
+  value: number;
+  months: number;
+}
+
+export async function cohort(params: CohortParams): Promise<CohortResult[]> {
+  const qs = new URLSearchParams();
+  qs.set('test_name', params.test_name);
+  if (params.op) qs.set('op', params.op);
+  qs.set('value', String(params.value));
+  qs.set('months', String(params.months));
+  return fetchJSON(`/insights/cohort?${qs.toString()}`);
+}
