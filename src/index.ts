@@ -1,3 +1,4 @@
+import path from 'path';
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -28,6 +29,12 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.use('/api', apiRouter);
+
+const clientDir = path.resolve(process.cwd(), 'dist_client');
+app.use(express.static(clientDir));
+app.get('*', (req, res) =>
+  res.sendFile(path.join(clientDir, 'index.html'))
+);
 
 // Error handler should be last and only apply to /api routes
 app.use('/api', errorHandler);
