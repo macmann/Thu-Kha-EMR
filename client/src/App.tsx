@@ -4,6 +4,7 @@ import RouteGuard from './components/RouteGuard';
 import Patients from './pages/Patients';
 import PatientDetail from './pages/PatientDetail';
 import VisitDetail from './pages/VisitDetail';
+import Cohort from './pages/Cohort';
 import './styles/App.css';
 
 function App() {
@@ -32,6 +33,14 @@ function App() {
         element={
           <RouteGuard>
             <VisitDetail />
+          </RouteGuard>
+        }
+      />
+      <Route
+        path="/cohort"
+        element={
+          <RouteGuard>
+            <Cohort />
           </RouteGuard>
         }
       />
