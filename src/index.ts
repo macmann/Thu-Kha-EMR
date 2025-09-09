@@ -5,12 +5,19 @@ import morgan from 'morgan';
 import { apiRouter } from './server';
 import { errorHandler } from './middleware/errorHandler';
 
-export const app = express();
+if (
+  process.env.DATABASE_URL &&
+  !process.env.DATABASE_URL.includes('sslmode=require')
+) {
+  throw new Error('sslmode=require must be set in DATABASE_URL');
+}
 
+export const app = express();
+app.disable('x-powered-by');
 app.use(helmet());
 
 if (process.env.NODE_ENV !== 'production') {
-  app.use(cors());
+  app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
 }
 
 app.use(morgan('dev'));

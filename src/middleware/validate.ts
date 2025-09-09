@@ -1,0 +1,25 @@
+import { AnyZodObject, ZodError } from 'zod';
+import { Request, Response, NextFunction } from 'express';
+import { HttpError } from '../utils/httpErrors';
+
+interface Schema {
+  body?: AnyZodObject;
+  query?: AnyZodObject;
+  params?: AnyZodObject;
+}
+
+export function validate(schema: Schema) {
+  return (req: Request, _res: Response, next: NextFunction) => {
+    try {
+      if (schema.body) req.body = schema.body.parse(req.body);
+      if (schema.query) req.query = schema.query.parse(req.query);
+      if (schema.params) req.params = schema.params.parse(req.params);
+      next();
+    } catch (err) {
+      if (err instanceof ZodError) {
+        return next(new HttpError(400, 'Invalid request'));
+      }
+      next(err);
+    }
+  };
+}

@@ -1,23 +1,39 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient, Prisma } from '@prisma/client';
+import rateLimit from 'express-rate-limit';
+import { z } from 'zod';
 import { requireAuth } from '../auth';
+import { validate } from '../../middleware/validate';
 
 const prisma = new PrismaClient();
 const router = Router();
+
+const limiter = rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MIN || '1') * 60 * 1000,
+  limit: parseInt(process.env.RATE_LIMIT_MAX || '100'),
+});
 
 function maskContact(contact?: string | null) {
   if (!contact) return contact;
   return contact.replace(/.(?=.{2})/g, '*');
 }
 
-router.get('/', requireAuth, async (req: Request, res: Response) => {
-  const q = (req.query.query as string) || '';
-  if (!q.trim()) {
-    return res.status(400).json({ error: 'query required' });
-  }
-  const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
-  const offset = parseInt(req.query.offset as string) || 0;
-  const lowerQ = q.toLowerCase();
+router.get(
+  '/',
+  requireAuth,
+  limiter,
+  validate({
+    query: z.object({
+      query: z.string().min(1),
+      limit: z.string().optional(),
+      offset: z.string().optional(),
+    }),
+  }),
+  async (req: Request, res: Response) => {
+    const q = req.query.query as string;
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+    const offset = parseInt(req.query.offset as string) || 0;
+    const lowerQ = q.toLowerCase();
   const patients = await prisma.$queryRaw<Array<{ patientId: string; name: string; dob: Date; insurance: string | null }>>(
     Prisma.sql`
       SELECT "patientId", name, dob, insurance
@@ -28,8 +44,9 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     `
   );
   console.log('patient search', { q, count: patients.length });
-  res.json(patients);
-});
+    res.json(patients);
+  }
+);
 
 router.get('/:id', requireAuth, async (req: Request, res: Response) => {
   const { id } = req.params;
