@@ -53,13 +53,13 @@ export default function PatientDetail() {
       </div>
     );
 
-  function renderSummary() {
-    if (!patient.visits || patient.visits.length === 0) {
+  function renderSummary(p: PatientSummary) {
+    if (!p.visits || p.visits.length === 0) {
       return <div className="mt-6">No visit history.</div>;
     }
     return (
       <div className="mt-5 space-y-5">
-        {patient.visits.map((visit) => (
+        {p.visits.map((visit) => (
           <section
             key={visit.visitId}
             className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
@@ -198,7 +198,7 @@ export default function PatientDetail() {
           </nav>
         </div>
 
-        {activeTab === 'summary' ? renderSummary() : renderVisits()}
+          {activeTab === 'summary' ? renderSummary(patient) : renderVisits()}
         <NavigationButtons />
       </div>
     </div>
