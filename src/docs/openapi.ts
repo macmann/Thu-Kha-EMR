@@ -183,7 +183,7 @@ addPath('/patients/{id}/visits', 'get', {
   summary: 'List visits for patient',
   security: [{ bearerAuth: [] }],
   parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
-  responses: { '200': { description: 'Visits', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Visit' } } } } }
+  responses: { '200': { description: 'Visits', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Visit' } } } } } }
 });
 
 addPath('/visits/{id}', 'get', {
@@ -201,7 +201,7 @@ addPath('/patients', 'get', {
     { name: 'limit', in: 'query', schema: { type: 'integer' } },
     { name: 'offset', in: 'query', schema: { type: 'integer' } }
   ],
-  responses: { '200': { description: 'Patients', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Patient' } } } } }
+  responses: { '200': { description: 'Patients', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Patient' } } } } } }
 });
 
 addPath('/patients/{id}', 'get', {
@@ -221,14 +221,14 @@ addPath('/doctors', 'get', {
     { name: 'department', in: 'query', schema: { type: 'string' } },
     { name: 'q', in: 'query', schema: { type: 'string' } }
   ],
-  responses: { '200': { description: 'Doctors', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Doctor' } } } } }
+  responses: { '200': { description: 'Doctors', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Doctor' } } } } } }
 });
 
 addPath('/visits/{id}/diagnoses', 'post', {
   summary: 'Add diagnosis',
   security: [{ bearerAuth: [] }],
   parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
-  responses: { '201': { description: 'Created', content: { 'application/json': { schema: { $ref: '#/components/schemas/Diagnosis' } } } }
+  responses: { '201': { description: 'Created', content: { 'application/json': { schema: { $ref: '#/components/schemas/Diagnosis' } } } } }
 });
 
 addPath('/diagnoses', 'get', {
@@ -241,14 +241,14 @@ addPath('/diagnoses', 'get', {
     { name: 'limit', in: 'query', schema: { type: 'integer' } },
     { name: 'offset', in: 'query', schema: { type: 'integer' } }
   ],
-  responses: { '200': { description: 'Diagnoses', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Diagnosis' } } } } }
+  responses: { '200': { description: 'Diagnoses', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Diagnosis' } } } } } }
 });
 
 addPath('/visits/{id}/medications', 'post', {
   summary: 'Add medication',
   security: [{ bearerAuth: [] }],
   parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
-  responses: { '201': { description: 'Created', content: { 'application/json': { schema: { $ref: '#/components/schemas/Medication' } } } }
+  responses: { '201': { description: 'Created', content: { 'application/json': { schema: { $ref: '#/components/schemas/Medication' } } } } }
 });
 
 addPath('/medications', 'get', {
@@ -261,14 +261,14 @@ addPath('/medications', 'get', {
     { name: 'limit', in: 'query', schema: { type: 'integer' } },
     { name: 'offset', in: 'query', schema: { type: 'integer' } }
   ],
-  responses: { '200': { description: 'Medications', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Medication' } } } } }
+  responses: { '200': { description: 'Medications', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Medication' } } } } } }
 });
 
 addPath('/visits/{id}/labs', 'post', {
   summary: 'Add lab result',
   security: [{ bearerAuth: [] }],
   parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
-  responses: { '201': { description: 'Created', content: { 'application/json': { schema: { $ref: '#/components/schemas/LabResult' } } } }
+  responses: { '201': { description: 'Created', content: { 'application/json': { schema: { $ref: '#/components/schemas/LabResult' } } } } }
 });
 
 addPath('/labs', 'get', {
@@ -284,14 +284,14 @@ addPath('/labs', 'get', {
     { name: 'limit', in: 'query', schema: { type: 'integer' } },
     { name: 'offset', in: 'query', schema: { type: 'integer' } }
   ],
-  responses: { '200': { description: 'Lab results', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/LabResult' } } } } }
+  responses: { '200': { description: 'Lab results', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/LabResult' } } } } } }
 });
 
 addPath('/visits/{id}/observations', 'post', {
   summary: 'Add observation',
   security: [{ bearerAuth: [] }],
   parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
-  responses: { '201': { description: 'Created', content: { 'application/json': { schema: { $ref: '#/components/schemas/Observation' } } } }
+  responses: { '201': { description: 'Created', content: { 'application/json': { schema: { $ref: '#/components/schemas/Observation' } } } } }
 });
 
 addPath('/visits/{id}/observations', 'get', {
