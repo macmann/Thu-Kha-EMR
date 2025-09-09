@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-import { requireAuth, requireRole } from '../auth';
-import type { AuthRequest } from '../auth/middleware';
+import { requireAuth, requireRole } from '../auth/index.js';
+import type { AuthRequest } from '../auth/middleware.js';
 
 const prisma = new PrismaClient();
 const router = Router();
@@ -38,5 +38,5 @@ router.get('/', requireAuth, requireRole('Admin', 'Auditor'), async (req: AuthRe
   res.json(audits);
 });
 
-export { logDataChange } from './service';
+export { logDataChange } from './service.js';
 export default router;

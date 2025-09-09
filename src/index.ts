@@ -1,11 +1,11 @@
 import 'dotenv/config';
 import path from 'path';
-import express from 'express';
+import express, { Request, Response } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import morgan from 'morgan';
-import { apiRouter } from './server';
-import { errorHandler } from './middleware/errorHandler';
+import { apiRouter } from './server.js';
+import { errorHandler } from './middleware/errorHandler.js';
 
 if (
   process.env.DATABASE_URL &&
@@ -32,7 +32,7 @@ if (process.env.NODE_ENV !== 'production') {
 app.use(morgan('dev'));
 app.use(express.json());
 
-app.get('/api/health', (_req, res) => {
+app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok' });
 });
 
@@ -40,7 +40,7 @@ app.use('/api', apiRouter);
 
 const clientDir = path.resolve(process.cwd(), 'dist_client');
 app.use(express.static(clientDir));
-app.get('*', (req, res) =>
+app.get('*', (req: Request, res: Response) =>
   res.sendFile(path.join(clientDir, 'index.html'))
 );
 

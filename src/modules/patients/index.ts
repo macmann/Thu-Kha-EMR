@@ -2,8 +2,8 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient, Prisma } from '@prisma/client';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
-import { requireAuth } from '../auth';
-import { validate } from '../../middleware/validate';
+import { requireAuth } from '../auth/index.js';
+import { validate } from '../../middleware/validate.js';
 
 const prisma = new PrismaClient();
 const router = Router();
@@ -94,7 +94,7 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
   if (!patient) {
     return res.sendStatus(404);
   }
-  console.log('patient detail', { patientId: id, contact: maskContact(patient.contact) });
+  console.log('patient detail', { patientId: id, contact: maskContact(patient.contact as unknown as string | null) });
   res.json(patient);
 });
 

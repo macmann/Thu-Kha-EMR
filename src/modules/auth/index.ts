@@ -3,7 +3,8 @@ import rateLimit from 'express-rate-limit';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { PrismaClient, Role } from '@prisma/client';
-import { requireAuth, requireRole, AuthRequest } from './middleware';
+import { requireAuth, requireRole } from './middleware.js';
+import type { AuthRequest } from './middleware.js';
 import crypto from 'crypto';
 
 const prisma = new PrismaClient();
@@ -53,7 +54,7 @@ async function logEvent(userId: string | null, event: string, outcome: string, m
 function getCookies(req: Request): Record<string, string> {
   const header = req.headers.cookie;
   if (!header) return {};
-  const pairs = header.split(';').map((c) => c.trim().split('='));
+  const pairs = header.split(';').map((c: string) => c.trim().split('='));
   const cookies: Record<string, string> = {};
   for (const [k, v] of pairs) {
     cookies[k] = decodeURIComponent(v);
@@ -207,5 +208,5 @@ router.post('/password/reset', async (req: Request, res: Response) => {
   res.json({ ok: true });
 });
 
-export { requireAuth, requireRole } from './middleware';
+export { requireAuth, requireRole } from './middleware.js';
 export default router;
