@@ -20,6 +20,7 @@ export default function LoginCard({ onSubmit, values, onChange }: LoginCardProps
             strokeLinecap="round"
             strokeLinejoin="round"
             className="h-6 w-6 text-white"
+            aria-hidden="true"
           >
             <path d="M12 6v12M6 12h12" />
           </svg>
@@ -27,6 +28,7 @@ export default function LoginCard({ onSubmit, values, onChange }: LoginCardProps
         <h1 className="text-2xl font-bold text-gray-900">EMR System</h1>
         <p className="mt-2 text-sm text-gray-600">Sign in to your account</p>
       </div>
+
       <form onSubmit={onSubmit} className="space-y-6">
         <div>
           <label
@@ -45,6 +47,7 @@ export default function LoginCard({ onSubmit, values, onChange }: LoginCardProps
             className="mt-1 w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
+
         <div>
           <label
             htmlFor="password"
@@ -62,6 +65,7 @@ export default function LoginCard({ onSubmit, values, onChange }: LoginCardProps
             className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
+
         <div className="flex items-center justify-between">
           <label htmlFor="remember" className="flex items-center">
             <input
@@ -77,6 +81,7 @@ export default function LoginCard({ onSubmit, values, onChange }: LoginCardProps
             Forgot your password?
           </a>
         </div>
+
         <button
           type="submit"
           className="w-full rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
