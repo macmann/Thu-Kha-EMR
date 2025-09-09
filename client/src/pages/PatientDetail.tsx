@@ -6,6 +6,7 @@ import {
   type PatientSummary,
   type Visit,
 } from '../api/client';
+import PageLayout from '../components/PageLayout';
 
 export default function PatientDetail() {
   const { id } = useParams<{ id: string }>();
@@ -43,7 +44,12 @@ export default function PatientDetail() {
     loadVisits();
   }, [activeTab, id, visits]);
 
-  if (!patient) return <div>Loading...</div>;
+  if (!patient)
+    return (
+      <PageLayout>
+        <div>Loading...</div>
+      </PageLayout>
+    );
 
   function renderSummary() {
     if (!patient.visits || patient.visits.length === 0) {
@@ -119,7 +125,7 @@ export default function PatientDetail() {
   }
 
   return (
-    <div>
+    <PageLayout>
       <h1>{patient.name}</h1>
       <p>DOB: {new Date(patient.dob).toLocaleDateString()}</p>
       <p>Insurance: {patient.insurance || ''}</p>
@@ -141,7 +147,7 @@ export default function PatientDetail() {
         </button>
       </div>
       {activeTab === 'summary' ? renderSummary() : renderVisits()}
-    </div>
+    </PageLayout>
   );
 }
 

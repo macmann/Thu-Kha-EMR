@@ -8,6 +8,7 @@ import {
   type Observation,
   type AddObservationPayload,
 } from '../api/client';
+import PageLayout from '../components/PageLayout';
 
 export default function VisitDetail() {
   const { id } = useParams<{ id: string }>();
@@ -88,10 +89,15 @@ export default function VisitDetail() {
     }
   }
 
-  if (loading || !visit) return <div>Loading...</div>;
+  if (loading || !visit)
+    return (
+      <PageLayout>
+        <div>Loading...</div>
+      </PageLayout>
+    );
 
   return (
-    <div>
+    <PageLayout>
       <h1>Visit Detail</h1>
       <p>Date: {new Date(visit.visitDate).toLocaleDateString()}</p>
       <p>Department: {visit.department}</p>
@@ -236,7 +242,7 @@ export default function VisitDetail() {
           )}
         </div>
       )}
-    </div>
+    </PageLayout>
   );
 }
 
