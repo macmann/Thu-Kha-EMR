@@ -1,15 +1,4 @@
-doctor_id (PK),name,department
-1,Dr Lim Wei,Neurology
-2,Dr Wong Jun,Endocrinology
-3,Dr Chua Mei,Oncology
-4,Dr Tan Chee,Oncology
-5,Dr Susan Ong,Cardiology
-6,Dr Chua Mei,Cardiology
-7,Dr Tan Chee,Cardiology
-8,Dr Wong Jun,Orthopedics
-9,Dr Wong Jun,Oncology
-10,Dr Susan Ong,Oncology
-11,Dr Gopal Raj,Neurology
-12,Dr Chua Mei,Orthopedics
-13,Dr Susan Ong,Orthopedics
-14,Dr Tan Chee,Neurology
+name,department,doctorId
+Dr Smith,Cardiology,a8e28f9c-2661-5662-80a1-36ccf1c395be
+Dr Lee,Endocrinology,ce60576c-9cac-524a-8134-26db68392be6
+Dr Tan,General Medicine,7d24ea31-79b3-58dc-9d7c-8e34a298fc53

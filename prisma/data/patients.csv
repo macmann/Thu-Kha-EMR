@@ -1,21 +1,5 @@
-patient_id (PK),name,dob,gender,contact,insurance
-1,John Tan,1968-03-31,M,96111158,AIA
-2,Mary Lee,1969-01-06,M,99982417,AIA
-3,Kumar Raj,2005-04-26,F,92153616,AIA
-4,Alicia Wong,1991-04-02,M,98019797,Great Eastern
-5,David Lim,1980-03-04,M,99081500,Great Eastern
-6,Sophia Ng,1971-01-08,M,98110904,AIA
-7,Michael Chan,1985-04-08,F,97973528,Great Eastern
-8,Rachel Goh,1991-04-28,F,92416910,NTUC Income
-9,James Ong,1995-03-31,M,99611563,AIA
-10,Linda Chua,1976-03-31,M,99427450,Prudential
-11,Daniel Ho,1961-03-04,F,99442994,Prudential
-12,Grace Tan,1957-10-25,M,91241595,Prudential
-13,Samuel Lee,1954-09-11,M,96152508,Prudential
-14,Ivy Chen,1973-01-02,F,95614633,AIA
-15,Victor Low,1957-06-11,F,99536498,Great Eastern
-16,Angela Teo,1966-03-30,F,91284814,Great Eastern
-17,Henry Phua,1981-04-05,F,93563561,AXA
-18,Melissa Koh,1982-05-23,F,99558713,Prudential
-19,Jason Tay,1986-06-08,F,98208833,AXA
-20,Fiona Lau,1991-02-27,F,92487542,Prudential
+name,dob,gender,contact,insurance,patientId
+John Tan,1968-03-31,M,96111158,AIA,6a1928ef-a4b2-51c2-9746-0ac0b2594f55
+Mary Lee,1975-11-20,F,98123456,Prudential,cb3c6ada-1e86-5e14-8c17-0be10e6bb5ca
+Aung Ko,1988-07-12,M,0945123456,None,7f09bd54-9c0a-54ad-9908-622e687f7c31
+Thiri Win,1992-02-05,F,09777888999,AYA,e2317499-b3b5-5b91-aa96-980f71cb377f
