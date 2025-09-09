@@ -1,7 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import Home from './pages/Home';
 import Login from './pages/Login';
 import RouteGuard from './components/RouteGuard';
+import Patients from './pages/Patients';
+import PatientDetail from './pages/PatientDetail';
 import './styles/App.css';
 
 function App() {
@@ -12,7 +13,15 @@ function App() {
         path="/patients"
         element={
           <RouteGuard>
-            <Home />
+            <Patients />
+          </RouteGuard>
+        }
+      />
+      <Route
+        path="/patients/:id"
+        element={
+          <RouteGuard>
+            <PatientDetail />
           </RouteGuard>
         }
       />
