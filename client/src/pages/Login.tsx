@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthProvider';
 import LoginCard from '../components/LoginCard';
-import '../styles/login.css';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -34,10 +33,18 @@ export default function Login() {
   const values = { username: email, password };
 
   return (
-    <div className="login-container">
-      <div className="login-wrapper">
-        {error && <div className="alert alert-error">{error}</div>}
-        {success && <div className="alert alert-success">{success}</div>}
+    <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
+      <div className="w-full max-w-sm">
+        {error && (
+          <div className="mb-4 rounded-md bg-red-100 p-2 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+        {success && (
+          <div className="mb-4 rounded-md bg-green-100 p-2 text-sm text-green-700">
+            {success}
+          </div>
+        )}
         <LoginCard onSubmit={handleSubmit} values={values} onChange={handleChange} />
       </div>
     </div>
