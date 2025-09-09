@@ -14,6 +14,13 @@ if (
   throw new Error('sslmode=require must be set in DATABASE_URL');
 }
 
+if (
+  process.env.DIRECT_URL &&
+  !process.env.DIRECT_URL.includes('sslmode=require')
+) {
+  throw new Error('sslmode=require must be set in DIRECT_URL');
+}
+
 export const app = express();
 app.disable('x-powered-by');
 app.use(helmet());

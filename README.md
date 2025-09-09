@@ -11,8 +11,8 @@ Atenxion EMR is a reference implementation of an electronic medical record syste
    ```
    The API runs on `http://localhost:8080` and the web client on `http://localhost:5173`.
 
-## Aiven PostgreSQL Setup
-Provision a PostgreSQL instance on [Aiven](https://aiven.io) and set the `DATABASE_URL` in `.env` (include `sslmode=require`). Enable the required extensions:
+## Neon PostgreSQL Setup
+Provision a PostgreSQL instance on [Neon](https://neon.tech) and set the `DATABASE_URL` and `DIRECT_URL` in `.env` (include `sslmode=require` for both). Enable the required extensions:
 ```sql
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
@@ -33,6 +33,7 @@ The OpenAPI specification is served at `/api/docs/openapi.json`.
 1. Create a new Web Service and connect this repository.
 2. Configure environment variables:
    - `DATABASE_URL` (with `sslmode=require`)
+   - `DIRECT_URL` (with `sslmode=require`)
    - `JWT_SECRET`
    - `RATE_LIMIT_WINDOW_MIN`
    - `RATE_LIMIT_MAX`

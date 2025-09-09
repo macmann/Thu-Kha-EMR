@@ -34,12 +34,16 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-sm">
         {error && (
-          <div className="mb-4 rounded-md bg-red-100 p-2 text-sm text-red-700">{error}</div>
+          <div className="mb-4 rounded-md bg-red-100 p-2 text-sm text-red-700">
+            {error}
+          </div>
         )}
         {success && (
-          <div className="mb-4 rounded-md bg-green-100 p-2 text-sm text-green-700">{success}</div>
+          <div className="mb-4 rounded-md bg-green-100 p-2 text-sm text-green-700">
+            {success}
+          </div>
         )}
         <LoginCard onSubmit={handleSubmit} values={values} onChange={handleChange} />
       </div>
