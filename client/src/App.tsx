@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import RouteGuard from './components/RouteGuard';
@@ -9,13 +9,14 @@ function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route
-        path="/"
+        path="/patients"
         element={
           <RouteGuard>
             <Home />
           </RouteGuard>
         }
       />
+      <Route path="/" element={<Navigate to="/patients" replace />} />
     </Routes>
   );
 }

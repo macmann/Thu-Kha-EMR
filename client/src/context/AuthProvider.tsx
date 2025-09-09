@@ -35,13 +35,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const login = async (email: string, password: string) => {
-    const data = await fetchJSON('/auth/token', {
+    const data = await fetchJSON('/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
     setAccessToken(data.accessToken);
-    setUser({ userId: data.userId, role: data.role, email: data.email });
+    const payload: { sub: string; role: string } = JSON.parse(
+      atob(data.accessToken.split('.')[1]),
+    );
+    setUser({ userId: payload.sub, role: payload.role, email });
   };
 
   const logout = () => {
