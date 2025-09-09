@@ -1,0 +1,21 @@
+diag_id (PK) ,visit_id (FK),diagnosis
+201,101,Asthma
+202,102,Asthma
+203,103,Breast Cancer (Stage II)
+204,104,Type 2 Diabetes Mellitus
+205,105,Hypertension
+206,106,Migraine
+207,107,Type 2 Diabetes Mellitus
+208,108,Osteoporosis
+209,109,Osteoporosis
+210,110,Hypertension
+211,111,Type 2 Diabetes Mellitus
+212,112,Asthma
+213,113,Breast Cancer (Stage II)
+214,114,Asthma
+215,115,Osteoporosis
+216,116,Migraine
+217,117,Breast Cancer (Stage II)
+218,118,Hypertension
+219,119,Asthma
+220,120,Migraine

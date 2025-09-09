@@ -1,0 +1,21 @@
+med_id (PK),visit_id (FK),drug_name,dosage,instructions
+301,101,Metformin,27mg,Take after breakfast
+302,102,Paracetamol,489mg,Twice daily
+303,103,Paracetamol,259mg,Take with meals
+304,104,Tamoxifen,261mg,Take with meals
+305,105,Atenolol,297mg,Take with meals
+306,106,Insulin,64mg,Take at night
+307,107,Insulin,396mg,Take after breakfast
+308,108,Metformin,223mg,Take with meals
+309,109,Tamoxifen,449mg,Morning dose
+310,110,Metformin,66mg,Take with meals
+311,111,Atenolol,348mg,Before bed
+312,112,Lisinopril,360mg,Take with meals
+313,113,Metformin,438mg,Before bed
+314,114,Lisinopril,169mg,Take at night
+315,115,Tamoxifen,50mg,Take after breakfast
+316,116,Tamoxifen,114mg,Twice daily
+317,117,Insulin,271mg,Take with meals
+318,118,Metformin,302mg,Before bed
+319,119,Insulin,92mg,Twice daily
+320,120,Insulin,421mg,Take at night

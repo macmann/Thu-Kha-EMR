@@ -1,0 +1,21 @@
+report_id (PK) ,visit_id (FK),report_type,file_path
+501,101,MRI Report,/reports/101_mri_report.pdf
+502,102,Dietitian Note,/reports/102_dietitian_note.pdf
+503,103,ECG Report,/reports/103_ecg_report.pdf
+504,104,MRI Report,/reports/104_mri_report.pdf
+505,105,X-Ray Report,/reports/105_x-ray_report.pdf
+506,106,Dietitian Note,/reports/106_dietitian_note.pdf
+507,107,X-Ray Report,/reports/107_x-ray_report.pdf
+508,108,Dietitian Note,/reports/108_dietitian_note.pdf
+509,109,Oncology Report,/reports/109_oncology_report.pdf
+510,110,Oncology Report,/reports/110_oncology_report.pdf
+511,111,X-Ray Report,/reports/111_x-ray_report.pdf
+512,112,MRI Report,/reports/112_mri_report.pdf
+513,113,Oncology Report,/reports/113_oncology_report.pdf
+514,114,Dietitian Note,/reports/114_dietitian_note.pdf
+515,115,X-Ray Report,/reports/115_x-ray_report.pdf
+516,116,MRI Report,/reports/116_mri_report.pdf
+517,117,X-Ray Report,/reports/117_x-ray_report.pdf
+518,118,X-Ray Report,/reports/118_x-ray_report.pdf
+519,119,ECG Report,/reports/119_ecg_report.pdf
+520,120,MRI Report,/reports/120_mri_report.pdf
