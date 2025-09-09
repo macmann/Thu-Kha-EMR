@@ -1,13 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { fetchJSON } from '../api/http';
-
-interface Patient {
-  patientId: string;
-  name: string;
-  dob: string;
-  insurance: string | null;
-}
+import { searchPatients, type Patient } from '../api/client';
 
 export default function PatientSearch() {
   const [query, setQuery] = useState('');
@@ -26,7 +19,7 @@ export default function PatientSearch() {
         return;
       }
       try {
-        const data = await fetchJSON(`/patients?query=${encodeURIComponent(debounced)}`);
+        const data = await searchPatients(debounced);
         setResults(data);
       } catch (err) {
         console.error(err);

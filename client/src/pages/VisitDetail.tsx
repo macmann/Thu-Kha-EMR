@@ -1,51 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { fetchJSON } from '../api/http';
-
-interface Diagnosis {
-  diagnosis: string;
-}
-
-interface Medication {
-  drugName: string;
-  dosage?: string;
-  instructions?: string;
-}
-
-interface LabResult {
-  testName: string;
-  resultValue: number | null;
-  unit: string | null;
-  testDate: string | null;
-}
-
-interface Observation {
-  obsId: string;
-  noteText: string;
-  bpSystolic?: number;
-  bpDiastolic?: number;
-  heartRate?: number;
-  temperatureC?: number;
-  spo2?: number;
-  bmi?: number;
-  createdAt: string;
-}
-
-interface VisitDetailData {
-  visitId: string;
-  patientId: string;
-  visitDate: string;
-  department: string;
-  reason?: string;
-  diagnoses: Diagnosis[];
-  medications: Medication[];
-  labResults: LabResult[];
-  observations: Observation[];
-}
+import {
+  getVisit,
+  addObservation,
+  listPatientObservations,
+  type VisitDetail,
+  type Observation,
+  type AddObservationPayload,
+} from '../api/client';
 
 export default function VisitDetail() {
   const { id } = useParams<{ id: string }>();
-  const [visit, setVisit] = useState<VisitDetailData | null>(null);
+  const [visit, setVisit] = useState<VisitDetail | null>(null);
   const [loading, setLoading] = useState(false);
 
   const [noteText, setNoteText] = useState('');
@@ -65,7 +31,7 @@ export default function VisitDetail() {
       if (!id) return;
       setLoading(true);
       try {
-        const data = await fetchJSON(`/visits/${id}`);
+        const data = await getVisit(id);
         setVisit(data);
       } catch (err) {
         console.error(err);
@@ -79,7 +45,7 @@ export default function VisitDetail() {
   async function handleAddObservation(e: React.FormEvent) {
     e.preventDefault();
     if (!id) return;
-    const payload: any = { noteText };
+    const payload: AddObservationPayload = { noteText };
     if (bpSystolic) payload.bpSystolic = parseInt(bpSystolic, 10);
     if (bpDiastolic) payload.bpDiastolic = parseInt(bpDiastolic, 10);
     if (heartRate) payload.heartRate = parseInt(heartRate, 10);
@@ -87,11 +53,7 @@ export default function VisitDetail() {
     if (spo2) payload.spo2 = parseInt(spo2, 10);
     if (bmi) payload.bmi = parseFloat(bmi);
     try {
-      await fetchJSON(`/visits/${id}/observations`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      await addObservation(id, payload);
       setNoteText('');
       setBpSystolic('');
       setBpDiastolic('');
@@ -99,7 +61,7 @@ export default function VisitDetail() {
       setTemperatureC('');
       setSpo2('');
       setBmi('');
-      const data = await fetchJSON(`/visits/${id}`);
+      const data = await getVisit(id);
       setVisit(data);
     } catch (err) {
       console.error(err);
@@ -110,9 +72,13 @@ export default function VisitDetail() {
     if (!visit) return;
     setPrevLoading(true);
     try {
-      const data = await fetchJSON(
-        `/patients/${visit.patientId}/observations?author=me&before_visit=${visit.visitId}&exclude_visit=${visit.visitId}&order=desc&limit=100`,
-      );
+      const data = await listPatientObservations(visit.patientId, {
+        author: 'me',
+        before_visit: visit.visitId,
+        exclude_visit: visit.visitId,
+        order: 'desc',
+        limit: 100,
+      });
       setPrevNotes(data);
       setShowPrev(true);
     } catch (err) {

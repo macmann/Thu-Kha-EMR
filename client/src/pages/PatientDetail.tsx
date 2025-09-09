@@ -1,59 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { fetchJSON } from '../api/http';
-
-interface Diagnosis {
-  diagnosis: string;
-}
-
-interface Medication {
-  drugName: string;
-  dosage?: string;
-  instructions?: string;
-}
-
-interface LabResult {
-  testName: string;
-  resultValue: number | null;
-  unit: string | null;
-  testDate: string | null;
-}
-
-interface Observation {
-  obsId: string;
-  noteText: string;
-  bpSystolic?: number;
-  bpDiastolic?: number;
-  heartRate?: number;
-  temperatureC?: number;
-  spo2?: number;
-  bmi?: number;
-  createdAt: string;
-}
-
-interface VisitSummary {
-  visitId: string;
-  visitDate: string;
-  diagnoses: Diagnosis[];
-  medications: Medication[];
-  labResults: LabResult[];
-  observations: Observation[];
-}
-
-interface PatientSummary {
-  patientId: string;
-  name: string;
-  dob: string;
-  insurance: string | null;
-  visits: VisitSummary[];
-}
-
-interface Visit {
-  visitId: string;
-  visitDate: string;
-  department: string;
-  reason?: string;
-}
+import {
+  getPatient,
+  listPatientVisits,
+  type PatientSummary,
+  type Visit,
+} from '../api/client';
 
 export default function PatientDetail() {
   const { id } = useParams<{ id: string }>();
@@ -66,8 +18,8 @@ export default function PatientDetail() {
     async function load() {
       if (!id) return;
       try {
-        const data = await fetchJSON(`/patients/${id}?include=summary`);
-        setPatient(data);
+        const data = await getPatient(id, { include: 'summary' });
+        setPatient(data as PatientSummary);
       } catch (err) {
         console.error(err);
       }
@@ -80,7 +32,7 @@ export default function PatientDetail() {
       if (activeTab !== 'visits' || !id || visits) return;
       setVisitsLoading(true);
       try {
-        const data = await fetchJSON(`/patients/${id}/visits`);
+        const data = await listPatientVisits(id);
         setVisits(data);
       } catch (err) {
         console.error(err);
