@@ -1,6 +1,6 @@
 import { AnyZodObject, ZodError } from 'zod';
 import { Request, Response, NextFunction } from 'express';
-import { HttpError } from '../utils/httpErrors';
+import { HttpError } from '../utils/httpErrors.js';
 
 interface Schema {
   body?: AnyZodObject;

@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 
 const openapi: any = {
   openapi: '3.0.0',
@@ -383,7 +383,7 @@ addPath('/audit', 'get', {
 openapi.paths = paths;
 
 export const docsRouter = Router();
-docsRouter.get('/docs/openapi.json', (_req, res) => {
+docsRouter.get('/docs/openapi.json', (_req: Request, res: Response) => {
   res.json(openapi);
 });
 

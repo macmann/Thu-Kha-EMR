@@ -1,16 +1,16 @@
 import { Router } from 'express';
 
-import authRouter from './modules/auth';
-import visitsRouter from './modules/visits';
-import patientsRouter from './modules/patients';
-import doctorsRouter from './modules/doctors';
-import diagnosesRouter from './modules/diagnoses';
-import medicationsRouter from './modules/medications';
-import labsRouter from './modules/labs';
-import observationsRouter from './modules/observations';
-import insightsRouter from './modules/insights';
-import auditRouter from './modules/audit';
-import { docsRouter } from './docs/openapi';
+import authRouter from './modules/auth/index.js';
+import visitsRouter from './modules/visits/index.js';
+import patientsRouter from './modules/patients/index.js';
+import doctorsRouter from './modules/doctors/index.js';
+import diagnosesRouter from './modules/diagnoses/index.js';
+import medicationsRouter from './modules/medications/index.js';
+import labsRouter from './modules/labs/index.js';
+import observationsRouter from './modules/observations/index.js';
+import insightsRouter from './modules/insights/index.js';
+import auditRouter from './modules/audit/index.js';
+import { docsRouter } from './docs/openapi.js';
 
 export const apiRouter = Router();
 
