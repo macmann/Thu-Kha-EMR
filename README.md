@@ -1,71 +1,45 @@
-# codex-project (Minimal Node.js setup)
+# Atenxion EMR
 
-This is a **minimal Node.js project** to generate code via the OpenAI API in a **Codex-style workflow**.
-> ⚠️ Note: OpenAI's original *Codex* models are retired. This template defaults to a current code-capable model (`gpt-4o-mini`). You can change the model via `OPENAI_MODEL`.
+## Project Overview
+Atenxion EMR is a reference implementation of an electronic medical record system. It aligns with the BRD by providing patient lookup, visit tracking and clinical insights via a JSON API protected by JWT and rate limiting.
 
-## Folder Structure
-```
-codex-project/
-├─ src/
-│  └─ index.js
-├─ .env.example
-├─ .gitignore
-├─ package.json
-└─ README.md
-```
-
-## Setup
-
-1) **Install Node 18+**  
-2) Copy `.env.example` to `.env` and set your key:
-```bash
-cp .env.example .env
-# edit .env and paste your OpenAI key
-```
-3) Install dependencies:
-```bash
-npm install
-```
-4) Run the script (pass your coding task as an argument or it will use the default):
-```bash
-npm start -- "Write a function in JavaScript that reverses a string."
-```
-
-## Change the Model
-In `.env` set:
-```
-OPENAI_MODEL=gpt-4o-mini
-```
-You can switch to other current code-capable models you have access to.
-
-## Git: init & push
-```bash
-git init
-git add .
-git commit -m "Initial commit: minimal OpenAI code generator"
-git branch -M main
-git remote add origin https://github.com/<your-username>/codex-project.git
-git push -u origin main
-```
-
-## Notes
-- Do **not** commit `.env`. Your API keys must remain secret.
-- The sample uses the **Responses API** to request plain JavaScript code.
-- Adjust the `input` instruction in `src/index.js` for different languages or formatting (e.g., Python-only).
-
-## Database Setup with Aiven and Prisma
-
-This project uses Prisma with a PostgreSQL database. You can quickly provision a database using [Aiven](https://aiven.io).
-
-1. Create a PostgreSQL service in Aiven.
-2. Set the provided connection string as `DATABASE_URL` in your `.env`. The URL **must** include `sslmode=require`:
+## Local Development
+1. Install dependencies with `npm install`.
+2. Start both the API and web dev servers:
+   ```bash
+   npm run dev
    ```
-   DATABASE_URL=postgres://USER:PASSWORD@HOST:PORT/DB?sslmode=require
-   ```
-3. Apply database migrations and generate the Prisma client:
-   ```
-   npm run prisma:migrate
-   npm run prisma:generate
-   ```
+   The API runs on `http://localhost:8080` and the web client on `http://localhost:5173`.
 
-The initial migration enables the `pgcrypto`, `pg_trgm`, and `btree_gin` extensions required by the project.
+## Aiven PostgreSQL Setup
+Provision a PostgreSQL instance on [Aiven](https://aiven.io) and set the `DATABASE_URL` in `.env` (include `sslmode=require`). Enable the required extensions:
+```sql
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS btree_gin;
+```
+
+## Migrations & Seeding
+Apply migrations and load demo data:
+```bash
+npm run prisma:migrate
+npm run seed:csv
+```
+
+## API Docs
+The OpenAPI specification is served at `/api/docs/openapi.json`.
+
+## Deploying to Render
+1. Create a new Web Service and connect this repository.
+2. Configure environment variables:
+   - `DATABASE_URL` (with `sslmode=require`)
+   - `JWT_SECRET`
+   - `RATE_LIMIT_WINDOW_MIN`
+   - `RATE_LIMIT_MAX`
+3. Build command: `npm install && npm run build`
+4. Start command: `npm start`
+
+## Security Notes
+- TLS is enforced by using `sslmode=require` for database connections.
+- `express-rate-limit` protects patient and auth endpoints.
+- Patient contact details are masked in logs and API responses.
