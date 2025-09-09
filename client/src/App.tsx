@@ -3,6 +3,7 @@ import Login from './pages/Login';
 import RouteGuard from './components/RouteGuard';
 import Patients from './pages/Patients';
 import PatientDetail from './pages/PatientDetail';
+import VisitDetail from './pages/VisitDetail';
 import './styles/App.css';
 
 function App() {
@@ -26,6 +27,14 @@ function App() {
         }
       />
       <Route path="/" element={<Navigate to="/patients" replace />} />
+      <Route
+        path="/visits/:id"
+        element={
+          <RouteGuard>
+            <VisitDetail />
+          </RouteGuard>
+        }
+      />
     </Routes>
   );
 }
