@@ -5,12 +5,19 @@ interface UserAccount {
   password: string;
 }
 
+interface DoctorInfo {
+  name: string;
+  department: string;
+}
+
 interface SettingsContextType {
   appName: string;
   logo: string | null;
   users: UserAccount[];
+  doctors: DoctorInfo[];
   updateSettings: (data: { appName?: string; logo?: string | null }) => void;
   addUser: (user: UserAccount) => void;
+  addDoctor: (doctor: DoctorInfo) => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -19,6 +26,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [appName, setAppName] = useState<string>('EMR System');
   const [logo, setLogo] = useState<string | null>(null);
   const [users, setUsers] = useState<UserAccount[]>([]);
+  const [doctors, setDoctors] = useState<DoctorInfo[]>([]);
 
   useEffect(() => {
     const stored = localStorage.getItem('appSettings');
@@ -28,6 +36,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (parsed.appName) setAppName(parsed.appName);
         if (parsed.logo) setLogo(parsed.logo);
         if (Array.isArray(parsed.users)) setUsers(parsed.users);
+        if (Array.isArray(parsed.doctors)) setDoctors(parsed.doctors);
       } catch {
         /* ignore */
       }
@@ -35,8 +44,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('appSettings', JSON.stringify({ appName, logo, users }));
-  }, [appName, logo, users]);
+    localStorage.setItem('appSettings', JSON.stringify({ appName, logo, users, doctors }));
+  }, [appName, logo, users, doctors]);
 
   const updateSettings = (data: { appName?: string; logo?: string | null }) => {
     if (data.appName !== undefined) setAppName(data.appName);
@@ -47,8 +56,14 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setUsers((prev) => [...prev, user]);
   };
 
+  const addDoctor = (doctor: DoctorInfo) => {
+    setDoctors((prev) => [...prev, doctor]);
+  };
+
   return (
-    <SettingsContext.Provider value={{ appName, logo, users, updateSettings, addUser }}>
+    <SettingsContext.Provider
+      value={{ appName, logo, users, doctors, updateSettings, addUser, addDoctor }}
+    >
       {children}
     </SettingsContext.Provider>
   );
