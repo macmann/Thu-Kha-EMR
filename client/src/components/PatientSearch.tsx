@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { searchPatients, type Patient } from '../api/client';
-import NavigationButtons from './NavigationButtons';
+import BackButton from './BackButton';
 
 export default function PatientSearch() {
   const [query, setQuery] = useState('');
@@ -91,7 +91,7 @@ export default function PatientSearch() {
             </tbody>
           </table>
         </div>
-        <NavigationButtons />
+        <BackButton />
       </div>
     </div>
   );

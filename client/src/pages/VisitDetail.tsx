@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import NavigationButtons from '../components/NavigationButtons';
 import {
   addObservation,
   getPatient,
@@ -200,7 +199,6 @@ export default function VisitDetail() {
         <p className="mt-4 text-sm text-gray-500">
           My previous notes for this patient (before this visit)
         </p>
-        <NavigationButtons />
       </div>
     </div>
   );

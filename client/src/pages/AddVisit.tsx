@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import NavigationButtons from '../components/NavigationButtons';
 import {
   createVisit,
   addDiagnosis,
@@ -267,7 +266,6 @@ export default function AddVisit() {
             {saving ? 'Saving...' : 'Save Visit'}
           </button>
         </form>
-        <NavigationButtons />
       </div>
     </div>
   );
