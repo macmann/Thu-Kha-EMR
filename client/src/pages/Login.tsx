@@ -21,7 +21,7 @@ export default function Login() {
     try {
       await login(email, password);
       setSuccess('Login successful');
-      navigate('/patients');
+      navigate('/');
     } catch (err: any) {
       setError(err.message);
     }
