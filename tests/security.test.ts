@@ -1,5 +1,4 @@
 import request from 'supertest';
-import jwt from 'jsonwebtoken';
 
 jest.mock('@prisma/client', () => {
   const mPrisma = {
@@ -18,7 +17,6 @@ describe('security headers and rate limits', () => {
   beforeEach(async () => {
     jest.resetModules();
     process.env.NODE_ENV = 'test';
-    process.env.JWT_SECRET = 'changeme';
     process.env.RATE_LIMIT_MAX = '2';
     process.env.RATE_LIMIT_WINDOW_MIN = '1';
     const mod = await import('../src/index');
@@ -31,20 +29,11 @@ describe('security headers and rate limits', () => {
     expect(res.headers['x-content-type-options']).toBe('nosniff');
   });
 
-  it('rate limits auth routes', async () => {
-    await request(app).post('/api/auth/login').send({ email: 'a', password: 'b' });
-    await request(app).post('/api/auth/login').send({ email: 'a', password: 'b' });
-    const res = await request(app).post('/api/auth/login').send({ email: 'a', password: 'b' });
-    expect(res.status).toBe(429);
-  });
-
   it('rate limits patient search', async () => {
-    const token = jwt.sign({ role: 'Doctor' }, 'changeme', { subject: 'u1' });
-    await request(app).get('/api/patients').set('Authorization', `Bearer ${token}`).query({ query: 'a' });
-    await request(app).get('/api/patients').set('Authorization', `Bearer ${token}`).query({ query: 'a' });
+    await request(app).get('/api/patients').query({ query: 'a' });
+    await request(app).get('/api/patients').query({ query: 'a' });
     const res = await request(app)
       .get('/api/patients')
-      .set('Authorization', `Bearer ${token}`)
       .query({ query: 'a' });
     expect(res.status).toBe(429);
   });
@@ -54,7 +43,6 @@ describe('CORS in production', () => {
   it('disables cors in production', async () => {
     jest.resetModules();
     process.env.NODE_ENV = 'production';
-    process.env.JWT_SECRET = 'changeme';
     const mod = await import('../src/index');
     const res = await request(mod.app).get('/api/health');
     expect(res.headers['access-control-allow-origin']).toBeUndefined();

@@ -1,17 +1,14 @@
 import request from 'supertest';
 import { app } from '../src/index';
 import { PrismaClient } from '@prisma/client';
-import jwt from 'jsonwebtoken';
 
 const prisma = new PrismaClient();
-let token: string;
 let patientId: string;
 let doctorId: string;
 let visitId: string;
 
 beforeAll(async () => {
-  const user = await prisma.user.create({ data: { email: 'visitdoc@example.com', passwordHash: 'x', role: 'Doctor' } });
-  token = jwt.sign({ role: 'Doctor' }, 'changeme', { subject: user.userId });
+  await prisma.user.create({ data: { email: 'visitdoc@example.com', passwordHash: 'x', role: 'Doctor' } });
   const doctor = await prisma.doctor.create({ data: { name: 'Dr. House', department: 'Diagnostics' } });
   doctorId = doctor.doctorId;
   const patient = await prisma.patient.create({ data: { name: 'Greg Patient', dob: new Date('1985-05-05'), gender: 'M' } });
@@ -36,7 +33,6 @@ describe('Visit lifecycle', () => {
   it('creates and retrieves visit details', async () => {
     const createRes = await request(app)
       .post('/api/visits')
-      .set('Authorization', `Bearer ${token}`)
       .send({
         patientId,
         visitDate: '2023-03-01',
@@ -54,14 +50,12 @@ describe('Visit lifecycle', () => {
     await prisma.observation.create({ data: { visitId, patientId, doctorId, noteText: 'note2', createdAt: new Date('2023-03-03') } });
 
     const listRes = await request(app)
-      .get(`/api/patients/${patientId}/visits`)
-      .set('Authorization', `Bearer ${token}`);
+      .get(`/api/patients/${patientId}/visits`);
     expect(listRes.status).toBe(200);
     expect(listRes.body[0].visitId).toBe(visitId);
 
     const detailRes = await request(app)
-      .get(`/api/visits/${visitId}`)
-      .set('Authorization', `Bearer ${token}`);
+      .get(`/api/visits/${visitId}`);
     expect(detailRes.status).toBe(200);
     expect(detailRes.body.diagnoses[0].diagnosis).toBe('Flu');
     expect(detailRes.body.medications[0].drugName).toBe('Tamiflu');

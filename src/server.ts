@@ -1,20 +1,18 @@
 import { Router } from 'express';
 
-import authRouter from './modules/auth/index.js';
-import visitsRouter from './modules/visits/index.js';
-import patientsRouter from './modules/patients/index.js';
-import doctorsRouter from './modules/doctors/index.js';
-import diagnosesRouter from './modules/diagnoses/index.js';
-import medicationsRouter from './modules/medications/index.js';
-import labsRouter from './modules/labs/index.js';
-import observationsRouter from './modules/observations/index.js';
-import insightsRouter from './modules/insights/index.js';
-import auditRouter from './modules/audit/index.js';
-import { docsRouter } from './docs/openapi.js';
+import visitsRouter from './modules/visits/index.ts';
+import patientsRouter from './modules/patients/index.ts';
+import doctorsRouter from './modules/doctors/index.ts';
+import diagnosesRouter from './modules/diagnoses/index.ts';
+import medicationsRouter from './modules/medications/index.ts';
+import labsRouter from './modules/labs/index.ts';
+import observationsRouter from './modules/observations/index.ts';
+import insightsRouter from './modules/insights/index.ts';
+import auditRouter from './modules/audit/index.ts';
+import { docsRouter } from './docs/openapi.ts';
 
 export const apiRouter = Router();
 
-apiRouter.use('/auth', authRouter);
 apiRouter.use(visitsRouter);
 apiRouter.use('/patients', patientsRouter);
 apiRouter.use('/doctors', doctorsRouter);

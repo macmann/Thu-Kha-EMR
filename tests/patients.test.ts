@@ -1,16 +1,13 @@
 import request from 'supertest';
 import { app } from '../src/index';
 import { PrismaClient } from '@prisma/client';
-import jwt from 'jsonwebtoken';
 
 const prisma = new PrismaClient();
-let token: string;
 let patientId: string;
 
 beforeAll(async () => {
   await prisma.$executeRaw`CREATE EXTENSION IF NOT EXISTS "pg_trgm"`;
-  const user = await prisma.user.create({ data: { email: 'doc@example.com', passwordHash: 'x', role: 'Doctor' } });
-  token = jwt.sign({ role: 'Doctor' }, 'changeme', { subject: user.userId });
+  await prisma.user.create({ data: { email: 'doc@example.com', passwordHash: 'x', role: 'Doctor' } });
   const doctor = await prisma.doctor.create({ data: { name: 'Dr. Who', department: 'General' } });
   const patient = await prisma.patient.create({
     data: { name: 'John Doe', dob: new Date('1980-01-01'), gender: 'M', contact: '5551234', insurance: 'Aetna' },
@@ -47,7 +44,6 @@ describe('GET /api/patients search', () => {
   it('finds patient by fuzzy name', async () => {
     const res = await request(app)
       .get('/api/patients')
-      .set('Authorization', `Bearer ${token}`)
       .query({ query: 'Jon Doe' });
     expect(res.status).toBe(200);
     const names = res.body.map((p: any) => p.name);
@@ -59,7 +55,6 @@ describe('GET /api/patients/:id summary', () => {
   it('returns patient summary with visits', async () => {
     const res = await request(app)
       .get(`/api/patients/${patientId}`)
-      .set('Authorization', `Bearer ${token}`)
       .query({ include: 'summary' });
     expect(res.status).toBe(200);
     expect(res.body.patientId).toBe(patientId);
