@@ -116,20 +116,12 @@ export default function PatientDetail() {
   function renderVisits() {
     if (visitsLoading) return <div className="mt-6">Loading visits...</div>;
     if (!visits) return null;
-    return (
-      <div className="mt-5 space-y-5">
-        <div className="flex justify-end">
-          <Link
-            to={`/patients/${id}/visits/new`}
-            className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-white font-medium hover:bg-blue-700"
-          >
-            Add Visit
-          </Link>
-        </div>
-        {visits.length === 0 ? (
-          <div>No visits found.</div>
-        ) : (
-          visits.map((v) => (
+      return (
+        <div className="mt-5 space-y-5">
+          {visits.length === 0 ? (
+            <div>No visits found.</div>
+          ) : (
+            visits.map((v) => (
             <section
               key={v.visitId}
               className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
@@ -167,21 +159,31 @@ export default function PatientDetail() {
   }
 
   return (
-    <div className="p-4 md:p-6">
-      <div className="mx-auto max-w-4xl rounded-2xl bg-white shadow-xl p-5 md:p-7">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">
-            {patient.name}
-          </h1>
-          <p className="mt-1 text-sm text-gray-700">
-            <span className="font-semibold">DOB:</span>{' '}
-            {new Date(patient.dob).toLocaleDateString()}
-          </p>
-          <p className="mt-1 text-sm text-gray-700">
-            <span className="font-semibold">Insurance:</span>{' '}
-            {patient.insurance || ''}
-          </p>
-        </div>
+      <div className="p-4 md:p-6">
+        <div className="mx-auto max-w-4xl rounded-2xl bg-white shadow-xl p-5 md:p-7">
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">
+                {patient.name}
+              </h1>
+              <p className="mt-1 text-sm text-gray-700">
+                <span className="font-semibold">DOB:</span>{' '}
+                {new Date(patient.dob).toLocaleDateString()}
+              </p>
+              <p className="mt-1 text-sm text-gray-700">
+                <span className="font-semibold">Insurance:</span>{' '}
+                {patient.insurance || ''}
+              </p>
+            </div>
+            <div className="mt-4 shrink-0">
+              <Link
+                to={`/patients/${id}/visits/new`}
+                className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-white font-medium hover:bg-blue-700"
+              >
+                Add Visit
+              </Link>
+            </div>
+          </div>
 
         <div className="mt-4 border-b border-gray-200">
           <nav role="tablist" className="flex gap-6">
