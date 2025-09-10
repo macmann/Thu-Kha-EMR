@@ -3,8 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc && cd client && npm install && npm run build",
-    "start": "node dist/index.js",
+    "build": "npm run build:server && npm run build:client",
+    "build:server": "tsc",
+    "build:client": "cd client && npm install && npm run build",
+    "prestart": "npm run build:server",
+    "start": "node dist/src/index.js",
     "dev": "concurrently -k -n API,WEB \"tsx watch src/index.ts\" \"cd client && npm run dev\"",
     "dev:api": "tsx watch src/index.ts",
     "dev:web": "cd client && npm run dev",

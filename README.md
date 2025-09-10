@@ -11,6 +11,12 @@ Atenxion EMR is a reference implementation of an electronic medical record syste
    ```
    The API runs on `http://localhost:8080` and the web client on `http://localhost:5173`.
 
+3. To run the API without watch mode, start the compiled server:
+   ```bash
+   npm start
+   ```
+   This command compiles the TypeScript API before launching.
+
 ## Neon PostgreSQL Setup
 Provision a PostgreSQL instance on [Neon](https://neon.tech) and set the `DATABASE_URL` and `DIRECT_URL` in `.env` (include `sslmode=require` for both). Enable the required extensions:
 ```sql
