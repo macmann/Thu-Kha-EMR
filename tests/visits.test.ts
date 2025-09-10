@@ -30,7 +30,7 @@ afterAll(async () => {
 });
 
 describe('Visit lifecycle', () => {
-  it('creates and retrieves visit details', async () => {
+  it('creates visit with nested details and retrieves them', async () => {
     const createRes = await request(app)
       .post('/api/visits')
       .send({
@@ -39,34 +39,32 @@ describe('Visit lifecycle', () => {
         doctorId,
         department: 'Diagnostics',
         reason: 'checkup',
+        diagnoses: [{ diagnosis: 'Flu' }],
+        medications: [{ drugName: 'Tamiflu' }],
+        labResults: [{ testName: 'CBC', resultValue: 4.5, unit: 'x', testDate: '2023-03-02' }],
+        observations: [{ noteText: 'note1' }, { noteText: 'note2' }],
       });
     expect(createRes.status).toBe(201);
     visitId = createRes.body.visitId;
     expect(createRes.body.doctor.doctorId).toBe(doctorId);
-    expect(createRes.body.diagnoses).toEqual([]);
-    expect(createRes.body.medications).toEqual([]);
-    expect(createRes.body.labResults).toEqual([]);
-    expect(createRes.body.observations).toEqual([]);
+    expect(createRes.body.diagnoses[0].diagnosis).toBe('Flu');
+    expect(createRes.body.medications[0].drugName).toBe('Tamiflu');
+    expect(createRes.body.labResults[0].testName).toBe('CBC');
+    const notes = createRes.body.observations.map((o: any) => o.noteText).sort();
+    expect(notes).toEqual(['note1', 'note2']);
 
-    await prisma.diagnosis.create({ data: { visitId, diagnosis: 'Flu' } });
-    await prisma.medication.create({ data: { visitId, drugName: 'Tamiflu' } });
-    await prisma.labResult.create({ data: { visitId, testName: 'CBC', resultValue: 4.5, unit: 'x', testDate: new Date('2023-03-02') } });
-    await prisma.observation.create({ data: { visitId, patientId, doctorId, noteText: 'note1', createdAt: new Date('2023-03-02') } });
-    await prisma.observation.create({ data: { visitId, patientId, doctorId, noteText: 'note2', createdAt: new Date('2023-03-03') } });
-
-    const listRes = await request(app)
-      .get(`/api/patients/${patientId}/visits`);
+    const listRes = await request(app).get(`/api/patients/${patientId}/visits`);
     expect(listRes.status).toBe(200);
     expect(listRes.body[0].visitId).toBe(visitId);
     expect(listRes.body[0].doctor.name).toBe('Dr. House');
 
-    const detailRes = await request(app)
-      .get(`/api/visits/${visitId}`);
+    const detailRes = await request(app).get(`/api/visits/${visitId}`);
     expect(detailRes.status).toBe(200);
     expect(detailRes.body.doctor.name).toBe('Dr. House');
     expect(detailRes.body.diagnoses[0].diagnosis).toBe('Flu');
     expect(detailRes.body.medications[0].drugName).toBe('Tamiflu');
     expect(detailRes.body.labResults[0].testName).toBe('CBC');
-    expect(detailRes.body.observations[0].noteText).toBe('note2');
+    const detailNotes = detailRes.body.observations.map((o: any) => o.noteText).sort();
+    expect(detailNotes).toEqual(['note1', 'note2']);
   });
 });

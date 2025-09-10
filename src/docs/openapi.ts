@@ -103,6 +103,46 @@ const openapi: any = {
           createdAt: { type: 'string', format: 'date-time' }
         }
       },
+      DiagnosisCreate: {
+        type: 'object',
+        required: ['diagnosis'],
+        properties: {
+          diagnosis: { type: 'string' },
+        },
+      },
+      MedicationCreate: {
+        type: 'object',
+        required: ['drugName'],
+        properties: {
+          drugName: { type: 'string' },
+          dosage: { type: 'string', nullable: true },
+          instructions: { type: 'string', nullable: true },
+        },
+      },
+      LabResultCreate: {
+        type: 'object',
+        required: ['testName'],
+        properties: {
+          testName: { type: 'string' },
+          resultValue: { type: 'number', nullable: true },
+          unit: { type: 'string', nullable: true },
+          referenceRange: { type: 'string', nullable: true },
+          testDate: { type: 'string', format: 'date', nullable: true },
+        },
+      },
+      ObservationCreate: {
+        type: 'object',
+        required: ['noteText'],
+        properties: {
+          noteText: { type: 'string' },
+          bpSystolic: { type: 'integer', nullable: true },
+          bpDiastolic: { type: 'integer', nullable: true },
+          heartRate: { type: 'integer', nullable: true },
+          temperatureC: { type: 'number', nullable: true },
+          spo2: { type: 'integer', nullable: true },
+          bmi: { type: 'number', nullable: true },
+        },
+      },
       ObservationListResponse: {
         type: 'array',
         items: { $ref: '#/components/schemas/Observation' }
@@ -199,6 +239,10 @@ addPath('/visits', 'post', {
             doctorId: { type: 'string', format: 'uuid' },
             department: { type: 'string' },
             reason: { type: 'string', nullable: true },
+            diagnoses: { type: 'array', items: { $ref: '#/components/schemas/DiagnosisCreate' } },
+            medications: { type: 'array', items: { $ref: '#/components/schemas/MedicationCreate' } },
+            labResults: { type: 'array', items: { $ref: '#/components/schemas/LabResultCreate' } },
+            observations: { type: 'array', items: { $ref: '#/components/schemas/ObservationCreate' } },
           },
         },
       },
