@@ -2,8 +2,8 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient, Prisma } from '@prisma/client';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
-import { requireAuth } from '../auth/index.ts';
-import { validate } from '../../middleware/validate.ts';
+import { requireAuth } from '../auth/index.js';
+import { validate } from '../../middleware/validate.js';
 
 const prisma = new PrismaClient();
 const router = Router();

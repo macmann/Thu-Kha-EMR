@@ -9,8 +9,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "outDir": "dist",
-    "sourceMap": true,
-    "allowImportingTsExtensions": true
+    "sourceMap": true
   },
   "include": ["src", "scripts"]
 }

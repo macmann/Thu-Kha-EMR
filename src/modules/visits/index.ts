@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-import { requireAuth, requireRole, type AuthRequest } from '../auth/index.ts';
-import { logDataChange } from '../audit/index.ts';
+import { requireAuth, requireRole, type AuthRequest } from '../auth/index.js';
+import { logDataChange } from '../audit/index.js';
 
 const prisma = new PrismaClient();
 const router = Router();
