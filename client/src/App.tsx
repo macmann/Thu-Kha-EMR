@@ -4,6 +4,7 @@ import RouteGuard from './components/RouteGuard';
 import Patients from './pages/Patients';
 import PatientDetail from './pages/PatientDetail';
 import VisitDetail from './pages/VisitDetail';
+import AddVisit from './pages/AddVisit';
 import Cohort from './pages/Cohort';
 import './styles/App.css';
 
@@ -24,6 +25,14 @@ function App() {
         element={
           <RouteGuard>
             <PatientDetail />
+          </RouteGuard>
+        }
+      />
+      <Route
+        path="/patients/:id/visits/new"
+        element={
+          <RouteGuard>
+            <AddVisit />
           </RouteGuard>
         }
       />

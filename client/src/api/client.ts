@@ -108,6 +108,73 @@ export async function getVisit(id: string): Promise<VisitDetail> {
   return fetchJSON(`/visits/${id}`);
 }
 
+export interface CreateVisitPayload {
+  patientId: string;
+  visitDate: string;
+  doctorId: string;
+  department: string;
+  reason?: string;
+}
+
+export async function createVisit(payload: CreateVisitPayload): Promise<Visit> {
+  return fetchJSON('/visits', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export interface AddDiagnosisPayload {
+  diagnosis: string;
+}
+
+export async function addDiagnosis(
+  visitId: string,
+  payload: AddDiagnosisPayload,
+): Promise<Diagnosis> {
+  return fetchJSON(`/visits/${visitId}/diagnoses`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export interface AddMedicationPayload {
+  drugName: string;
+  dosage?: string;
+  instructions?: string;
+}
+
+export async function addMedication(
+  visitId: string,
+  payload: AddMedicationPayload,
+): Promise<Medication> {
+  return fetchJSON(`/visits/${visitId}/medications`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export interface AddLabResultPayload {
+  testName: string;
+  resultValue?: number;
+  unit?: string;
+  referenceRange?: string;
+  testDate?: string;
+}
+
+export async function addLabResult(
+  visitId: string,
+  payload: AddLabResultPayload,
+): Promise<LabResult> {
+  return fetchJSON(`/visits/${visitId}/labs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
 export interface AddObservationPayload {
   noteText: string;
   bpSystolic?: number;

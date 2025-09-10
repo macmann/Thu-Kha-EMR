@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import NavigationButtons from '../components/NavigationButtons';
 import {
   getPatient,
@@ -10,8 +10,13 @@ import {
 
 export default function PatientDetail() {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const initialTab =
+    new URLSearchParams(location.search).get('tab') === 'visits'
+      ? 'visits'
+      : 'summary';
   const [patient, setPatient] = useState<PatientSummary | null>(null);
-  const [activeTab, setActiveTab] = useState<'summary' | 'visits'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'visits'>(initialTab);
   const [visits, setVisits] = useState<Visit[] | null>(null);
   const [visitsLoading, setVisitsLoading] = useState(false);
 
@@ -111,41 +116,52 @@ export default function PatientDetail() {
   function renderVisits() {
     if (visitsLoading) return <div className="mt-6">Loading visits...</div>;
     if (!visits) return null;
-    if (visits.length === 0) return <div className="mt-6">No visits found.</div>;
     return (
       <div className="mt-5 space-y-5">
-        {visits.map((v) => (
-          <section
-            key={v.visitId}
-            className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+        <div className="flex justify-end">
+          <Link
+            to={`/patients/${id}/visits/new`}
+            className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-white font-medium hover:bg-blue-700"
           >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-base font-semibold text-gray-900">
-                  Visit on {new Date(v.visitDate).toLocaleDateString()}
-                </h3>
-                <div className="mt-2 space-y-1 text-sm text-gray-700">
-                  <p>
-                    <span className="font-semibold">Department:</span> {v.department}
-                  </p>
-                  {v.reason && (
+            Add Visit
+          </Link>
+        </div>
+        {visits.length === 0 ? (
+          <div>No visits found.</div>
+        ) : (
+          visits.map((v) => (
+            <section
+              key={v.visitId}
+              className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900">
+                    Visit on {new Date(v.visitDate).toLocaleDateString()}
+                  </h3>
+                  <div className="mt-2 space-y-1 text-sm text-gray-700">
                     <p>
-                      <span className="font-semibold">Reason:</span> {v.reason}
+                      <span className="font-semibold">Department:</span> {v.department}
                     </p>
-                  )}
+                    {v.reason && (
+                      <p>
+                        <span className="font-semibold">Reason:</span> {v.reason}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="shrink-0">
+                  <Link
+                    to={`/visits/${v.visitId}`}
+                    className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-white font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    View
+                  </Link>
                 </div>
               </div>
-              <div className="shrink-0">
-                <Link
-                  to={`/visits/${v.visitId}`}
-                  className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-white font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  View
-                </Link>
-              </div>
-            </div>
-          </section>
-        ))}
+            </section>
+          ))
+        )}
       </div>
     );
   }
