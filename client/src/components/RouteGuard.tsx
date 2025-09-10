@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthProvider';
-import LogoutButton from './LogoutButton';
+import Header from './Header';
 
 interface Props {
   children: ReactNode;
@@ -15,9 +15,7 @@ export default function RouteGuard({ children }: Props) {
   }
   return (
     <>
-      <div className="fixed top-4 right-4">
-        <LogoutButton />
-      </div>
+      <Header />
       {children}
     </>
   );

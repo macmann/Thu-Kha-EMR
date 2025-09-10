@@ -6,6 +6,7 @@ import PatientDetail from './pages/PatientDetail';
 import VisitDetail from './pages/VisitDetail';
 import AddVisit from './pages/AddVisit';
 import Cohort from './pages/Cohort';
+import Settings from './pages/Settings';
 import './styles/App.css';
 
 function App() {
@@ -50,6 +51,14 @@ function App() {
         element={
           <RouteGuard>
             <Cohort />
+          </RouteGuard>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <RouteGuard>
+            <Settings />
           </RouteGuard>
         }
       />
