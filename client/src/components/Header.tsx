@@ -10,7 +10,9 @@ export default function Header() {
     <header className="relative flex items-center justify-center bg-gray-600 px-4 py-4 text-white">
       <div className="flex items-center space-x-4">
         {logo && (
-          <img src={logo} alt="logo" className="h-16 w-auto rounded" />
+          <Link to="/">
+            <img src={logo} alt="logo" className="h-16 w-auto rounded" />
+          </Link>
         )}
         <span className="text-xl font-semibold">{appName}</span>
       </div>
