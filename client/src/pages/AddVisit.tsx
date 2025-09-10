@@ -14,7 +14,7 @@ import { useAuth } from '../context/AuthProvider';
 export default function AddVisit() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
 
   const [visitDate, setVisitDate] = useState(
     new Date().toISOString().slice(0, 10),
@@ -36,10 +36,11 @@ export default function AddVisit() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (!accessToken) return;
     listDoctors()
       .then(setDoctors)
       .catch((err) => console.error(err));
-  }, []);
+  }, [accessToken]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
