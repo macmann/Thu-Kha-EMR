@@ -19,7 +19,11 @@ export default function LoginCard({
     <div className="rounded-2xl bg-white p-8 shadow">
       <div className="mb-6 flex flex-col items-center">
         {logo ? (
-          <img src={logo} alt="logo" className="mb-4 h-12 w-12 rounded" />
+          <img
+            src={logo}
+            alt="logo"
+            className="mb-4 h-12 w-auto rounded object-contain"
+          />
         ) : (
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-600">
             <svg
