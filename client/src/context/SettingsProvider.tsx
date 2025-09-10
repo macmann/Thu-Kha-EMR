@@ -1,23 +1,19 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Doctor, listDoctors, createDoctor } from '../api/client';
 
 interface UserAccount {
   email: string;
   password: string;
 }
 
-interface DoctorInfo {
-  name: string;
-  department: string;
-}
-
 interface SettingsContextType {
   appName: string;
   logo: string | null;
   users: UserAccount[];
-  doctors: DoctorInfo[];
+  doctors: Doctor[];
   updateSettings: (data: { appName?: string; logo?: string | null }) => void;
   addUser: (user: UserAccount) => void;
-  addDoctor: (doctor: DoctorInfo) => void;
+  addDoctor: (doctor: { name: string; department: string }) => Promise<void>;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -26,7 +22,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [appName, setAppName] = useState<string>('EMR System');
   const [logo, setLogo] = useState<string | null>(null);
   const [users, setUsers] = useState<UserAccount[]>([]);
-  const [doctors, setDoctors] = useState<DoctorInfo[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
 
   useEffect(() => {
     const stored = localStorage.getItem('appSettings');
@@ -36,7 +32,6 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (parsed.appName) setAppName(parsed.appName);
         if (parsed.logo) setLogo(parsed.logo);
         if (Array.isArray(parsed.users)) setUsers(parsed.users);
-        if (Array.isArray(parsed.doctors)) setDoctors(parsed.doctors);
       } catch {
         /* ignore */
       }
@@ -44,8 +39,12 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('appSettings', JSON.stringify({ appName, logo, users, doctors }));
-  }, [appName, logo, users, doctors]);
+    listDoctors().then(setDoctors).catch(() => setDoctors([]));
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('appSettings', JSON.stringify({ appName, logo, users }));
+  }, [appName, logo, users]);
 
   const updateSettings = (data: { appName?: string; logo?: string | null }) => {
     if (data.appName !== undefined) setAppName(data.appName);
@@ -56,8 +55,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setUsers((prev) => [...prev, user]);
   };
 
-  const addDoctor = (doctor: DoctorInfo) => {
-    setDoctors((prev) => [...prev, doctor]);
+  const addDoctor = async (doctor: { name: string; department: string }) => {
+    const created = await createDoctor(doctor);
+    setDoctors((prev) => [...prev, created]);
   };
 
   return (
