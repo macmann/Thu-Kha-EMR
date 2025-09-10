@@ -176,7 +176,32 @@ addPath('/auth/password/reset', 'post', {
 addPath('/visits', 'post', {
   summary: 'Create visit',
   security: [{ bearerAuth: [] }],
-  responses: { '201': { description: 'Created', content: { 'application/json': { schema: { $ref: '#/components/schemas/Visit' } } } } }
+  requestBody: {
+    required: true,
+    content: {
+      'application/json': {
+        schema: {
+          type: 'object',
+          required: ['patientId', 'visitDate', 'doctorId', 'department'],
+          properties: {
+            patientId: { type: 'string', format: 'uuid' },
+            visitDate: { type: 'string', format: 'date' },
+            doctorId: { type: 'string', format: 'uuid' },
+            department: { type: 'string' },
+            reason: { type: 'string', nullable: true },
+          },
+        },
+      },
+    },
+  },
+  responses: {
+    '201': {
+      description: 'Created',
+      content: {
+        'application/json': { schema: { $ref: '#/components/schemas/Visit' } },
+      },
+    },
+  },
 });
 
 addPath('/patients/{id}/visits', 'get', {
