@@ -36,10 +36,10 @@ export default function Settings() {
     setPassword('');
   }
 
-  function handleAddDoctor(e: React.FormEvent) {
+  async function handleAddDoctor(e: React.FormEvent) {
     e.preventDefault();
     if (!docName || !dept) return;
-    addDoctor({ name: docName, department: dept });
+    await addDoctor({ name: docName, department: dept });
     setDocName('');
     setDept('');
   }

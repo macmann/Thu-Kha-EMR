@@ -283,6 +283,32 @@ addPath('/doctors', 'get', {
   responses: { '200': { description: 'Doctors', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Doctor' } } } } } }
 });
 
+addPath('/doctors', 'post', {
+  summary: 'Create doctor',
+  security: [{ bearerAuth: [] }],
+  requestBody: {
+    required: true,
+    content: {
+      'application/json': {
+        schema: {
+          type: 'object',
+          required: ['name', 'department'],
+          properties: {
+            name: { type: 'string' },
+            department: { type: 'string' },
+          },
+        },
+      },
+    },
+  },
+  responses: {
+    '201': {
+      description: 'Doctor',
+      content: { 'application/json': { schema: { $ref: '#/components/schemas/Doctor' } } },
+    },
+  },
+});
+
 addPath('/visits/{id}/diagnoses', 'post', {
   summary: 'Add diagnosis',
   security: [{ bearerAuth: [] }],

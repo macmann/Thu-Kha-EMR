@@ -117,6 +117,19 @@ export async function listDoctors(): Promise<Doctor[]> {
   return fetchJSON('/doctors');
 }
 
+export interface CreateDoctorPayload {
+  name: string;
+  department: string;
+}
+
+export async function createDoctor(payload: CreateDoctorPayload): Promise<Doctor> {
+  return fetchJSON('/doctors', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function getPatient(
   id: string,
   params?: { include?: 'summary' },
