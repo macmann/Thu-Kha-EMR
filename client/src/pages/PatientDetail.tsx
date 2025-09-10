@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
-import NavigationButtons from '../components/NavigationButtons';
+import BackButton from '../components/BackButton';
 import {
   getPatient,
   listPatientVisits,
@@ -215,7 +215,7 @@ export default function PatientDetail() {
         </div>
 
           {activeTab === 'summary' ? renderSummary(patient) : renderVisits()}
-        <NavigationButtons />
+        <BackButton />
       </div>
     </div>
   );
