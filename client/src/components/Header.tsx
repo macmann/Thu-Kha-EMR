@@ -7,14 +7,12 @@ export default function Header() {
   const { appName, logo } = useSettings();
   const { accessToken } = useAuth();
   return (
-    <header className="flex items-center justify-between bg-blue-600 px-4 py-2 text-white">
-      <div className="flex items-center">
-        {logo && (
-          <img src={logo} alt="logo" className="mr-2 h-8 w-8 rounded" />
-        )}
-        <span className="text-lg font-semibold">{appName}</span>
-      </div>
+    <header className="flex items-center justify-center bg-gray-600 px-4 py-4 text-white">
       <div className="flex items-center space-x-4">
+        {logo && (
+          <img src={logo} alt="logo" className="h-16 w-16 rounded" />
+        )}
+        <span className="text-xl font-semibold">{appName}</span>
         <Link to="/settings" className="text-sm hover:underline">
           Settings
         </Link>
