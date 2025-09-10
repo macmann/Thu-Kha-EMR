@@ -95,6 +95,20 @@ export async function login(email: string, password: string): Promise<Tokens> {
   });
 }
 
+export interface CreatePatientPayload {
+  name: string;
+  dob: string;
+  insurance: string;
+}
+
+export async function createPatient(payload: CreatePatientPayload): Promise<Patient> {
+  return fetchJSON('/patients', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function searchPatients(query: string): Promise<Patient[]> {
   return fetchJSON(`/patients?query=${encodeURIComponent(query)}`);
 }

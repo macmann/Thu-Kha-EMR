@@ -219,15 +219,48 @@ addPath('/visits/{id}', 'get', {
   responses: { '200': { description: 'Visit', content: { 'application/json': { schema: { $ref: '#/components/schemas/Visit' } } } }, '404': { description: 'Not found' } }
 });
 
+addPath('/patients', 'post', {
+  summary: 'Register patient',
+  security: [{ bearerAuth: [] }],
+  requestBody: {
+    content: {
+      'application/json': {
+        schema: {
+          type: 'object',
+          required: ['name', 'dob', 'insurance'],
+          properties: {
+            name: { type: 'string' },
+            dob: { type: 'string', format: 'date' },
+            insurance: { type: 'string' },
+          },
+        },
+      },
+    },
+  },
+  responses: {
+    '201': {
+      description: 'Created',
+      content: { 'application/json': { schema: { $ref: '#/components/schemas/Patient' } } },
+    },
+  },
+});
+
 addPath('/patients', 'get', {
   summary: 'Search patients',
   security: [{ bearerAuth: [] }],
   parameters: [
     { name: 'query', in: 'query', required: true, schema: { type: 'string' } },
     { name: 'limit', in: 'query', schema: { type: 'integer' } },
-    { name: 'offset', in: 'query', schema: { type: 'integer' } }
+    { name: 'offset', in: 'query', schema: { type: 'integer' } },
   ],
-  responses: { '200': { description: 'Patients', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Patient' } } } } } }
+  responses: {
+    '200': {
+      description: 'Patients',
+      content: {
+        'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Patient' } } },
+      },
+    },
+  },
 });
 
 addPath('/patients/{id}', 'get', {

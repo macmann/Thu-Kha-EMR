@@ -67,3 +67,15 @@ describe('GET /api/patients/:id summary', () => {
     expect(visit.observations.length).toBeGreaterThan(0);
   });
 });
+
+describe('POST /api/patients', () => {
+  it('creates a new patient', async () => {
+    const res = await request(app).post('/api/patients').send({
+      name: 'Alice Jones',
+      dob: '2001-01-01',
+      insurance: 'Aetna',
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.name).toBe('Alice Jones');
+  });
+});
