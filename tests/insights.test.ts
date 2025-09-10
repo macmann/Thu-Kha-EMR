@@ -1,17 +1,14 @@
 import request from 'supertest';
 import { app } from '../src/index';
 import { PrismaClient } from '@prisma/client';
-import jwt from 'jsonwebtoken';
 
 const prisma = new PrismaClient();
-let token: string;
 let patient1Id: string;
 let patient2Id: string;
 let latestVisitId: string;
 
 beforeAll(async () => {
-  const user = await prisma.user.create({ data: { email: 'insights@example.com', passwordHash: 'x', role: 'Doctor' } });
-  token = jwt.sign({ role: 'Doctor' }, 'changeme', { subject: user.userId });
+  await prisma.user.create({ data: { email: 'insights@example.com', passwordHash: 'x', role: 'Doctor' } });
   const doctor = await prisma.doctor.create({ data: { name: 'Dr. I', department: 'Insights' } });
   const patient1 = await prisma.patient.create({ data: { name: 'Alice', dob: new Date('1980-01-01'), gender: 'F' } });
   const patient2 = await prisma.patient.create({ data: { name: 'Bob', dob: new Date('1975-01-01'), gender: 'M' } });
@@ -46,7 +43,6 @@ describe('Insights cohort', () => {
   it('finds patients with high HbA1c', async () => {
     const res = await request(app)
       .get('/api/insights/cohort')
-      .set('Authorization', `Bearer ${token}`)
       .query({ test_name: 'HbA1c', op: 'gt', value: 8, months: 6 });
     expect(res.status).toBe(200);
     expect(res.body.length).toBe(1);
@@ -59,7 +55,6 @@ describe('Insights summary and latest visit', () => {
   it('returns patient summary', async () => {
     const res = await request(app)
       .get('/api/insights/patient-summary')
-      .set('Authorization', `Bearer ${token}`)
       .query({ patient_id: patient1Id, last_n: 2 });
     expect(res.status).toBe(200);
     expect(res.body.visits.length).toBe(2);
@@ -68,7 +63,6 @@ describe('Insights summary and latest visit', () => {
   it('returns latest visit bundle', async () => {
     const res = await request(app)
       .get('/api/insights/latest-visit')
-      .set('Authorization', `Bearer ${token}`)
       .query({ patient_id: patient1Id });
     expect(res.status).toBe(200);
     expect(res.body.visitId).toBe(latestVisitId);

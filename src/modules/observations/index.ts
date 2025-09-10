@@ -1,9 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient, Prisma, Observation } from '@prisma/client';
 import { z } from 'zod';
-import { requireAuth, requireRole } from '../auth/index.js';
-import type { AuthRequest } from '../auth/middleware.js';
-import { logDataChange } from '../audit/index.js';
+import { requireAuth, requireRole, type AuthRequest } from '../auth/index.ts';
+import { logDataChange } from '../audit/index.ts';
 
 const prisma = new PrismaClient();
 const router = Router();
@@ -35,7 +34,7 @@ router.post('/visits/:id/observations', requireAuth, requireRole('Doctor'), asyn
     data: {
       visitId: id,
       patientId: visit.patientId,
-      doctorId: req.user!.userId,
+      doctorId: visit.doctorId,
       ...parsed.data,
     },
   });
