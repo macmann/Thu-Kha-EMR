@@ -22,7 +22,13 @@ router.post('/visits', requireAuth, requireRole('Doctor', 'Admin'), async (req: 
   }
   const visit = await prisma.visit.create({
     data: parsed.data,
-    include: { doctor: { select: { doctorId: true, name: true, department: true } } },
+    include: {
+      doctor: { select: { doctorId: true, name: true, department: true } },
+      diagnoses: { orderBy: { createdAt: 'desc' } },
+      medications: { orderBy: { createdAt: 'desc' } },
+      labResults: { orderBy: { createdAt: 'desc' } },
+      observations: { orderBy: { createdAt: 'desc' } },
+    },
   });
   await logDataChange(req.user!.userId, 'visit', visit.visitId, undefined, visit);
   res.status(201).json(visit);

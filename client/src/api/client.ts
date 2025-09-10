@@ -156,7 +156,7 @@ export interface CreateVisitPayload {
   reason?: string;
 }
 
-export async function createVisit(payload: CreateVisitPayload): Promise<Visit> {
+export async function createVisit(payload: CreateVisitPayload): Promise<VisitDetail> {
   return fetchJSON('/visits', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
