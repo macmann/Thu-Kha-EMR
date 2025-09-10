@@ -102,6 +102,9 @@ export default function VisitDetail() {
         <p className="mt-1 text-sm text-gray-700">
           <span className="font-semibold">Department:</span> {visit.department}
         </p>
+        <p className="mt-1 text-sm text-gray-700">
+          <span className="font-semibold">Doctor:</span> {visit.doctor.name}
+        </p>
         {visit.reason && (
           <p className="mt-1 text-sm text-gray-700">
             <span className="font-semibold">Reason:</span> {visit.reason}

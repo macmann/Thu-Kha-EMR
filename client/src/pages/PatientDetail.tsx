@@ -73,6 +73,9 @@ export default function PatientDetail() {
               Visit on {new Date(visit.visitDate).toLocaleDateString()}
             </h3>
             <div className="mt-2 space-y-1 text-sm text-gray-700">
+              <p>
+                <span className="font-semibold">Doctor:</span> {visit.doctor.name}
+              </p>
               {visit.diagnoses.length > 0 && (
                 <p>
                   <span className="font-semibold">Diagnoses:</span>{' '}
@@ -132,6 +135,9 @@ export default function PatientDetail() {
                     Visit on {new Date(v.visitDate).toLocaleDateString()}
                   </h3>
                   <div className="mt-2 space-y-1 text-sm text-gray-700">
+                    <p>
+                      <span className="font-semibold">Doctor:</span> {v.doctor.name}
+                    </p>
                     <p>
                       <span className="font-semibold">Department:</span> {v.department}
                     </p>

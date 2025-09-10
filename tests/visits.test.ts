@@ -42,6 +42,7 @@ describe('Visit lifecycle', () => {
       });
     expect(createRes.status).toBe(201);
     visitId = createRes.body.visitId;
+    expect(createRes.body.doctor.doctorId).toBe(doctorId);
 
     await prisma.diagnosis.create({ data: { visitId, diagnosis: 'Flu' } });
     await prisma.medication.create({ data: { visitId, drugName: 'Tamiflu' } });
@@ -53,10 +54,12 @@ describe('Visit lifecycle', () => {
       .get(`/api/patients/${patientId}/visits`);
     expect(listRes.status).toBe(200);
     expect(listRes.body[0].visitId).toBe(visitId);
+    expect(listRes.body[0].doctor.name).toBe('Dr. House');
 
     const detailRes = await request(app)
       .get(`/api/visits/${visitId}`);
     expect(detailRes.status).toBe(200);
+    expect(detailRes.body.doctor.name).toBe('Dr. House');
     expect(detailRes.body.diagnoses[0].diagnosis).toBe('Flu');
     expect(detailRes.body.medications[0].drugName).toBe('Tamiflu');
     expect(detailRes.body.labResults[0].testName).toBe('CBC');
