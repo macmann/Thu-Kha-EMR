@@ -8,13 +8,6 @@ const openapi: any = {
   },
   servers: [{ url: '/api' }],
   components: {
-    securitySchemes: {
-      bearerAuth: {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT'
-      }
-    },
     schemas: {
       Patient: {
         type: 'object',
@@ -112,7 +105,7 @@ const openapi: any = {
       }
     }
   },
-  security: [{ bearerAuth: [] }],
+  security: [],
   paths: {}
 };
 
@@ -130,7 +123,7 @@ addPath('/health', 'get', {
 
 addPath('/auth/register', 'post', {
   summary: 'Register user',
-  security: [{ bearerAuth: [] }],
+  security: [],
   responses: { '201': { description: 'Created' } }
 });
 
@@ -176,7 +169,7 @@ addPath('/auth/password/reset', 'post', {
 
 addPath('/visits', 'post', {
   summary: 'Create visit',
-  security: [{ bearerAuth: [] }],
+  security: [],
   requestBody: {
     required: true,
     content: {
@@ -207,21 +200,21 @@ addPath('/visits', 'post', {
 
 addPath('/patients/{id}/visits', 'get', {
   summary: 'List visits for patient',
-  security: [{ bearerAuth: [] }],
+  security: [],
   parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
   responses: { '200': { description: 'Visits', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Visit' } } } } } }
 });
 
 addPath('/visits/{id}', 'get', {
   summary: 'Get visit detail',
-  security: [{ bearerAuth: [] }],
+  security: [],
   parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
   responses: { '200': { description: 'Visit', content: { 'application/json': { schema: { $ref: '#/components/schemas/Visit' } } } }, '404': { description: 'Not found' } }
 });
 
 addPath('/patients', 'post', {
   summary: 'Register patient',
-  security: [{ bearerAuth: [] }],
+  security: [],
   requestBody: {
     content: {
       'application/json': {
@@ -247,7 +240,7 @@ addPath('/patients', 'post', {
 
 addPath('/patients', 'get', {
   summary: 'Search patients',
-  security: [{ bearerAuth: [] }],
+  security: [],
   parameters: [
     { name: 'query', in: 'query', required: true, schema: { type: 'string' } },
     { name: 'limit', in: 'query', schema: { type: 'integer' } },
@@ -265,7 +258,7 @@ addPath('/patients', 'get', {
 
 addPath('/patients/{id}', 'get', {
   summary: 'Get patient',
-  security: [{ bearerAuth: [] }],
+  security: [],
   parameters: [
     { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
     { name: 'include', in: 'query', schema: { type: 'string', enum: ['summary'] } }
@@ -275,7 +268,7 @@ addPath('/patients/{id}', 'get', {
 
 addPath('/doctors', 'get', {
   summary: 'Search doctors',
-  security: [{ bearerAuth: [] }],
+  security: [],
   parameters: [
     { name: 'department', in: 'query', schema: { type: 'string' } },
     { name: 'q', in: 'query', schema: { type: 'string' } }
@@ -285,7 +278,7 @@ addPath('/doctors', 'get', {
 
 addPath('/doctors', 'post', {
   summary: 'Create doctor',
-  security: [{ bearerAuth: [] }],
+  security: [],
   requestBody: {
     required: true,
     content: {
@@ -311,14 +304,14 @@ addPath('/doctors', 'post', {
 
 addPath('/visits/{id}/diagnoses', 'post', {
   summary: 'Add diagnosis',
-  security: [{ bearerAuth: [] }],
+  security: [],
   parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
   responses: { '201': { description: 'Created', content: { 'application/json': { schema: { $ref: '#/components/schemas/Diagnosis' } } } } }
 });
 
 addPath('/diagnoses', 'get', {
   summary: 'List diagnoses',
-  security: [{ bearerAuth: [] }],
+  security: [],
   parameters: [
     { name: 'q', in: 'query', schema: { type: 'string' } },
     { name: 'from', in: 'query', schema: { type: 'string', format: 'date' } },
@@ -331,14 +324,14 @@ addPath('/diagnoses', 'get', {
 
 addPath('/visits/{id}/medications', 'post', {
   summary: 'Add medication',
-  security: [{ bearerAuth: [] }],
+  security: [],
   parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
   responses: { '201': { description: 'Created', content: { 'application/json': { schema: { $ref: '#/components/schemas/Medication' } } } } }
 });
 
 addPath('/medications', 'get', {
   summary: 'List medications',
-  security: [{ bearerAuth: [] }],
+  security: [],
   parameters: [
     { name: 'patient_id', in: 'query', schema: { type: 'string', format: 'uuid' } },
     { name: 'from', in: 'query', schema: { type: 'string', format: 'date' } },
@@ -351,14 +344,14 @@ addPath('/medications', 'get', {
 
 addPath('/visits/{id}/labs', 'post', {
   summary: 'Add lab result',
-  security: [{ bearerAuth: [] }],
+  security: [],
   parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
   responses: { '201': { description: 'Created', content: { 'application/json': { schema: { $ref: '#/components/schemas/LabResult' } } } } }
 });
 
 addPath('/labs', 'get', {
   summary: 'List lab results',
-  security: [{ bearerAuth: [] }],
+  security: [],
   parameters: [
     { name: 'patient_id', in: 'query', schema: { type: 'string', format: 'uuid' } },
     { name: 'test_name', in: 'query', schema: { type: 'string' } },
@@ -374,14 +367,14 @@ addPath('/labs', 'get', {
 
 addPath('/visits/{id}/observations', 'post', {
   summary: 'Add observation',
-  security: [{ bearerAuth: [] }],
+  security: [],
   parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
   responses: { '201': { description: 'Created', content: { 'application/json': { schema: { $ref: '#/components/schemas/Observation' } } } } }
 });
 
 addPath('/visits/{id}/observations', 'get', {
   summary: 'List visit observations',
-  security: [{ bearerAuth: [] }],
+  security: [],
   parameters: [
     { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
     { name: 'scope', in: 'query', schema: { type: 'string', enum: ['visit', 'patient'] } },
@@ -401,7 +394,7 @@ addPath('/visits/{id}/observations', 'get', {
 
 addPath('/patients/{patientId}/observations', 'get', {
   summary: 'List patient observations',
-  security: [{ bearerAuth: [] }],
+  security: [],
   parameters: [
     { name: 'patientId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
     { name: 'author', in: 'query', schema: { type: 'string', enum: ['me', 'any'] } },
@@ -421,7 +414,7 @@ addPath('/patients/{patientId}/observations', 'get', {
 
 addPath('/insights/patient-summary', 'get', {
   summary: 'Patient summary',
-  security: [{ bearerAuth: [] }],
+  security: [],
   parameters: [
     { name: 'patient_id', in: 'query', required: true, schema: { type: 'string', format: 'uuid' } },
     { name: 'last_n', in: 'query', schema: { type: 'integer' } }
@@ -431,7 +424,7 @@ addPath('/insights/patient-summary', 'get', {
 
 addPath('/insights/latest-visit', 'get', {
   summary: 'Latest visit for patient',
-  security: [{ bearerAuth: [] }],
+  security: [],
   parameters: [
     { name: 'patient_id', in: 'query', required: true, schema: { type: 'string', format: 'uuid' } }
   ],
@@ -440,7 +433,7 @@ addPath('/insights/latest-visit', 'get', {
 
 addPath('/insights/cohort', 'get', {
   summary: 'Cohort query',
-  security: [{ bearerAuth: [] }],
+  security: [],
   parameters: [
     { name: 'test_name', in: 'query', required: true, schema: { type: 'string' } },
     { name: 'op', in: 'query', schema: { type: 'string', enum: ['gt', 'gte', 'lt', 'lte', 'eq'] } },
@@ -452,7 +445,7 @@ addPath('/insights/cohort', 'get', {
 
 addPath('/audit', 'get', {
   summary: 'Audit log',
-  security: [{ bearerAuth: [] }],
+  security: [],
   parameters: [
     { name: 'entity', in: 'query', schema: { type: 'string' } },
     { name: 'entity_id', in: 'query', schema: { type: 'string' } },
