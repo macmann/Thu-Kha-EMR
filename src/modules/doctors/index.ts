@@ -17,9 +17,6 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Invalid query' });
   }
   const { department, q } = parsed.data;
-  if (!department && !q) {
-    return res.status(400).json({ error: 'department or q required' });
-  }
   const where: any = {};
   if (department) {
     where.department = { contains: department, mode: 'insensitive' };

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   createVisit,
@@ -6,6 +6,8 @@ import {
   addMedication,
   addLabResult,
   addObservation,
+  listDoctors,
+  type Doctor,
 } from '../api/client';
 import { useAuth } from '../context/AuthProvider';
 
@@ -18,6 +20,8 @@ export default function AddVisit() {
     new Date().toISOString().slice(0, 10),
   );
   const [department, setDepartment] = useState('');
+  const [doctorId, setDoctorId] = useState('');
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [reason, setReason] = useState('');
   const [diagnoses, setDiagnoses] = useState('');
   const [medications, setMedications] = useState('');
@@ -31,15 +35,21 @@ export default function AddVisit() {
   const [bmi, setBmi] = useState('');
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    listDoctors()
+      .then(setDoctors)
+      .catch((err) => console.error(err));
+  }, []);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!id || !user) return;
+    if (!id || !user || !doctorId) return;
     setSaving(true);
     try {
       const visit = await createVisit({
         patientId: id,
         visitDate,
-        doctorId: user.userId,
+        doctorId,
         department,
         reason: reason || undefined,
       });
@@ -125,13 +135,37 @@ export default function AddVisit() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">
+              Doctor
+            </label>
+            <select
+              value={doctorId}
+              onChange={(e) => {
+                setDoctorId(e.target.value);
+                const doc = doctors.find((d) => d.doctorId === e.target.value);
+                setDepartment(doc ? doc.department : '');
+              }}
+              className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
+              required
+            >
+              <option value="" disabled>
+                Select Doctor
+              </option>
+              {doctors.map((d) => (
+                <option key={d.doctorId} value={d.doctorId}>
+                  {`${d.name} - ${d.department}`}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
               Department
             </label>
             <input
               type="text"
               value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-              className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
+              readOnly
+              className="mt-1 w-full rounded-md border-gray-300 shadow-sm bg-gray-100"
               required
             />
           </div>
