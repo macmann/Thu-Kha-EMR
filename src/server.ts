@@ -10,6 +10,7 @@ import observationsRouter from './modules/observations/index.js';
 import insightsRouter from './modules/insights/index.js';
 import auditRouter from './modules/audit/index.js';
 import { docsRouter } from './docs/openapi.js';
+import authRouter from './modules/auth/index.js';
 
 export const apiRouter = Router();
 
@@ -25,6 +26,7 @@ apiRouter.use('/labs', labsRouter);
 apiRouter.use(observationsRouter);
 apiRouter.use('/insights', insightsRouter);
 apiRouter.use('/audit', auditRouter);
+apiRouter.use('/auth', authRouter);
 apiRouter.use(docsRouter);
 
 export default apiRouter;
