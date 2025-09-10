@@ -4,28 +4,40 @@ interface LoginCardProps {
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   values: { username: string; password: string };
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  appName: string;
+  logo?: string | null;
 }
 
-export default function LoginCard({ onSubmit, values, onChange }: LoginCardProps) {
+export default function LoginCard({
+  onSubmit,
+  values,
+  onChange,
+  appName,
+  logo,
+}: LoginCardProps) {
   return (
     <div className="rounded-2xl bg-white p-8 shadow">
       <div className="mb-6 flex flex-col items-center">
-        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-600">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-6 w-6 text-white"
-            aria-hidden="true"
-          >
-            <path d="M12 6v12M6 12h12" />
-          </svg>
-        </div>
-        <h1 className="text-2xl font-bold text-gray-900">EMR System</h1>
+        {logo ? (
+          <img src={logo} alt="logo" className="mb-4 h-12 w-12 rounded" />
+        ) : (
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-600">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-6 w-6 text-white"
+              aria-hidden="true"
+            >
+              <path d="M12 6v12M6 12h12" />
+            </svg>
+          </div>
+        )}
+        <h1 className="text-2xl font-bold text-gray-900">{appName}</h1>
         <p className="mt-2 text-sm text-gray-600">Sign in to your account</p>
       </div>
 
