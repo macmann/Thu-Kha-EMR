@@ -2,8 +2,9 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient, Prisma } from '@prisma/client';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
-import { requireAuth } from '../auth/index.js';
+import { requireAuth, type AuthRequest } from '../auth/index.js';
 import { validate } from '../../middleware/validate.js';
+import { logDataChange } from '../audit/index.js';
 
 const prisma = new PrismaClient();
 const router = Router();
@@ -47,6 +48,25 @@ router.get(
     res.json(patients);
   }
 );
+
+const createPatientSchema = z.object({
+  name: z.string().min(1),
+  dob: z.coerce.date(),
+  insurance: z.string().min(1),
+});
+
+router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
+  const parsed = createPatientSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.flatten() });
+  }
+  const patient = await prisma.patient.create({
+    data: { ...parsed.data, gender: 'M' },
+    select: { patientId: true, name: true, dob: true, insurance: true },
+  });
+  await logDataChange(req.user!.userId, 'patient', patient.patientId, undefined, patient);
+  res.status(201).json(patient);
+});
 
 router.get('/:id', requireAuth, async (req: Request, res: Response) => {
   const { id } = req.params;
