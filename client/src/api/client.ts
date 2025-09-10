@@ -99,6 +99,10 @@ export async function searchPatients(query: string): Promise<Patient[]> {
   return fetchJSON(`/patients?query=${encodeURIComponent(query)}`);
 }
 
+export async function listDoctors(): Promise<Doctor[]> {
+  return fetchJSON('/doctors');
+}
+
 export async function getPatient(
   id: string,
   params?: { include?: 'summary' },
