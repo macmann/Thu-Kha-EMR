@@ -40,6 +40,22 @@ const openapi: any = {
           doctor: { $ref: '#/components/schemas/Doctor' }
         }
       },
+      VisitDetail: {
+        type: 'object',
+        properties: {
+          visitId: { type: 'string', format: 'uuid' },
+          patientId: { type: 'string', format: 'uuid' },
+          doctorId: { type: 'string', format: 'uuid' },
+          visitDate: { type: 'string', format: 'date' },
+          department: { type: 'string' },
+          reason: { type: 'string', nullable: true },
+          doctor: { $ref: '#/components/schemas/Doctor' },
+          diagnoses: { type: 'array', items: { $ref: '#/components/schemas/Diagnosis' } },
+          medications: { type: 'array', items: { $ref: '#/components/schemas/Medication' } },
+          labResults: { type: 'array', items: { $ref: '#/components/schemas/LabResult' } },
+          observations: { type: 'array', items: { $ref: '#/components/schemas/Observation' } },
+        }
+      },
       Diagnosis: {
         type: 'object',
         properties: {
@@ -192,7 +208,7 @@ addPath('/visits', 'post', {
     '201': {
       description: 'Created',
       content: {
-        'application/json': { schema: { $ref: '#/components/schemas/Visit' } },
+        'application/json': { schema: { $ref: '#/components/schemas/VisitDetail' } },
       },
     },
   },
@@ -209,7 +225,13 @@ addPath('/visits/{id}', 'get', {
   summary: 'Get visit detail',
   security: [],
   parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
-  responses: { '200': { description: 'Visit', content: { 'application/json': { schema: { $ref: '#/components/schemas/Visit' } } } }, '404': { description: 'Not found' } }
+  responses: {
+    '200': {
+      description: 'Visit',
+      content: { 'application/json': { schema: { $ref: '#/components/schemas/VisitDetail' } } },
+    },
+    '404': { description: 'Not found' },
+  },
 });
 
 addPath('/patients', 'post', {
