@@ -66,6 +66,7 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
       select: {
         visitId: true,
         visitDate: true,
+        doctor: { select: { doctorId: true, name: true, department: true } },
         diagnoses: { select: { diagnosis: true } },
         medications: { select: { drugName: true, dosage: true, instructions: true } },
         labResults: {

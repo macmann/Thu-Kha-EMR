@@ -7,6 +7,12 @@ export interface Patient {
   insurance: string | null;
 }
 
+export interface Doctor {
+  doctorId: string;
+  name: string;
+  department: string;
+}
+
 export interface Diagnosis {
   diagnosis: string;
 }
@@ -39,14 +45,17 @@ export interface Observation {
 export interface Visit {
   visitId: string;
   patientId: string;
+  doctorId: string;
   visitDate: string;
   department: string;
   reason?: string;
+  doctor: Doctor;
 }
 
 export interface VisitSummary {
   visitId: string;
   visitDate: string;
+  doctor: Doctor;
   diagnoses: Diagnosis[];
   medications: Medication[];
   labResults: LabResult[];

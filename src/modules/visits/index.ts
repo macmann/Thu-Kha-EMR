@@ -20,7 +20,10 @@ router.post('/visits', requireAuth, requireRole('Doctor', 'Admin'), async (req: 
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.flatten() });
   }
-  const visit = await prisma.visit.create({ data: parsed.data });
+  const visit = await prisma.visit.create({
+    data: parsed.data,
+    include: { doctor: { select: { doctorId: true, name: true, department: true } } },
+  });
   await logDataChange(req.user!.userId, 'visit', visit.visitId, undefined, visit);
   res.status(201).json(visit);
 });
@@ -35,6 +38,7 @@ router.get('/patients/:id/visits', requireAuth, async (req: Request, res: Respon
   const visits = await prisma.visit.findMany({
     where: { patientId: id },
     orderBy: { visitDate: 'desc' },
+    include: { doctor: { select: { doctorId: true, name: true, department: true } } },
   });
   res.json(visits);
 });
@@ -49,6 +53,7 @@ router.get('/visits/:id', requireAuth, async (req: Request, res: Response) => {
   const visit = await prisma.visit.findUnique({
     where: { visitId: id },
     include: {
+      doctor: { select: { doctorId: true, name: true, department: true } },
       diagnoses: { orderBy: { createdAt: 'desc' } },
       medications: { orderBy: { createdAt: 'desc' } },
       labResults: { orderBy: { createdAt: 'desc' } },

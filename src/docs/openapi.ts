@@ -43,7 +43,8 @@ const openapi: any = {
           doctorId: { type: 'string', format: 'uuid' },
           visitDate: { type: 'string', format: 'date' },
           department: { type: 'string' },
-          reason: { type: 'string', nullable: true }
+          reason: { type: 'string', nullable: true },
+          doctor: { $ref: '#/components/schemas/Doctor' }
         }
       },
       Diagnosis: {

@@ -60,6 +60,7 @@ describe('GET /api/patients/:id summary', () => {
     expect(res.body.patientId).toBe(patientId);
     expect(res.body.visits.length).toBeGreaterThan(0);
     const visit = res.body.visits[0];
+    expect(visit.doctor.name).toBe('Dr. Who');
     expect(visit.diagnoses.length).toBeGreaterThan(0);
     expect(visit.medications.length).toBeGreaterThan(0);
     expect(visit.labResults.length).toBeGreaterThan(0);
