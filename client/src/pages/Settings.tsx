@@ -4,8 +4,17 @@ import { useSettings } from '../context/SettingsProvider';
 type TabKey = 'general' | 'doctor';
 
 export default function Settings() {
-  const { appName, logo, users, doctors, updateSettings, addUser, addDoctor } =
-    useSettings();
+  const {
+    appName,
+    logo,
+    users,
+    doctors,
+    updateSettings,
+    addUser,
+    addDoctor,
+    widgetEnabled,
+    setWidgetEnabled,
+  } = useSettings();
   const [name, setName] = useState(appName);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -90,6 +99,17 @@ export default function Settings() {
                 </label>
                 <input type="file" accept="image/*" onChange={handleLogoChange} />
                 {logo && <img src={logo} alt="logo" className="mt-2 h-16" />}
+              </div>
+              <div>
+                <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={widgetEnabled}
+                    onChange={(e) => setWidgetEnabled(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  <span>Widget On/Off</span>
+                </label>
               </div>
               <button
                 type="submit"

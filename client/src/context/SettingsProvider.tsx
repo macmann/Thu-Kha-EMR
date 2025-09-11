@@ -14,6 +14,8 @@ interface SettingsContextType {
   updateSettings: (data: { appName?: string; logo?: string | null }) => void;
   addUser: (user: UserAccount) => void;
   addDoctor: (doctor: { name: string; department: string }) => Promise<void>;
+  widgetEnabled: boolean;
+  setWidgetEnabled: (enabled: boolean) => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -23,6 +25,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [logo, setLogo] = useState<string | null>(null);
   const [users, setUsers] = useState<UserAccount[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [widgetEnabled, setWidgetEnabled] = useState<boolean>(false);
 
   useEffect(() => {
     const stored = localStorage.getItem('appSettings');
@@ -32,6 +35,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (parsed.appName) setAppName(parsed.appName);
         if (parsed.logo) setLogo(parsed.logo);
         if (Array.isArray(parsed.users)) setUsers(parsed.users);
+        if (typeof parsed.widgetEnabled === 'boolean') setWidgetEnabled(parsed.widgetEnabled);
       } catch {
         /* ignore */
       }
@@ -43,8 +47,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('appSettings', JSON.stringify({ appName, logo, users }));
-  }, [appName, logo, users]);
+    localStorage.setItem(
+      'appSettings',
+      JSON.stringify({ appName, logo, users, widgetEnabled }),
+    );
+  }, [appName, logo, users, widgetEnabled]);
 
   const updateSettings = (data: { appName?: string; logo?: string | null }) => {
     if (data.appName !== undefined) setAppName(data.appName);
@@ -62,7 +69,17 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   return (
     <SettingsContext.Provider
-      value={{ appName, logo, users, doctors, updateSettings, addUser, addDoctor }}
+      value={{
+        appName,
+        logo,
+        users,
+        doctors,
+        updateSettings,
+        addUser,
+        addDoctor,
+        widgetEnabled,
+        setWidgetEnabled,
+      }}
     >
       {children}
     </SettingsContext.Provider>
