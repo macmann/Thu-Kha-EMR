@@ -23,7 +23,17 @@ if (
 
 export const app = express();
 app.disable('x-powered-by');
-app.use(helmet());
+app.use(
+  helmet({
+    frameguard: false,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        frameSrc: ["'self'", 'https://demo.atenxion.ai'],
+      },
+    },
+  })
+);
 
 if (process.env.NODE_ENV !== 'production') {
   app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
