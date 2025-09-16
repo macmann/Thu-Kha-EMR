@@ -53,6 +53,12 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     );
   }, [appName, logo, users, widgetEnabled]);
 
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.title = appName || 'EMR System';
+    }
+  }, [appName]);
+
   const updateSettings = (data: { appName?: string; logo?: string | null }) => {
     if (data.appName !== undefined) setAppName(data.appName);
     if (data.logo !== undefined) setLogo(data.logo);
