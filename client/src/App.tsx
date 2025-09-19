@@ -9,6 +9,9 @@ import Cohort from './pages/Cohort';
 import Settings from './pages/Settings';
 import Home from './pages/Home';
 import RegisterPatient from './pages/RegisterPatient';
+import AppointmentsPage from './pages/AppointmentsPage';
+import AppointmentForm from './pages/AppointmentForm';
+import AppointmentDetail from './pages/AppointmentDetail';
 import './styles/App.css';
 
 function App() {
@@ -28,6 +31,30 @@ function App() {
         element={
           <RouteGuard>
             <PatientDetail />
+          </RouteGuard>
+        }
+      />
+      <Route
+        path="/appointments"
+        element={
+          <RouteGuard>
+            <AppointmentsPage />
+          </RouteGuard>
+        }
+      />
+      <Route
+        path="/appointments/new"
+        element={
+          <RouteGuard>
+            <AppointmentForm />
+          </RouteGuard>
+        }
+      />
+      <Route
+        path="/appointments/:id"
+        element={
+          <RouteGuard>
+            <AppointmentDetail />
           </RouteGuard>
         }
       />

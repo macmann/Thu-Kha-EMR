@@ -1,6 +1,7 @@
 node_modules
 dist
 dist_client
+tsconfig.tsbuildinfo
 .env
 
 # Optional: lockfile generated during testing

@@ -22,7 +22,7 @@ type NavigationItem = {
 const navigation: NavigationItem[] = [
   { key: 'dashboard', name: 'Dashboard', icon: DashboardIcon, to: '/' },
   { key: 'patients', name: 'Patients', icon: PatientsIcon, to: '/patients' },
-  { key: 'appointments', name: 'Appointments', icon: CalendarIcon },
+  { key: 'appointments', name: 'Appointments', icon: CalendarIcon, to: '/appointments' },
   { key: 'reports', name: 'Reports', icon: ReportsIcon },
   { key: 'settings', name: 'Settings', icon: SettingsIcon, to: '/settings' },
 ];
