@@ -1,5 +1,83 @@
 import { Router, Request, Response } from 'express';
 
+const appointmentExample = {
+  appointmentId: 'a3f2bfae-1234-4e5f-9f4e-9d1d0c6bb001',
+  patientId: '11111111-2222-3333-4444-555555555555',
+  doctorId: '99999999-8888-7777-6666-555555555555',
+  department: 'Cardiology',
+  date: '2024-06-15T00:00:00.000Z',
+  startTimeMin: 540,
+  endTimeMin: 600,
+  reason: 'Routine follow-up',
+  location: 'Room 12B',
+  status: 'Scheduled',
+  cancelReason: null,
+  createdAt: '2024-05-01T10:00:00.000Z',
+  updatedAt: '2024-05-01T10:00:00.000Z',
+  patient: {
+    patientId: '11111111-2222-3333-4444-555555555555',
+    name: 'Jane Doe',
+  },
+  doctor: {
+    doctorId: '99999999-8888-7777-6666-555555555555',
+    name: 'Dr. Smith',
+    department: 'Cardiology',
+  },
+};
+
+const appointmentCreateExample = {
+  patientId: '11111111-2222-3333-4444-555555555555',
+  doctorId: '99999999-8888-7777-6666-555555555555',
+  department: 'Cardiology',
+  date: '2024-06-15',
+  startTimeMin: 540,
+  endTimeMin: 600,
+  reason: 'Routine follow-up',
+  location: 'Room 12B',
+};
+
+const appointmentUpdateExample = {
+  department: 'Cardiology',
+  startTimeMin: 555,
+  endTimeMin: 615,
+  location: 'Telehealth',
+};
+
+const appointmentListExample = {
+  data: [appointmentExample],
+  nextCursor: 'b5aa0d46-8e08-4b9d-8b1e-2f0f14a6d7c3',
+};
+
+const availabilityExample = {
+  availability: [
+    { startMin: 480, endMin: 720 },
+    { startMin: 780, endMin: 1020 },
+  ],
+  blocked: [{ startMin: 540, endMin: 600 }],
+  freeSlots: [
+    { startMin: 480, endMin: 540 },
+    { startMin: 600, endMin: 720 },
+    { startMin: 780, endMin: 900 },
+    { startMin: 960, endMin: 1020 },
+  ],
+};
+
+const statusPatchExample = {
+  status: 'Cancelled',
+  cancelReason: 'Patient requested cancellation',
+};
+
+const appointmentStatusUpdatedExample = {
+  ...appointmentExample,
+  status: 'Cancelled',
+  cancelReason: 'Patient requested cancellation',
+  updatedAt: '2024-06-15T13:55:00.000Z',
+};
+
+const visitCreatedExample = {
+  visitId: '6f0c93de-5c34-4af9-9a3b-4bfbc147abcd',
+};
+
 const openapi: any = {
   openapi: '3.0.0',
   info: {
@@ -8,6 +86,13 @@ const openapi: any = {
   },
   servers: [{ url: '/api' }],
   components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+      },
+    },
     schemas: {
       Patient: {
         type: 'object',
@@ -157,6 +242,174 @@ const openapi: any = {
         type: 'object',
         properties: {
           accessToken: { type: 'string' }
+        }
+      },
+      AppointmentStatus: {
+        type: 'string',
+        description: 'Lifecycle status for an appointment.',
+        enum: ['Scheduled', 'CheckedIn', 'InProgress', 'Completed', 'Cancelled']
+      },
+      AppointmentStatusPatch: {
+        type: 'string',
+        description: 'Allowed target statuses when updating an appointment status.',
+        enum: ['CheckedIn', 'InProgress', 'Completed', 'Cancelled']
+      },
+      AppointmentPatientSummary: {
+        type: 'object',
+        required: ['patientId', 'name'],
+        properties: {
+          patientId: { type: 'string', format: 'uuid' },
+          name: { type: 'string' }
+        }
+      },
+      AppointmentDoctorSummary: {
+        type: 'object',
+        required: ['doctorId', 'name', 'department'],
+        properties: {
+          doctorId: { type: 'string', format: 'uuid' },
+          name: { type: 'string' },
+          department: { type: 'string' }
+        }
+      },
+      Appointment: {
+        type: 'object',
+        required: [
+          'appointmentId',
+          'patientId',
+          'doctorId',
+          'department',
+          'date',
+          'startTimeMin',
+          'endTimeMin',
+          'status',
+          'createdAt',
+          'updatedAt',
+          'patient',
+          'doctor'
+        ],
+        properties: {
+          appointmentId: { type: 'string', format: 'uuid' },
+          patientId: { type: 'string', format: 'uuid' },
+          doctorId: { type: 'string', format: 'uuid' },
+          department: { type: 'string' },
+          date: { type: 'string', format: 'date-time' },
+          startTimeMin: { type: 'integer', minimum: 0, maximum: 1440 },
+          endTimeMin: { type: 'integer', minimum: 0, maximum: 1440 },
+          reason: { type: 'string', nullable: true },
+          location: { type: 'string', nullable: true },
+          status: { $ref: '#/components/schemas/AppointmentStatus' },
+          cancelReason: { type: 'string', nullable: true },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+          patient: { $ref: '#/components/schemas/AppointmentPatientSummary' },
+          doctor: { $ref: '#/components/schemas/AppointmentDoctorSummary' }
+        }
+      },
+      AppointmentCreateRequest: {
+        type: 'object',
+        required: [
+          'patientId',
+          'doctorId',
+          'department',
+          'date',
+          'startTimeMin',
+          'endTimeMin'
+        ],
+        properties: {
+          patientId: { type: 'string', format: 'uuid' },
+          doctorId: { type: 'string', format: 'uuid' },
+          department: { type: 'string' },
+          date: { type: 'string', format: 'date' },
+          startTimeMin: { type: 'integer', minimum: 0, maximum: 1440 },
+          endTimeMin: { type: 'integer', minimum: 0, maximum: 1440 },
+          reason: { type: 'string' },
+          location: { type: 'string' }
+        }
+      },
+      AppointmentUpdateRequest: {
+        type: 'object',
+        properties: {
+          patientId: { type: 'string', format: 'uuid' },
+          doctorId: { type: 'string', format: 'uuid' },
+          department: { type: 'string' },
+          date: { type: 'string', format: 'date' },
+          startTimeMin: { type: 'integer', minimum: 0, maximum: 1440 },
+          endTimeMin: { type: 'integer', minimum: 0, maximum: 1440 },
+          reason: { type: 'string' },
+          location: { type: 'string' }
+        }
+      },
+      AppointmentStatusUpdateRequest: {
+        type: 'object',
+        required: ['status'],
+        properties: {
+          status: { $ref: '#/components/schemas/AppointmentStatusPatch' },
+          cancelReason: {
+            type: 'string',
+            description: 'Reason is only applicable when cancelling an appointment.'
+          }
+        }
+      },
+      AppointmentListResponse: {
+        type: 'object',
+        required: ['data'],
+        properties: {
+          data: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/Appointment' }
+          },
+          nextCursor: {
+            type: 'string',
+            format: 'uuid',
+            description: 'Cursor to request the next page of appointments.',
+            nullable: true
+          }
+        }
+      },
+      AvailabilitySlot: {
+        type: 'object',
+        required: ['startMin', 'endMin'],
+        properties: {
+          startMin: {
+            type: 'integer',
+            minimum: 0,
+            maximum: 1440,
+            description: 'Inclusive minute offset from the start of the day.'
+          },
+          endMin: {
+            type: 'integer',
+            minimum: 0,
+            maximum: 1440,
+            description: 'Exclusive minute offset from the start of the day.'
+          }
+        }
+      },
+      AvailabilityResponse: {
+        type: 'object',
+        required: ['availability', 'blocked', 'freeSlots'],
+        properties: {
+          availability: {
+            type: 'array',
+            description: 'Configured availability windows for the doctor on the requested date.',
+            items: { $ref: '#/components/schemas/AvailabilitySlot' }
+          },
+          blocked: {
+            type: 'array',
+            description: 'Merged blackout periods and booked appointments.',
+            items: { $ref: '#/components/schemas/AvailabilitySlot' }
+          },
+          freeSlots: {
+            type: 'array',
+            description: 'Available time ranges after removing blocked periods.',
+            items: { $ref: '#/components/schemas/AvailabilitySlot' }
+          }
+        }
+      },
+      VisitCreatedResponse: {
+        type: 'object',
+        required: ['visitId'],
+        properties: {
+          visitId: { type: 'string', format: 'uuid' }
         }
       }
     }
@@ -364,6 +617,311 @@ addPath('/doctors', 'post', {
     '201': {
       description: 'Doctor',
       content: { 'application/json': { schema: { $ref: '#/components/schemas/Doctor' } } },
+    },
+  },
+});
+
+addPath('/appointments/availability', 'get', {
+  summary: 'Get appointment availability for a doctor',
+  description:
+    'Returns configured availability, blocked segments, and computed free slots for the requested day.',
+  security: [{ bearerAuth: [] }],
+  parameters: [
+    {
+      name: 'doctorId',
+      in: 'query',
+      required: true,
+      description: 'Doctor identifier to evaluate availability for.',
+      schema: { type: 'string', format: 'uuid' },
+    },
+    {
+      name: 'date',
+      in: 'query',
+      required: true,
+      description: 'Date to evaluate availability for (YYYY-MM-DD).',
+      schema: { type: 'string', format: 'date' },
+    },
+  ],
+  responses: {
+    '200': {
+      description: 'Availability for the requested doctor and day.',
+      content: {
+        'application/json': {
+          schema: { $ref: '#/components/schemas/AvailabilityResponse' },
+          example: availabilityExample,
+        },
+      },
+    },
+    '400': {
+      description: 'Invalid request.',
+      content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
+    },
+    '401': { description: 'Unauthorized' },
+  },
+});
+
+addPath('/appointments', 'post', {
+  summary: 'Create appointment',
+  description: 'Creates a new appointment after validating doctor availability and conflicts.',
+  security: [{ bearerAuth: [] }],
+  requestBody: {
+    required: true,
+    content: {
+      'application/json': {
+        schema: { $ref: '#/components/schemas/AppointmentCreateRequest' },
+        example: appointmentCreateExample,
+      },
+    },
+  },
+  responses: {
+    '201': {
+      description: 'Created appointment.',
+      content: {
+        'application/json': {
+          schema: { $ref: '#/components/schemas/Appointment' },
+          example: appointmentExample,
+        },
+      },
+    },
+    '400': {
+      description: 'Invalid request or unavailable time slot.',
+      content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
+    },
+    '401': { description: 'Unauthorized' },
+    '404': {
+      description: 'Patient or doctor not found.',
+      content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
+    },
+  },
+});
+
+addPath('/appointments', 'get', {
+  summary: 'List appointments',
+  description: 'Returns appointments with optional filtering and pagination.',
+  security: [{ bearerAuth: [] }],
+  parameters: [
+    {
+      name: 'date',
+      in: 'query',
+      description: 'Filter to appointments scheduled on this date (YYYY-MM-DD).',
+      schema: { type: 'string', format: 'date' },
+    },
+    {
+      name: 'from',
+      in: 'query',
+      description: 'Return appointments occurring on or after this date (YYYY-MM-DD).',
+      schema: { type: 'string', format: 'date' },
+    },
+    {
+      name: 'to',
+      in: 'query',
+      description: 'Return appointments before the day after this date (YYYY-MM-DD).',
+      schema: { type: 'string', format: 'date' },
+    },
+    {
+      name: 'doctorId',
+      in: 'query',
+      description: 'Filter by doctor identifier.',
+      schema: { type: 'string', format: 'uuid' },
+    },
+    {
+      name: 'status',
+      in: 'query',
+      description: 'Filter by appointment status.',
+      schema: {
+        type: 'string',
+        enum: ['Scheduled', 'CheckedIn', 'InProgress', 'Completed', 'Cancelled'],
+      },
+    },
+    {
+      name: 'limit',
+      in: 'query',
+      description: 'Maximum number of records to return (keyset pagination).',
+      schema: { type: 'integer', minimum: 1, maximum: 100 },
+    },
+    {
+      name: 'cursor',
+      in: 'query',
+      description: 'Cursor (appointmentId) for keyset pagination.',
+      schema: { type: 'string', format: 'uuid' },
+    },
+    {
+      name: 'page',
+      in: 'query',
+      description: 'Page number when using offset pagination.',
+      schema: { type: 'integer', minimum: 1 },
+    },
+    {
+      name: 'pageSize',
+      in: 'query',
+      description: 'Page size when using offset pagination.',
+      schema: { type: 'integer', minimum: 1, maximum: 100 },
+    },
+  ],
+  responses: {
+    '200': {
+      description: 'Appointments matching the supplied filters.',
+      content: {
+        'application/json': {
+          schema: { $ref: '#/components/schemas/AppointmentListResponse' },
+          example: appointmentListExample,
+        },
+      },
+    },
+    '400': {
+      description: 'Invalid request.',
+      content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
+    },
+    '401': { description: 'Unauthorized' },
+  },
+});
+
+addPath('/appointments/{appointmentId}', 'get', {
+  summary: 'Get appointment',
+  security: [{ bearerAuth: [] }],
+  parameters: [
+    {
+      name: 'appointmentId',
+      in: 'path',
+      required: true,
+      schema: { type: 'string', format: 'uuid' },
+    },
+  ],
+  responses: {
+    '200': {
+      description: 'Appointment detail.',
+      content: {
+        'application/json': {
+          schema: { $ref: '#/components/schemas/Appointment' },
+          example: appointmentExample,
+        },
+      },
+    },
+    '401': { description: 'Unauthorized' },
+    '404': {
+      description: 'Appointment not found.',
+      content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
+    },
+  },
+});
+
+addPath('/appointments/{appointmentId}', 'put', {
+  summary: 'Update appointment',
+  security: [{ bearerAuth: [] }],
+  parameters: [
+    {
+      name: 'appointmentId',
+      in: 'path',
+      required: true,
+      schema: { type: 'string', format: 'uuid' },
+    },
+  ],
+  requestBody: {
+    required: true,
+    content: {
+      'application/json': {
+        schema: { $ref: '#/components/schemas/AppointmentUpdateRequest' },
+        example: appointmentUpdateExample,
+      },
+    },
+  },
+  responses: {
+    '200': {
+      description: 'Updated appointment.',
+      content: {
+        'application/json': {
+          schema: { $ref: '#/components/schemas/Appointment' },
+          example: appointmentExample,
+        },
+      },
+    },
+    '400': {
+      description: 'Invalid request or unavailable time slot.',
+      content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
+    },
+    '401': { description: 'Unauthorized' },
+    '404': {
+      description: 'Appointment not found.',
+      content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
+    },
+  },
+});
+
+addPath('/appointments/{appointmentId}', 'delete', {
+  summary: 'Delete appointment',
+  security: [{ bearerAuth: [] }],
+  parameters: [
+    {
+      name: 'appointmentId',
+      in: 'path',
+      required: true,
+      schema: { type: 'string', format: 'uuid' },
+    },
+  ],
+  responses: {
+    '204': { description: 'Appointment deleted.' },
+    '401': { description: 'Unauthorized' },
+    '404': {
+      description: 'Appointment not found.',
+      content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
+    },
+  },
+});
+
+addPath('/appointments/{appointmentId}/status', 'patch', {
+  summary: 'Update appointment status',
+  description:
+    'Transitions an appointment to a new status and optionally creates a visit when completing the appointment.',
+  security: [{ bearerAuth: [] }],
+  parameters: [
+    {
+      name: 'appointmentId',
+      in: 'path',
+      required: true,
+      schema: { type: 'string', format: 'uuid' },
+    },
+  ],
+  requestBody: {
+    required: true,
+    content: {
+      'application/json': {
+        schema: { $ref: '#/components/schemas/AppointmentStatusUpdateRequest' },
+        example: statusPatchExample,
+      },
+    },
+  },
+  responses: {
+    '200': {
+      description: 'Updated appointment or visit identifier when the appointment is completed.',
+      content: {
+        'application/json': {
+          schema: {
+            oneOf: [
+              { $ref: '#/components/schemas/Appointment' },
+              { $ref: '#/components/schemas/VisitCreatedResponse' },
+            ],
+          },
+          examples: {
+            appointment: {
+              summary: 'Status changed without creating a visit',
+              value: appointmentStatusUpdatedExample,
+            },
+            visitCreated: {
+              summary: 'Visit created when marking the appointment as completed',
+              value: visitCreatedExample,
+            },
+          },
+        },
+      },
+    },
+    '400': {
+      description: 'Invalid status transition or request.',
+      content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
+    },
+    '401': { description: 'Unauthorized' },
+    '404': {
+      description: 'Appointment not found.',
+      content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
     },
   },
 });
