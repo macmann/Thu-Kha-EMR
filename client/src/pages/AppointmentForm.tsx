@@ -133,10 +133,10 @@ export default function AppointmentForm() {
 
     let cancelled = false;
 
-    async function loadAppointment() {
+    async function loadAppointment(targetId: string) {
       setInitializing(true);
       try {
-        const appointment = await getAppointment(appointmentId);
+        const appointment = await getAppointment(targetId);
         if (cancelled) return;
 
         hydrateForm(appointment);
@@ -151,7 +151,7 @@ export default function AppointmentForm() {
       }
     }
 
-    loadAppointment();
+    loadAppointment(appointmentId);
 
     return () => {
       cancelled = true;
