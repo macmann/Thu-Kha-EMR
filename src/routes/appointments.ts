@@ -1,0 +1,546 @@
+import { Router, type Request, type Response, type NextFunction } from 'express';
+import { PrismaClient, Prisma, type AppointmentStatus } from '@prisma/client';
+import { z } from 'zod';
+
+import {
+  assertCreatable,
+  assertUpdatable,
+  getDoctorAvailabilityForDate,
+  type AvailabilityWindow,
+} from '../services/appointmentService.js';
+import { validate } from '../middleware/validate.js';
+import { requireAuth } from '../modules/auth/index.js';
+import {
+  CreateAppointmentSchema,
+  UpdateAppointmentBodySchema,
+  UpdateAppointmentParamsSchema,
+  PatchStatusSchema,
+  type CreateAppointmentInput,
+  type UpdateAppointmentInput,
+  type PatchStatusInput,
+} from '../validation/appointment.js';
+import { toDateOnly } from '../utils/time.js';
+import {
+  BadRequestError,
+  HttpError,
+  NotFoundError,
+} from '../utils/httpErrors.js';
+
+const prisma = new PrismaClient();
+const router = Router();
+
+router.use(requireAuth);
+
+const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+
+const availabilityQuerySchema = z.object({
+  doctorId: z.string().uuid(),
+  date: z.string().regex(dateRegex, 'Date must be in format YYYY-MM-DD'),
+});
+
+type AvailabilityQuery = z.infer<typeof availabilityQuerySchema>;
+
+const listQuerySchema = z.object({
+  date: z.string().regex(dateRegex).optional(),
+  from: z.string().regex(dateRegex).optional(),
+  to: z.string().regex(dateRegex).optional(),
+  doctorId: z.string().uuid().optional(),
+  status: z
+    .enum(['Scheduled', 'CheckedIn', 'InProgress', 'Completed', 'Cancelled'])
+    .optional(),
+  limit: z
+    .string()
+    .regex(/^\d+$/)
+    .transform(Number)
+    .pipe(z.number().int().positive().max(100))
+    .optional(),
+  cursor: z.string().uuid().optional(),
+  page: z
+    .string()
+    .regex(/^\d+$/)
+    .transform(Number)
+    .pipe(z.number().int().positive())
+    .optional(),
+  pageSize: z
+    .string()
+    .regex(/^\d+$/)
+    .transform(Number)
+    .pipe(z.number().int().positive().max(100))
+    .optional(),
+});
+
+type ListQuery = z.infer<typeof listQuerySchema>;
+
+type TimeSegment = { startMin: number; endMin: number };
+
+router.get(
+  '/availability',
+  validate({ query: availabilityQuerySchema }),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { doctorId, date } = req.query as AvailabilityQuery;
+      const appointmentDate = toDateOnly(date);
+      const [availability, appointments, blackouts] = await Promise.all([
+        getDoctorAvailabilityForDate(prisma, doctorId, appointmentDate),
+        prisma.appointment.findMany({
+          where: {
+            doctorId,
+            date: appointmentDate,
+            status: { not: 'Cancelled' },
+          },
+          select: {
+            startTimeMin: true,
+            endTimeMin: true,
+          },
+        }),
+        prisma.doctorBlackout.findMany({
+          where: {
+            doctorId,
+            startAt: { lt: addDays(appointmentDate, 1) },
+            endAt: { gt: appointmentDate },
+          },
+          select: {
+            startAt: true,
+            endAt: true,
+          },
+        }),
+      ]);
+
+      const dayStart = appointmentDate;
+      const dayEnd = addDays(dayStart, 1);
+      const blackoutSegments = blackouts
+        .map((blackout) =>
+          convertBlackoutToSegment(blackout.startAt, blackout.endAt, dayStart, dayEnd)
+        )
+        .filter((segment): segment is TimeSegment => Boolean(segment));
+      const bookedSegments = appointments.map((appt) => ({
+        startMin: appt.startTimeMin,
+        endMin: appt.endTimeMin,
+      }));
+      const blockers = mergeSegments([...bookedSegments, ...blackoutSegments]);
+      const freeSlots = calculateFreeSlots(availability, blockers);
+
+      res.json({
+        availability,
+        blocked: blockers,
+        freeSlots,
+      });
+    } catch (error) {
+      handleError(error, next);
+    }
+  }
+);
+
+router.post(
+  '/',
+  validate({ body: CreateAppointmentSchema }),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const body = req.body as CreateAppointmentInput;
+      await assertCreatable(prisma, body);
+      const appointment = await prisma.appointment.create({
+        data: {
+          patientId: body.patientId,
+          doctorId: body.doctorId,
+          department: body.department,
+          date: toDateOnly(body.date),
+          startTimeMin: body.startTimeMin,
+          endTimeMin: body.endTimeMin,
+          reason: body.reason ?? null,
+          location: body.location ?? null,
+        },
+        include: {
+          patient: { select: { patientId: true, name: true } },
+          doctor: { select: { doctorId: true, name: true, department: true } },
+        },
+      });
+      res.status(201).json(appointment);
+    } catch (error) {
+      handleError(error, next);
+    }
+  }
+);
+
+router.put(
+  '/:appointmentId',
+  validate({ params: UpdateAppointmentParamsSchema, body: UpdateAppointmentBodySchema }),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { appointmentId } = req.params as z.infer<typeof UpdateAppointmentParamsSchema>;
+      const body = req.body as UpdateAppointmentInput;
+
+      await assertUpdatable(prisma, appointmentId, body);
+
+      const data: Prisma.AppointmentUpdateInput = {};
+      if (body.patientId) data.patientId = body.patientId;
+      if (body.doctorId) data.doctorId = body.doctorId;
+      if (body.department) data.department = body.department;
+      if (body.date) data.date = toDateOnly(body.date);
+      if (typeof body.startTimeMin === 'number') data.startTimeMin = body.startTimeMin;
+      if (typeof body.endTimeMin === 'number') data.endTimeMin = body.endTimeMin;
+      if (body.reason !== undefined) data.reason = body.reason;
+      if (body.location !== undefined) data.location = body.location;
+
+      const appointment = await prisma.appointment.update({
+        where: { appointmentId },
+        data,
+        include: {
+          patient: { select: { patientId: true, name: true } },
+          doctor: { select: { doctorId: true, name: true, department: true } },
+        },
+      });
+
+      res.json(appointment);
+    } catch (error) {
+      handleError(error, next);
+    }
+  }
+);
+
+const allowedTransitions: Record<AppointmentStatus, AppointmentStatus[]> = {
+  Scheduled: ['CheckedIn', 'Cancelled'],
+  CheckedIn: ['InProgress', 'Cancelled'],
+  InProgress: ['Completed'],
+  Completed: [],
+  Cancelled: [],
+};
+
+router.patch(
+  '/:appointmentId/status',
+  validate({
+    params: UpdateAppointmentParamsSchema,
+    body: PatchStatusSchema,
+  }),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { appointmentId } = req.params as z.infer<typeof UpdateAppointmentParamsSchema>;
+      const body = req.body as PatchStatusInput;
+
+      const appointment = await prisma.appointment.findUnique({
+        where: { appointmentId },
+      });
+
+      if (!appointment) {
+        throw new NotFoundError('Appointment not found');
+      }
+
+      if (body.status !== appointment.status) {
+        const allowed = allowedTransitions[appointment.status] ?? [];
+        if (!allowed.includes(body.status)) {
+          throw new BadRequestError('Invalid status transition');
+        }
+      }
+
+      if (body.status !== 'Cancelled' && body.cancelReason) {
+        throw new BadRequestError('cancelReason is only allowed when cancelling an appointment');
+      }
+
+      if (body.status === 'Completed') {
+        const result = await prisma.$transaction(async (tx) => {
+          const updatedAppointment = await tx.appointment.update({
+            where: { appointmentId },
+            data: {
+              status: body.status,
+              cancelReason: null,
+            },
+          });
+
+          const appointmentDate = toDateOnly(
+            updatedAppointment.date.toISOString().slice(0, 10)
+          );
+
+          const existingVisit = await tx.visit.findFirst({
+            where: {
+              patientId: updatedAppointment.patientId,
+              doctorId: updatedAppointment.doctorId,
+              visitDate: appointmentDate,
+            },
+            select: { visitId: true },
+          });
+
+          if (existingVisit) {
+            return existingVisit.visitId;
+          }
+
+          const visit = await tx.visit.create({
+            data: {
+              patientId: updatedAppointment.patientId,
+              doctorId: updatedAppointment.doctorId,
+              visitDate: appointmentDate,
+              department: updatedAppointment.department,
+              reason: updatedAppointment.reason ?? undefined,
+            },
+            select: { visitId: true },
+          });
+
+          return visit.visitId;
+        });
+
+        res.json({ visitId: result });
+        return;
+      }
+
+      const updated = await prisma.appointment.update({
+        where: { appointmentId },
+        data: {
+          status: body.status,
+          cancelReason: body.status === 'Cancelled' ? body.cancelReason ?? null : null,
+        },
+        include: {
+          patient: { select: { patientId: true, name: true } },
+          doctor: { select: { doctorId: true, name: true, department: true } },
+        },
+      });
+
+      res.json(updated);
+    } catch (error) {
+      handleError(error, next);
+    }
+  }
+);
+
+router.get(
+  '/',
+  validate({ query: listQuerySchema }),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const query = req.query as ListQuery;
+      const where: Prisma.AppointmentWhereInput = {};
+
+      if (query.date) {
+        where.date = toDateOnly(query.date);
+      } else {
+        const dateFilter: Prisma.DateTimeFilter = {};
+        if (query.from) {
+          dateFilter.gte = toDateOnly(query.from);
+        }
+        if (query.to) {
+          const toDate = toDateOnly(query.to);
+          dateFilter.lt = addDays(toDate, 1);
+        }
+        if (Object.keys(dateFilter).length > 0) {
+          where.date = dateFilter;
+        }
+      }
+
+      if (query.doctorId) {
+        where.doctorId = query.doctorId;
+      }
+
+      if (query.status) {
+        where.status = query.status as AppointmentStatus;
+      }
+
+      let take = query.limit ?? query.pageSize ?? 20;
+      if (take > 100) take = 100;
+
+      const findMany: Prisma.AppointmentFindManyArgs = {
+        where,
+        include: {
+          patient: { select: { patientId: true, name: true } },
+          doctor: { select: { doctorId: true, name: true, department: true } },
+        },
+        orderBy: [
+          { date: 'asc' },
+          { startTimeMin: 'asc' },
+        ],
+        take,
+      };
+
+      if (query.cursor) {
+        findMany.cursor = { appointmentId: query.cursor };
+        findMany.skip = 1;
+      } else if (query.page) {
+        const pageSize = query.pageSize ?? take;
+        const skip = (query.page - 1) * pageSize;
+        if (skip > 0) {
+          findMany.skip = skip;
+        }
+        findMany.take = pageSize;
+      }
+
+      const appointments = await prisma.appointment.findMany(findMany);
+      const nextCursor =
+        appointments.length === findMany.take
+          ? appointments[appointments.length - 1]?.appointmentId
+          : undefined;
+
+      res.json({ data: appointments, nextCursor });
+    } catch (error) {
+      handleError(error, next);
+    }
+  }
+);
+
+router.get(
+  '/:appointmentId',
+  validate({ params: UpdateAppointmentParamsSchema }),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { appointmentId } = req.params as z.infer<typeof UpdateAppointmentParamsSchema>;
+
+      const appointment = await prisma.appointment.findUnique({
+        where: { appointmentId },
+        include: {
+          patient: { select: { patientId: true, name: true } },
+          doctor: { select: { doctorId: true, name: true, department: true } },
+        },
+      });
+
+      if (!appointment) {
+        throw new NotFoundError('Appointment not found');
+      }
+
+      res.json(appointment);
+    } catch (error) {
+      handleError(error, next);
+    }
+  }
+);
+
+router.delete(
+  '/:appointmentId',
+  validate({ params: UpdateAppointmentParamsSchema }),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { appointmentId } = req.params as z.infer<typeof UpdateAppointmentParamsSchema>;
+      await prisma.appointment.delete({ where: { appointmentId } });
+      res.status(204).send();
+    } catch (error) {
+      handleError(error, next);
+    }
+  }
+);
+
+function handleError(error: unknown, next: NextFunction) {
+  if (error instanceof HttpError) {
+    next(error);
+    return;
+  }
+
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+    next(new NotFoundError('Appointment not found'));
+    return;
+  }
+
+  if (error instanceof Error) {
+    if (/not found/i.test(error.message)) {
+      next(new NotFoundError(error.message));
+      return;
+    }
+    next(new BadRequestError(error.message));
+    return;
+  }
+
+  next(error as Error);
+}
+
+function convertBlackoutToSegment(
+  startAt: Date,
+  endAt: Date,
+  dayStart: Date,
+  dayEnd: Date
+): TimeSegment | null {
+  const clampedStart = Math.max(startAt.getTime(), dayStart.getTime());
+  const clampedEnd = Math.min(endAt.getTime(), dayEnd.getTime());
+  if (clampedEnd <= clampedStart) {
+    return null;
+  }
+
+  const minute = 60 * 1000;
+  const startMin = Math.max(0, Math.floor((clampedStart - dayStart.getTime()) / minute));
+  const endMin = Math.min(1440, Math.ceil((clampedEnd - dayStart.getTime()) / minute));
+
+  if (endMin <= startMin) {
+    return null;
+  }
+
+  return { startMin, endMin };
+}
+
+function mergeSegments(segments: TimeSegment[]): TimeSegment[] {
+  if (segments.length === 0) {
+    return [];
+  }
+
+  const sorted = [...segments]
+    .filter((segment) => segment.endMin > segment.startMin)
+    .sort((a, b) => (a.startMin === b.startMin ? a.endMin - b.endMin : a.startMin - b.startMin));
+
+  if (!sorted.length) {
+    return [];
+  }
+
+  const merged: TimeSegment[] = [sorted[0]];
+
+  for (let i = 1; i < sorted.length; i += 1) {
+    const current = sorted[i];
+    const last = merged[merged.length - 1];
+
+    if (current.startMin <= last.endMin) {
+      last.endMin = Math.max(last.endMin, current.endMin);
+    } else {
+      merged.push({ ...current });
+    }
+  }
+
+  return merged;
+}
+
+function calculateFreeSlots(
+  windows: AvailabilityWindow[],
+  blockers: TimeSegment[]
+): TimeSegment[] {
+  const freeSlots: TimeSegment[] = [];
+
+  for (const window of windows) {
+    freeSlots.push(...subtractWindow(window, blockers));
+  }
+
+  return freeSlots;
+}
+
+function subtractWindow(
+  window: AvailabilityWindow,
+  blockers: TimeSegment[]
+): TimeSegment[] {
+  const slots: TimeSegment[] = [];
+  let currentStart = window.startMin;
+
+  for (const blocker of blockers) {
+    if (blocker.endMin <= window.startMin) {
+      continue;
+    }
+
+    if (blocker.startMin >= window.endMin) {
+      break;
+    }
+
+    const overlapStart = Math.max(blocker.startMin, window.startMin);
+    const overlapEnd = Math.min(blocker.endMin, window.endMin);
+
+    if (overlapStart > currentStart) {
+      slots.push({ startMin: currentStart, endMin: overlapStart });
+    }
+
+    currentStart = Math.max(currentStart, overlapEnd);
+
+    if (currentStart >= window.endMin) {
+      break;
+    }
+  }
+
+  if (currentStart < window.endMin) {
+    slots.push({ startMin: currentStart, endMin: window.endMin });
+  }
+
+  return slots.filter((slot) => slot.endMin > slot.startMin);
+}
+
+function addDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  result.setUTCDate(result.getUTCDate() + days);
+  return result;
+}
+
+export default router;
