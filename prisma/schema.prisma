@@ -22,6 +22,14 @@ enum Role {
   Auditor
 }
 
+enum AppointmentStatus {
+  Scheduled
+  CheckedIn
+  InProgress
+  Completed
+  Cancelled
+}
+
 model Patient {
   patientId    String   @id @default(uuid()) @db.Uuid
   name         String
@@ -44,6 +52,52 @@ model Doctor {
 
   visits       Visit[]
   observations Observation[]
+}
+
+model Appointment {
+  appointmentId String             @id @default(uuid()) @db.Uuid
+  patientId     String             @db.Uuid
+  doctorId      String             @db.Uuid
+  department    String
+  date          DateTime
+  startTimeMin  Int
+  endTimeMin    Int
+  reason        String?
+  location      String?
+  status        AppointmentStatus @default(Scheduled)
+  cancelReason  String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  patient Patient @relation(fields: [patientId], references: [patientId])
+  doctor  Doctor  @relation(fields: [doctorId], references: [doctorId])
+
+  @@index([doctorId, date, startTimeMin, endTimeMin])
+  @@index([patientId, date])
+}
+
+model DoctorAvailability {
+  availabilityId String @id @default(uuid()) @db.Uuid
+  doctorId       String @db.Uuid
+  dayOfWeek      Int
+  startMin       Int
+  endMin         Int
+
+  doctor Doctor @relation(fields: [doctorId], references: [doctorId])
+
+  @@index([doctorId, dayOfWeek])
+}
+
+model DoctorBlackout {
+  blackoutId String   @id @default(uuid()) @db.Uuid
+  doctorId   String   @db.Uuid
+  startAt    DateTime
+  endAt      DateTime
+  reason     String?
+
+  doctor Doctor @relation(fields: [doctorId], references: [doctorId])
+
+  @@index([doctorId, startAt, endAt])
 }
 
 model Visit {
