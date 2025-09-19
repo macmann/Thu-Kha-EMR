@@ -5,6 +5,8 @@ export interface Patient {
   name: string;
   dob: string;
   insurance: string | null;
+  gender?: string | null;
+  contact?: string | null;
 }
 
 export interface Doctor {
