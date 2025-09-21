@@ -1,5 +1,5 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
-import { PrismaClient, Prisma, type AppointmentStatus } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { z } from 'zod';
 
 import {
@@ -26,8 +26,16 @@ import {
   HttpError,
   NotFoundError,
 } from '../utils/httpErrors.js';
+import type {
+  AppPrismaClient,
+  AppointmentFindManyArgs,
+  AppointmentStatus,
+  AppointmentUpdateData,
+  AppointmentWhereInput,
+  DateTimeFilter,
+} from '../types/appointments.js';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as AppPrismaClient;
 const router = Router();
 
 router.use(requireAuth);
@@ -81,30 +89,38 @@ router.get(
     try {
       const { doctorId, date } = req.query as AvailabilityQuery;
       const appointmentDate = toDateOnly(date);
+      const availabilityPromise = getDoctorAvailabilityForDate(
+        prisma,
+        doctorId,
+        appointmentDate
+      );
+      const appointmentsPromise = prisma.appointment.findMany({
+        where: {
+          doctorId,
+          date: appointmentDate,
+          status: { not: 'Cancelled' },
+        },
+        select: {
+          startTimeMin: true,
+          endTimeMin: true,
+        },
+      }) as Promise<Array<{ startTimeMin: number; endTimeMin: number }>>;
+      const blackoutsPromise = prisma.doctorBlackout.findMany({
+        where: {
+          doctorId,
+          startAt: { lt: addDays(appointmentDate, 1) },
+          endAt: { gt: appointmentDate },
+        },
+        select: {
+          startAt: true,
+          endAt: true,
+        },
+      }) as Promise<Array<{ startAt: Date; endAt: Date }>>;
+
       const [availability, appointments, blackouts] = await Promise.all([
-        getDoctorAvailabilityForDate(prisma, doctorId, appointmentDate),
-        prisma.appointment.findMany({
-          where: {
-            doctorId,
-            date: appointmentDate,
-            status: { not: 'Cancelled' },
-          },
-          select: {
-            startTimeMin: true,
-            endTimeMin: true,
-          },
-        }),
-        prisma.doctorBlackout.findMany({
-          where: {
-            doctorId,
-            startAt: { lt: addDays(appointmentDate, 1) },
-            endAt: { gt: appointmentDate },
-          },
-          select: {
-            startAt: true,
-            endAt: true,
-          },
-        }),
+        availabilityPromise,
+        appointmentsPromise,
+        blackoutsPromise,
       ]);
 
       const dayStart = appointmentDate;
@@ -172,7 +188,7 @@ router.put(
 
       await assertUpdatable(prisma, appointmentId, body);
 
-      const data: Prisma.AppointmentUpdateInput = {};
+      const data: AppointmentUpdateData = {};
       if (body.patientId) data.patientId = body.patientId;
       if (body.doctorId) data.doctorId = body.doctorId;
       if (body.department) data.department = body.department;
@@ -306,12 +322,12 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const query = req.query as ListQuery;
-      const where: Prisma.AppointmentWhereInput = {};
+      const where: AppointmentWhereInput = {};
 
       if (query.date) {
         where.date = toDateOnly(query.date);
       } else {
-        const dateFilter: Prisma.DateTimeFilter = {};
+        const dateFilter: DateTimeFilter = {};
         if (query.from) {
           dateFilter.gte = toDateOnly(query.from);
         }
@@ -329,13 +345,13 @@ router.get(
       }
 
       if (query.status) {
-        where.status = query.status as AppointmentStatus;
+        where.status = query.status;
       }
 
       let take = query.limit ?? query.pageSize ?? 20;
       if (take > 100) take = 100;
 
-      const findMany: Prisma.AppointmentFindManyArgs = {
+      const findMany: AppointmentFindManyArgs = {
         where,
         include: {
           patient: { select: { patientId: true, name: true } },
@@ -361,8 +377,9 @@ router.get(
       }
 
       const appointments = await prisma.appointment.findMany(findMany);
+      const expectedPageSize = findMany.take ?? appointments.length;
       const nextCursor =
-        appointments.length === findMany.take
+        appointments.length === expectedPageSize
           ? appointments[appointments.length - 1]?.appointmentId
           : undefined;
 
