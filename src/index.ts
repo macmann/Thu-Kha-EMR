@@ -23,6 +23,22 @@ if (
 
 export const app = express();
 app.disable('x-powered-by');
+
+const trustProxy = process.env.TRUST_PROXY;
+if (trustProxy) {
+  const normalizedTrustProxy =
+    trustProxy === 'true'
+      ? true
+      : trustProxy === 'false'
+        ? false
+        : Number.isNaN(Number(trustProxy))
+          ? trustProxy
+          : Number(trustProxy);
+  app.set('trust proxy', normalizedTrustProxy);
+} else {
+  app.set('trust proxy', 1);
+}
+
 app.use(
   helmet({
     frameguard: false,

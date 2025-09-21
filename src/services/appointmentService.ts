@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import type { AppPrismaClient } from '../types/appointments.js';
 import type { CreateAppointmentInput, UpdateAppointmentInput } from '../validation/appointment.js';
 import { composeDateTime, dayOfWeekUTC, toDateOnly } from '../utils/time.js';
@@ -12,6 +13,111 @@ export type AvailabilityWindow = {
   endMin: number;
 };
 
+type AvailabilityTableColumns = {
+  doctorId: string;
+  dayOfWeek: string;
+  startMin: string;
+  endMin: string;
+};
+
+type AvailabilityTableDefinition = {
+  schema: string;
+  table: string;
+  columns: AvailabilityTableColumns;
+};
+
+const AVAILABILITY_TABLE_CANDIDATES: AvailabilityTableDefinition[] = [
+  {
+    schema: 'public',
+    table: 'DoctorAvailability',
+    columns: {
+      doctorId: 'doctorId',
+      dayOfWeek: 'dayOfWeek',
+      startMin: 'startMin',
+      endMin: 'endMin',
+    },
+  },
+  {
+    schema: 'public',
+    table: 'doctor_availability',
+    columns: {
+      doctorId: 'doctor_id',
+      dayOfWeek: 'day_of_week',
+      startMin: 'start_min',
+      endMin: 'end_min',
+    },
+  },
+];
+
+function quoteIdentifier(identifier: string): string {
+  return `"${identifier.replace(/"/g, '""')}"`;
+}
+
+function buildTableReference(definition: AvailabilityTableDefinition): string {
+  return `${quoteIdentifier(definition.schema)}.${quoteIdentifier(definition.table)}`;
+}
+
+function normalizeAvailabilityValue(value: unknown): number {
+  if (typeof value === 'number') {
+    return value;
+  }
+
+  if (typeof value === 'bigint') {
+    return Number(value);
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    if (!Number.isNaN(parsed)) {
+      return parsed;
+    }
+  }
+
+  throw new Error('Invalid availability window value received from database');
+}
+
+function isMissingRelationOrColumnError(error: unknown): boolean {
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2010') {
+    const meta = error.meta as { code?: string } | undefined;
+    return meta?.code === '42P01' || meta?.code === '42703';
+  }
+
+  return false;
+}
+
+async function queryAvailabilityFallback(
+  prisma: AppPrismaClient,
+  doctorId: string,
+  dayOfWeek: number
+): Promise<AvailabilityWindow[]> {
+  for (const candidate of AVAILABILITY_TABLE_CANDIDATES) {
+    try {
+      const rows = await prisma.$queryRaw<Array<{ startMin: unknown; endMin: unknown }>>(
+        Prisma.sql`
+          SELECT ${Prisma.raw(quoteIdentifier(candidate.columns.startMin))} AS "startMin",
+                 ${Prisma.raw(quoteIdentifier(candidate.columns.endMin))} AS "endMin"
+          FROM ${Prisma.raw(buildTableReference(candidate))}
+          WHERE ${Prisma.raw(quoteIdentifier(candidate.columns.doctorId))} = ${doctorId}
+            AND ${Prisma.raw(quoteIdentifier(candidate.columns.dayOfWeek))} = ${dayOfWeek}
+          ORDER BY ${Prisma.raw(quoteIdentifier(candidate.columns.startMin))} ASC
+        `
+      );
+
+      return rows.map((window) => ({
+        startMin: normalizeAvailabilityValue(window.startMin),
+        endMin: normalizeAvailabilityValue(window.endMin),
+      }));
+    } catch (error) {
+      if (isMissingRelationOrColumnError(error)) {
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  return [];
+}
+
 export async function getDoctorAvailabilityForDate(
   prisma: AppPrismaClient,
   doctorId: string,
@@ -20,32 +126,28 @@ export async function getDoctorAvailabilityForDate(
   const dayOfWeek = dayOfWeekUTC(date);
 
   if (typeof prisma.doctorAvailability?.findMany === 'function') {
-    return prisma.doctorAvailability.findMany({
-      where: {
-        doctorId,
-        dayOfWeek,
-      },
-      select: {
-        startMin: true,
-        endMin: true,
-      },
-      orderBy: {
-        startMin: 'asc',
-      },
-    });
+    try {
+      return await prisma.doctorAvailability.findMany({
+        where: {
+          doctorId,
+          dayOfWeek,
+        },
+        select: {
+          startMin: true,
+          endMin: true,
+        },
+        orderBy: {
+          startMin: 'asc',
+        },
+      });
+    } catch (error) {
+      if (!isMissingRelationOrColumnError(error)) {
+        throw error;
+      }
+    }
   }
 
-  const fallbackAvailability = await prisma.$queryRaw<Array<{ startMin: number; endMin: number }>>`
-    SELECT "startMin", "endMin"
-    FROM "DoctorAvailability"
-    WHERE "doctorId" = ${doctorId} AND "dayOfWeek" = ${dayOfWeek}
-    ORDER BY "startMin" ASC
-  `;
-
-  return fallbackAvailability.map((window) => ({
-    startMin: Number(window.startMin),
-    endMin: Number(window.endMin),
-  }));
+  return queryAvailabilityFallback(prisma, doctorId, dayOfWeek);
 }
 
 export async function hasDoctorBlackout(
