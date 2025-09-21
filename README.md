@@ -26,6 +26,12 @@ npm run prisma:migrate
 npm run seed:csv
 ```
 
+## Staff Walkthrough
+Try the scheduling workflow after seeding demo data:
+1. Create an appointment for **Dr Tan** today from **10:00–10:30**.
+2. Attempt to create another appointment for the same provider and timeslot — the system should block the double booking.
+3. Mark the original appointment as complete and verify that the visit appears in the visit list.
+
 ## API Docs
 The OpenAPI specification is served at `/api/docs/openapi.json`.
 
