@@ -401,6 +401,8 @@ export default function AppointmentDetail() {
       return;
     }
 
+    const completedAppointment = appointment;
+
     if (visitId) {
       setVisitLookupStatus('ready');
       setVisitLookupError(null);
@@ -413,9 +415,9 @@ export default function AppointmentDetail() {
 
     async function locateVisit() {
       try {
-        const visits = await listPatientVisits(appointment.patient.patientId);
+        const visits = await listPatientVisits(completedAppointment.patient.patientId);
         if (cancelled) return;
-        const match = findMatchingVisit(appointment, visits);
+        const match = findMatchingVisit(completedAppointment, visits);
         if (match) {
           setVisitId(match);
           setVisitLookupStatus('ready');
@@ -528,7 +530,11 @@ export default function AppointmentDetail() {
     try {
       const result = await patchStatus(appointment.appointmentId, { status: targetStatus });
       if ('visitId' in result) {
-        const updated = { ...appointment, status: 'Completed', cancelReason: null };
+        const updated: Appointment = {
+          ...appointment,
+          status: 'Completed',
+          cancelReason: null,
+        };
         setAppointment(updated);
         hydrateForm(updated);
         setVisitId(result.visitId);
