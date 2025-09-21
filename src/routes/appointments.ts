@@ -37,6 +37,19 @@ import type {
 } from '../types/appointments.js';
 
 const prisma = new PrismaClient() as AppPrismaClient;
+
+function assertModelExists(client: any, key: string) {
+  if (!client[key]) {
+    throw new Error(
+      `Prisma model '${key}' is missing on PrismaClient. ` +
+        "Make sure it exists in schema.prisma and run 'npx prisma generate' (and 'prisma migrate deploy' in prod)."
+    );
+  }
+}
+
+assertModelExists(prisma as any, 'appointment');
+assertModelExists(prisma as any, 'doctorBlackout');
+assertModelExists(prisma as any, 'doctorAvailability');
 const router = Router();
 
 router.use(requireAuth);
