@@ -17,7 +17,7 @@ export function validate(schema: Schema) {
       next();
     } catch (err) {
       if (err instanceof ZodError) {
-        return next(new HttpError(400, 'Invalid request'));
+        return next(new HttpError(400, 'Invalid request', err.flatten()));
       }
       next(err);
     }
