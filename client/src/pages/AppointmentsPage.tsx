@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useState, type MouseEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import { CalendarIcon } from '../components/icons';
 import {
@@ -11,6 +11,11 @@ import {
   type AppointmentStatusPatch,
 } from '../api/appointments';
 import { listDoctors, type Doctor } from '../api/client';
+
+const DAY_START_MINUTE = 8 * 60;
+const DAY_END_MINUTE = 18 * 60;
+const DAY_VISIBLE_MINUTES = DAY_END_MINUTE - DAY_START_MINUTE;
+const MIN_SLOT_MINUTES = 30;
 
 type DateMode = 'single' | 'range';
 
@@ -93,6 +98,50 @@ const actionConfigs: Array<{
 
 const statusOptions: AppointmentStatus[] = ['Scheduled', 'CheckedIn', 'InProgress', 'Completed', 'Cancelled'];
 
+function toDateKey(value: string | Date): string {
+  if (value instanceof Date) {
+    const year = value.getFullYear();
+    const month = `${value.getMonth() + 1}`.padStart(2, '0');
+    const day = `${value.getDate()}`.padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  return value.includes('T') ? value.split('T')[0] : value;
+}
+
+function getWeekStart(date: Date): Date {
+  const weekStart = new Date(date);
+  const day = weekStart.getDay();
+  const diff = (day + 6) % 7;
+  weekStart.setDate(weekStart.getDate() - diff);
+  weekStart.setHours(0, 0, 0, 0);
+  return weekStart;
+}
+
+function clampMinutes(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function normalizeBlock(startTimeMin: number, endTimeMin?: number) {
+  const safeStart = clampMinutes(startTimeMin, DAY_START_MINUTE, DAY_END_MINUTE - MIN_SLOT_MINUTES);
+  const proposedEnd =
+    typeof endTimeMin === 'number' ? clampMinutes(endTimeMin, safeStart + MIN_SLOT_MINUTES, DAY_END_MINUTE) : null;
+  const fallbackEnd = clampMinutes(safeStart + 60, safeStart + MIN_SLOT_MINUTES, DAY_END_MINUTE);
+  const safeEnd = proposedEnd ?? fallbackEnd;
+  const top = ((safeStart - DAY_START_MINUTE) / DAY_VISIBLE_MINUTES) * 100;
+  const rawHeight = ((safeEnd - safeStart) / DAY_VISIBLE_MINUTES) * 100;
+  const minHeight = (MIN_SLOT_MINUTES / DAY_VISIBLE_MINUTES) * 100;
+  const availableSpace = Math.max(0, 100 - top);
+  const height = Math.min(Math.max(rawHeight, minHeight), Math.max(minHeight, availableSpace));
+  return { top, height };
+}
+
+function formatHourLabel(minutes: number) {
+  const hours = Math.floor(minutes / 60);
+  const suffix = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = ((hours + 11) % 12) + 1;
+  return `${displayHours}:00 ${suffix}`;
+}
+
 function parseErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     try {
@@ -143,6 +192,7 @@ function formatTimeRange(startMin: number, endMin: number) {
 }
 
 export default function AppointmentsPage() {
+  const navigate = useNavigate();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -155,6 +205,8 @@ export default function AppointmentsPage() {
   const [statusFilter, setStatusFilter] = useState<AppointmentStatus | ''>('');
   const [refreshToken, setRefreshToken] = useState(0);
 
+  const [calendarView, setCalendarView] = useState<'day' | 'week'>('day');
+
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [doctorsLoading, setDoctorsLoading] = useState(false);
   const [doctorError, setDoctorError] = useState<string | null>(null);
@@ -162,6 +214,67 @@ export default function AppointmentsPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [updating, setUpdating] = useState<Record<string, boolean>>({});
   const [toast, setToast] = useState<ToastState | null>(null);
+
+  const todayKey = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const focusDateKey = useMemo(() => {
+    if (dateMode === 'single') {
+      return singleDate || todayKey;
+    }
+    if (fromDate) return fromDate;
+    if (toDate) return toDate;
+    return todayKey;
+  }, [dateMode, singleDate, fromDate, toDate, todayKey]);
+
+  const focusDate = useMemo(() => {
+    const parsed = new Date(`${focusDateKey}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) {
+      return new Date(`${todayKey}T00:00:00`);
+    }
+    return parsed;
+  }, [focusDateKey, todayKey]);
+
+  const hourMarkers = useMemo(() => {
+    const markers: number[] = [];
+    for (let minute = DAY_START_MINUTE; minute <= DAY_END_MINUTE; minute += 60) {
+      markers.push(minute);
+    }
+    return markers;
+  }, []);
+
+  const gridMarkers = useMemo(() => {
+    const markers: number[] = [];
+    for (let minute = DAY_START_MINUTE; minute <= DAY_END_MINUTE; minute += MIN_SLOT_MINUTES) {
+      markers.push(minute);
+    }
+    return markers;
+  }, []);
+
+  const appointmentsByDate = useMemo(() => {
+    const map = new Map<string, Appointment[]>();
+    appointments.forEach((appointment) => {
+      const key = toDateKey(appointment.date);
+      if (!map.has(key)) {
+        map.set(key, []);
+      }
+      map.get(key)!.push(appointment);
+    });
+    map.forEach((list) => list.sort((a, b) => a.startTimeMin - b.startTimeMin));
+    return map;
+  }, [appointments]);
+
+  const dayAppointments = useMemo(
+    () => appointmentsByDate.get(focusDateKey) ?? [],
+    [appointmentsByDate, focusDateKey],
+  );
+
+  const weekDates = useMemo(() => {
+    const start = getWeekStart(focusDate);
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + index);
+      return date;
+    });
+  }, [focusDate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -320,6 +433,62 @@ export default function AppointmentsPage() {
   function handleRefresh() {
     setRefreshToken((token) => token + 1);
   }
+
+  function openAppointmentDetail(id: string) {
+    navigate(`/appointments/${id}`);
+  }
+
+  function openCreateSlot(dateKey: string, startMinute: number, endMinute: number) {
+    const params = new URLSearchParams();
+    params.set('date', dateKey);
+    params.set('start', String(startMinute));
+    params.set('end', String(endMinute));
+    navigate(`/appointments/new?${params.toString()}`);
+  }
+
+  function handleDayGridClick(event: MouseEvent<HTMLDivElement>) {
+    const { currentTarget } = event;
+    if (!currentTarget) return;
+    const rect = currentTarget.getBoundingClientRect();
+    const offset = event.clientY - rect.top;
+    const ratio = offset / rect.height;
+    const snappedMinutes = Math.round((ratio * DAY_VISIBLE_MINUTES) / MIN_SLOT_MINUTES) * MIN_SLOT_MINUTES;
+    const startMinute = clampMinutes(
+      DAY_START_MINUTE + snappedMinutes,
+      DAY_START_MINUTE,
+      DAY_END_MINUTE - MIN_SLOT_MINUTES,
+    );
+    const endMinute = clampMinutes(startMinute + 60, startMinute + MIN_SLOT_MINUTES, DAY_END_MINUTE);
+    openCreateSlot(focusDateKey, startMinute, endMinute);
+  }
+
+  function handleWeekGridClick(dateKey: string) {
+    return (event: MouseEvent<HTMLDivElement>) => {
+      const { currentTarget } = event;
+      if (!currentTarget) return;
+      const rect = currentTarget.getBoundingClientRect();
+      const offset = event.clientY - rect.top;
+      const ratio = offset / rect.height;
+      const snappedMinutes = Math.round((ratio * DAY_VISIBLE_MINUTES) / MIN_SLOT_MINUTES) * MIN_SLOT_MINUTES;
+      const startMinute = clampMinutes(
+        DAY_START_MINUTE + snappedMinutes,
+        DAY_START_MINUTE,
+        DAY_END_MINUTE - MIN_SLOT_MINUTES,
+      );
+      const endMinute = clampMinutes(startMinute + 60, startMinute + MIN_SLOT_MINUTES, DAY_END_MINUTE);
+      openCreateSlot(dateKey, startMinute, endMinute);
+    };
+  }
+
+  const focusDateDisplay = useMemo(() => {
+    const formatter = new Intl.DateTimeFormat(undefined, {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+    return formatter.format(focusDate);
+  }, [focusDate]);
 
   return (
     <DashboardLayout
@@ -491,6 +660,217 @@ export default function AppointmentsPage() {
                   ))}
                 </select>
               </div>
+            </div>
+          </section>
+
+          <section className="rounded-2xl bg-white p-6 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Schedule overview</h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  {calendarView === 'day' ? focusDateDisplay : `Week of ${focusDateDisplay}`}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="inline-flex overflow-hidden rounded-full border border-gray-200 bg-white shadow-sm">
+                  <button
+                    type="button"
+                    onClick={() => setCalendarView('day')}
+                    className={`px-4 py-2 text-sm font-medium transition ${
+                      calendarView === 'day' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    Day view
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCalendarView('week')}
+                    className={`px-4 py-2 text-sm font-medium transition ${
+                      calendarView === 'week' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    Week view
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    openCreateSlot(
+                      focusDateKey,
+                      DAY_START_MINUTE,
+                      clampMinutes(DAY_START_MINUTE + 60, DAY_START_MINUTE + MIN_SLOT_MINUTES, DAY_END_MINUTE),
+                    )
+                  }
+                  className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
+                >
+                  Add at 8:00 AM
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              {calendarView === 'day' ? (
+                <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-4">
+                  <div className="relative h-[600px] select-none pr-2 text-right text-xs text-gray-400">
+                    {hourMarkers.map((minute) => {
+                      const offset = ((minute - DAY_START_MINUTE) / DAY_VISIBLE_MINUTES) * 100;
+                      return (
+                        <div
+                          key={`day-axis-${minute}`}
+                          className="absolute right-0 -translate-y-1/2"
+                          style={{ top: `${offset}%` }}
+                        >
+                          {formatHourLabel(minute)}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div
+                    role="presentation"
+                    className="relative h-[600px] rounded-2xl border border-gray-200 bg-gray-50"
+                    onClick={handleDayGridClick}
+                  >
+                    {gridMarkers.map((minute) => {
+                      const offset = ((minute - DAY_START_MINUTE) / DAY_VISIBLE_MINUTES) * 100;
+                      const isHour = minute % 60 === 0;
+                      return (
+                        <div
+                          key={`day-grid-${minute}`}
+                          className={`absolute inset-x-0 border-t ${
+                            isHour ? 'border-gray-200' : 'border-dashed border-gray-200/70'
+                          }`}
+                          style={{ top: `${offset}%` }}
+                        />
+                      );
+                    })}
+                    {dayAppointments.length === 0 && (
+                      <div className="pointer-events-none absolute left-1/2 top-1/2 w-56 -translate-x-1/2 -translate-y-1/2 text-center text-sm text-gray-400">
+                        Click anywhere on the grid to schedule a new appointment.
+                      </div>
+                    )}
+                    {dayAppointments.map((appointment) => {
+                      const { top, height } = normalizeBlock(appointment.startTimeMin, appointment.endTimeMin);
+                      return (
+                        <button
+                          key={appointment.appointmentId}
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openAppointmentDetail(appointment.appointmentId);
+                          }}
+                          className="absolute left-1 right-1 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-left text-xs font-medium text-blue-900 shadow-sm transition hover:border-blue-300 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          style={{ top: `${top}%`, height: `${height}%` }}
+                        >
+                          <div className="text-[11px] font-semibold uppercase tracking-wide text-blue-500">
+                            {appointment.doctor.name}
+                          </div>
+                          <div className="mt-1 text-sm font-semibold text-blue-900">{appointment.patient.name}</div>
+                          <div className="mt-1 text-[11px] text-blue-700">
+                            {formatTimeRange(appointment.startTimeMin, appointment.endTimeMin)}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-[auto_repeat(7,minmax(0,1fr))] items-end gap-4">
+                    <div className="text-right text-xs font-semibold uppercase tracking-wide text-gray-400">Time</div>
+                    {weekDates.map((date) => {
+                      const dateKey = toDateKey(date);
+                      return (
+                        <div key={`week-label-${dateKey}`} className="text-center">
+                          <div
+                            className={`text-sm font-semibold ${
+                              dateKey === focusDateKey ? 'text-blue-600' : 'text-gray-900'
+                            }`}
+                          >
+                            {date.toLocaleDateString(undefined, { weekday: 'short' })}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="grid grid-cols-[auto_repeat(7,minmax(0,1fr))] gap-4">
+                    <div className="relative h-[600px] select-none pr-2 text-right text-xs text-gray-400">
+                      {hourMarkers.map((minute) => {
+                        const offset = ((minute - DAY_START_MINUTE) / DAY_VISIBLE_MINUTES) * 100;
+                        return (
+                          <div
+                            key={`week-axis-${minute}`}
+                            className="absolute right-0 -translate-y-1/2"
+                            style={{ top: `${offset}%` }}
+                          >
+                            {formatHourLabel(minute)}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {weekDates.map((date) => {
+                      const dateKey = toDateKey(date);
+                      const columnAppointments = appointmentsByDate.get(dateKey) ?? [];
+                      return (
+                        <div
+                          key={`week-col-${dateKey}`}
+                          role="presentation"
+                          className={`relative h-[600px] rounded-2xl border border-gray-200 bg-gray-50 ${
+                            dateKey === focusDateKey ? 'ring-1 ring-blue-200' : ''
+                          }`}
+                          onClick={handleWeekGridClick(dateKey)}
+                        >
+                          <div className="pointer-events-none absolute inset-0">
+                            {gridMarkers.map((minute) => {
+                              const offset = ((minute - DAY_START_MINUTE) / DAY_VISIBLE_MINUTES) * 100;
+                              const isHour = minute % 60 === 0;
+                              return (
+                                <div
+                                  key={`week-grid-${dateKey}-${minute}`}
+                                  className={`absolute inset-x-0 border-t ${
+                                    isHour ? 'border-gray-200' : 'border-dashed border-gray-200/70'
+                                  }`}
+                                  style={{ top: `${offset}%` }}
+                                />
+                              );
+                            })}
+                          </div>
+                          {columnAppointments.length === 0 && (
+                            <div className="pointer-events-none absolute left-1/2 top-1/2 w-40 -translate-x-1/2 -translate-y-1/2 text-center text-[11px] text-gray-400">
+                              Click to add
+                            </div>
+                          )}
+                          {columnAppointments.map((appointment) => {
+                            const { top, height } = normalizeBlock(appointment.startTimeMin, appointment.endTimeMin);
+                            return (
+                              <button
+                                key={appointment.appointmentId}
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  openAppointmentDetail(appointment.appointmentId);
+                                }}
+                                className="absolute left-1 right-1 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-left text-xs font-medium text-blue-900 shadow-sm transition hover:border-blue-300 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                style={{ top: `${top}%`, height: `${height}%` }}
+                              >
+                                <div className="text-[11px] font-semibold uppercase tracking-wide text-blue-500">
+                                  {appointment.doctor.name}
+                                </div>
+                                <div className="mt-1 text-sm font-semibold text-blue-900">{appointment.patient.name}</div>
+                                <div className="mt-1 text-[11px] text-blue-700">
+                                  {formatTimeRange(appointment.startTimeMin, appointment.endTimeMin)}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 

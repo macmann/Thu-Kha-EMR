@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import { listDoctors, searchPatients, type Doctor } from '../api/client';
 import {
@@ -66,10 +66,39 @@ function formatDateDisplay(date: string | undefined): string {
   });
 }
 
+function parseMinuteParam(value: string | null): number | null {
+  if (!value) return null;
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.max(0, Math.min(24 * 60, parsed));
+}
+
+function deriveDefaultEnd(start: number): number {
+  const preferred = Math.min(start + 60, 24 * 60);
+  if (preferred > start) return preferred;
+  const fallback = Math.min(start + 30, 24 * 60);
+  if (fallback > start) return fallback;
+  return start;
+}
+
 export default function AppointmentForm() {
   const navigate = useNavigate();
   const { id: appointmentId } = useParams<AppointmentFormParams>();
+  const [searchParams] = useSearchParams();
   const isEditing = Boolean(appointmentId);
+
+  const searchParamsKey = searchParams.toString();
+  const slotDateParam = searchParams.get('date');
+  const slotStartParam = parseMinuteParam(searchParams.get('start'));
+  const slotEndParam = parseMinuteParam(searchParams.get('end'));
+  const initialDateValue = slotDateParam || new Date().toISOString().slice(0, 10);
+  const initialStartValue = slotStartParam ?? null;
+  const initialEndValue =
+    slotEndParam !== null
+      ? slotEndParam
+      : initialStartValue !== null
+        ? deriveDefaultEnd(initialStartValue)
+        : null;
 
   const [patientInput, setPatientInput] = useState('');
   const [patientQuery, setPatientQuery] = useState('');
@@ -85,9 +114,13 @@ export default function AppointmentForm() {
   const [doctorId, setDoctorId] = useState('');
 
   const [department, setDepartment] = useState('');
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [startTimeMin, setStartTimeMin] = useState<number | ''>('');
-  const [endTimeMin, setEndTimeMin] = useState<number | ''>('');
+  const [date, setDate] = useState(() => initialDateValue);
+  const [startTimeMin, setStartTimeMin] = useState<number | ''>(() =>
+    initialStartValue !== null ? initialStartValue : '',
+  );
+  const [endTimeMin, setEndTimeMin] = useState<number | ''>(() =>
+    initialEndValue !== null ? initialEndValue : '',
+  );
   const [reason, setReason] = useState('');
   const [location, setLocation] = useState('');
 
@@ -247,6 +280,29 @@ export default function AppointmentForm() {
       cancelled = true;
     };
   }, [doctorId, date]);
+
+  useEffect(() => {
+    if (isEditing) return;
+
+    const params = new URLSearchParams(searchParamsKey);
+    const nextDate = params.get('date');
+    const nextStart = parseMinuteParam(params.get('start'));
+    const nextEnd = parseMinuteParam(params.get('end'));
+
+    if (nextDate) {
+      setDate(nextDate);
+    }
+
+    if (nextStart !== null) {
+      setStartTimeMin(nextStart);
+    }
+
+    if (nextEnd !== null) {
+      setEndTimeMin(nextEnd);
+    } else if (nextStart !== null) {
+      setEndTimeMin(deriveDefaultEnd(nextStart));
+    }
+  }, [isEditing, searchParamsKey]);
 
   function hydrateForm(appointment: Appointment) {
     const appointmentDate = appointment.date.includes('T')
