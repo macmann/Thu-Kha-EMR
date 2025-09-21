@@ -7,6 +7,7 @@ const prisma = new PrismaClient();
 const appointmentDate = '2025-03-10';
 const startOfDayMinutes = 9 * 60;
 const endOfDayMinutes = 10 * 60;
+const defaultWindowEnd = 17 * 60;
 
 let patientId!: string;
 let doctorId!: string;
@@ -31,14 +32,6 @@ beforeAll(async () => {
   });
   doctorId = doctor.doctorId;
 
-  await prisma.doctorAvailability.create({
-    data: {
-      doctorId,
-      dayOfWeek: new Date(`${appointmentDate}T00:00:00Z`).getUTCDay(),
-      startMin: startOfDayMinutes,
-      endMin: endOfDayMinutes,
-    },
-  });
 });
 
 afterEach(async () => {
@@ -177,7 +170,7 @@ describe('PATCH /api/appointments/:id/status', () => {
 });
 
 describe('GET /api/appointments/availability', () => {
-  it('returns no free slots when schedule is fully booked', async () => {
+  it('returns remaining free slots when part of the day is booked', async () => {
     const resCreate = await request(app)
       .post('/api/appointments')
       .send({
@@ -198,9 +191,31 @@ describe('GET /api/appointments/availability', () => {
 
     expect(availabilityRes.status).toBe(200);
     expect(Array.isArray(availabilityRes.body.freeSlots)).toBe(true);
-    expect(availabilityRes.body.freeSlots).toHaveLength(0);
+    expect(availabilityRes.body.freeSlots).toEqual([
+      { startMin: endOfDayMinutes, endMin: defaultWindowEnd },
+    ]);
     expect(availabilityRes.body.blocked).toEqual([
       { startMin: startOfDayMinutes, endMin: endOfDayMinutes },
     ]);
+    expect(availabilityRes.body.availability).toEqual([
+      { startMin: startOfDayMinutes, endMin: defaultWindowEnd },
+    ]);
+  });
+
+  it('enforces the default availability window', async () => {
+    const response = await request(app)
+      .post('/api/appointments')
+      .send({
+        patientId,
+        doctorId,
+        department: 'Cardiology',
+        date: appointmentDate,
+        startTimeMin: 7 * 60,
+        endTimeMin: 8 * 60,
+        reason: 'Too early visit',
+      });
+
+    expect(response.status).toBe(422);
+    expect(response.body.message).toContain('outside doctor availability');
   });
 });

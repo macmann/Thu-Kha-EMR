@@ -113,6 +113,46 @@ const openapi: any = {
           department: { type: 'string' }
         }
       },
+      DoctorAvailabilitySlot: {
+        type: 'object',
+        properties: {
+          availabilityId: { type: 'string', format: 'uuid' },
+          doctorId: { type: 'string', format: 'uuid' },
+          dayOfWeek: { type: 'integer', minimum: 0, maximum: 6 },
+          startMin: { type: 'integer', minimum: 0, maximum: 1439 },
+          endMin: { type: 'integer', minimum: 1, maximum: 1440 },
+        },
+      },
+      DoctorAvailabilityResponse: {
+        type: 'object',
+        properties: {
+          doctorId: { type: 'string', format: 'uuid' },
+          availability: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/DoctorAvailabilitySlot' },
+          },
+          defaultAvailability: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['startMin', 'endMin'],
+              properties: {
+                startMin: { type: 'integer', minimum: 0, maximum: 1439 },
+                endMin: { type: 'integer', minimum: 1, maximum: 1440 },
+              },
+            },
+          },
+        },
+      },
+      DoctorAvailabilityCreateRequest: {
+        type: 'object',
+        required: ['dayOfWeek', 'startMin', 'endMin'],
+        properties: {
+          dayOfWeek: { type: 'integer', minimum: 0, maximum: 6 },
+          startMin: { type: 'integer', minimum: 0, maximum: 1439 },
+          endMin: { type: 'integer', minimum: 1, maximum: 1440 },
+        },
+      },
       Visit: {
         type: 'object',
         properties: {
@@ -625,6 +665,80 @@ addPath('/doctors', 'post', {
       description: 'Doctor',
       content: { 'application/json': { schema: { $ref: '#/components/schemas/Doctor' } } },
     },
+  },
+});
+
+addPath('/doctors/{doctorId}/availability', 'get', {
+  summary: 'List doctor availability windows',
+  security: [],
+  parameters: [
+    {
+      name: 'doctorId',
+      in: 'path',
+      required: true,
+      schema: { type: 'string', format: 'uuid' },
+      description: 'Doctor identifier to inspect.',
+    },
+  ],
+  responses: {
+    '200': {
+      description: 'Availability windows configured for the doctor.',
+      content: {
+        'application/json': {
+          schema: { $ref: '#/components/schemas/DoctorAvailabilityResponse' },
+          example: {
+            doctorId: '99999999-8888-7777-6666-555555555555',
+            availability: [
+              {
+                availabilityId: '00000000-0000-0000-0000-000000000001',
+                doctorId: '99999999-8888-7777-6666-555555555555',
+                dayOfWeek: 1,
+                startMin: 540,
+                endMin: 720,
+              },
+            ],
+            defaultAvailability: [
+              { startMin: 540, endMin: 1020 },
+            ],
+          },
+        },
+      },
+    },
+    '404': { description: 'Doctor not found' },
+  },
+});
+
+addPath('/doctors/{doctorId}/availability', 'post', {
+  summary: 'Add an availability window for a doctor',
+  security: [],
+  parameters: [
+    {
+      name: 'doctorId',
+      in: 'path',
+      required: true,
+      schema: { type: 'string', format: 'uuid' },
+    },
+  ],
+  requestBody: {
+    required: true,
+    content: {
+      'application/json': {
+        schema: { $ref: '#/components/schemas/DoctorAvailabilityCreateRequest' },
+      },
+    },
+  },
+  responses: {
+    '201': {
+      description: 'Created availability window',
+      content: {
+        'application/json': {
+          schema: { $ref: '#/components/schemas/DoctorAvailabilitySlot' },
+        },
+      },
+    },
+    '400': { description: 'Invalid request payload' },
+    '404': { description: 'Doctor not found' },
+    '409': { description: 'Conflicts with an existing window' },
   },
 });
 
