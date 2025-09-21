@@ -43,40 +43,36 @@ router.use(requireAuth);
 
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 
+const statusValues = ['Scheduled', 'CheckedIn', 'InProgress', 'Completed', 'Cancelled'] as const satisfies readonly AppointmentStatus[];
+
+const dateParam = z
+  .coerce.string()
+  .transform((value) => value.trim())
+  .transform((value) => (value.includes('T') ? value.split('T')[0] : value))
+  .pipe(z.string().regex(dateRegex, 'Date must be in format YYYY-MM-DD'));
+
+const uuidParam = z.coerce.string().trim().uuid();
+
+const limitedPositiveIntParam = z.coerce.number().int().positive().max(100);
+const positiveIntParam = z.coerce.number().int().positive();
+
 const availabilityQuerySchema = z.object({
-  doctorId: z.string().uuid(),
-  date: z.string().regex(dateRegex, 'Date must be in format YYYY-MM-DD'),
+  doctorId: uuidParam,
+  date: dateParam,
 });
 
 type AvailabilityQuery = z.infer<typeof availabilityQuerySchema>;
 
 const listQuerySchema = z.object({
-  date: z.string().regex(dateRegex).optional(),
-  from: z.string().regex(dateRegex).optional(),
-  to: z.string().regex(dateRegex).optional(),
-  doctorId: z.string().uuid().optional(),
-  status: z
-    .enum(['Scheduled', 'CheckedIn', 'InProgress', 'Completed', 'Cancelled'])
-    .optional(),
-  limit: z
-    .string()
-    .regex(/^\d+$/)
-    .transform(Number)
-    .pipe(z.number().int().positive().max(100))
-    .optional(),
-  cursor: z.string().uuid().optional(),
-  page: z
-    .string()
-    .regex(/^\d+$/)
-    .transform(Number)
-    .pipe(z.number().int().positive())
-    .optional(),
-  pageSize: z
-    .string()
-    .regex(/^\d+$/)
-    .transform(Number)
-    .pipe(z.number().int().positive().max(100))
-    .optional(),
+  date: dateParam.optional(),
+  from: dateParam.optional(),
+  to: dateParam.optional(),
+  doctorId: uuidParam.optional(),
+  status: z.coerce.string().trim().pipe(z.enum(statusValues)).optional(),
+  limit: limitedPositiveIntParam.optional(),
+  cursor: uuidParam.optional(),
+  page: positiveIntParam.optional(),
+  pageSize: limitedPositiveIntParam.optional(),
 });
 
 type ListQuery = z.infer<typeof listQuerySchema>;
