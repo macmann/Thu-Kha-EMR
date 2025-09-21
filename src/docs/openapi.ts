@@ -234,9 +234,16 @@ const openapi: any = {
       },
       Error: {
         type: 'object',
+        required: ['code', 'message'],
         properties: {
-          error: { type: 'string' }
-        }
+          code: { type: 'integer', format: 'int32' },
+          message: { type: 'string' },
+          details: {
+            type: 'object',
+            nullable: true,
+            additionalProperties: true,
+          },
+        },
       },
       Tokens: {
         type: 'object',

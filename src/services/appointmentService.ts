@@ -1,6 +1,11 @@
 import type { PrismaClient } from '@prisma/client';
 import type { CreateAppointmentInput, UpdateAppointmentInput } from '../validation/appointment.js';
 import { composeDateTime, dayOfWeekUTC, toDateOnly } from '../utils/time.js';
+import {
+  ConflictError,
+  NotFoundError,
+  UnprocessableEntityError,
+} from '../utils/httpErrors.js';
 
 export type AvailabilityWindow = {
   startMin: number;
@@ -101,7 +106,7 @@ async function ensurePatientExists(prisma: PrismaClient, patientId: string): Pro
   });
 
   if (!patient) {
-    throw new Error('Patient not found');
+    throw new NotFoundError('Patient not found');
   }
 }
 
@@ -112,7 +117,7 @@ async function ensureDoctorExists(prisma: PrismaClient, doctorId: string): Promi
   });
 
   if (!doctor) {
-    throw new Error('Doctor not found');
+    throw new NotFoundError('Doctor not found');
   }
 }
 
@@ -128,7 +133,7 @@ async function assertWithinAvailability(
   const fitsAvailability = windows.some((window) => startMin >= window.startMin && endMin <= window.endMin);
 
   if (!fitsAvailability) {
-    throw new Error('Requested time is outside doctor availability');
+    throw new UnprocessableEntityError('Requested time is outside doctor availability');
   }
 }
 
@@ -142,7 +147,7 @@ async function assertNoBlackout(
   const hasBlackoutWindow = await hasDoctorBlackout(prisma, doctorId, date, startMin, endMin);
 
   if (hasBlackoutWindow) {
-    throw new Error('Doctor is unavailable due to blackout');
+    throw new UnprocessableEntityError('Doctor is unavailable due to blackout');
   }
 }
 
@@ -157,7 +162,7 @@ async function assertNoOverlap(
   const overlapping = await hasDoctorOverlap(prisma, doctorId, date, startMin, endMin, excludeId);
 
   if (overlapping) {
-    throw new Error('Appointment overlaps with an existing appointment');
+    throw new ConflictError('Appointment overlaps with an existing appointment');
   }
 }
 
@@ -192,7 +197,7 @@ export async function assertUpdatable(
   });
 
   if (!appointment) {
-    throw new Error('Appointment not found');
+    throw new NotFoundError('Appointment not found');
   }
 
   const patientId = dto.patientId ?? appointment.patientId;
