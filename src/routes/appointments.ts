@@ -59,28 +59,40 @@ const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 
 const statusValues = ['Scheduled', 'CheckedIn', 'InProgress', 'Completed', 'Cancelled'] as const satisfies readonly AppointmentStatus[];
 
-function isMissingAppointmentsTableError(error: unknown): boolean {
+function isMissingRelationOrColumnError(error: unknown): error is Prisma.PrismaClientKnownRequestError {
   if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
     return false;
   }
 
   if (error.code === 'P2010') {
     const meta = error.meta as { code?: string } | undefined;
-    if (meta?.code !== '42P01' && meta?.code !== '42703') {
-      return false;
-    }
-  } else if (error.code !== 'P2021' && error.code !== 'P2022') {
+    return meta?.code === '42P01' || meta?.code === '42703';
+  }
+
+  return error.code === 'P2021' || error.code === 'P2022';
+}
+
+function isMissingTableError(error: unknown, target: RegExp): boolean {
+  if (!isMissingRelationOrColumnError(error)) {
     return false;
   }
 
   const meta = error.meta as { table?: string; modelName?: string } | undefined;
-  const target = meta?.table ?? meta?.modelName;
+  const name = meta?.table ?? meta?.modelName;
 
-  if (typeof target === 'string' && /appointment/i.test(target)) {
+  if (typeof name === 'string' && target.test(name)) {
     return true;
   }
 
-  return /appointment/i.test(error.message);
+  return target.test(error.message);
+}
+
+function isMissingAppointmentsTableError(error: unknown): boolean {
+  return isMissingTableError(error, /appointment/i);
+}
+
+function isMissingDoctorBlackoutsTableError(error: unknown): boolean {
+  return isMissingTableError(error, /doctor.*blackout/i);
 }
 
 function createAppointmentsUnavailableError(): ServiceUnavailableError {
@@ -153,17 +165,24 @@ router.get(
           }
           throw error;
         })) as Promise<Array<{ startTimeMin: number; endTimeMin: number }>>;
-      const blackoutsPromise = prisma.doctorBlackout.findMany({
-        where: {
-          doctorId,
-          startAt: { lt: addDays(appointmentDate, 1) },
-          endAt: { gt: appointmentDate },
-        },
-        select: {
-          startAt: true,
-          endAt: true,
-        },
-      }) as Promise<Array<{ startAt: Date; endAt: Date }>>;
+      const blackoutsPromise = (prisma.doctorBlackout
+        .findMany({
+          where: {
+            doctorId,
+            startAt: { lt: addDays(appointmentDate, 1) },
+            endAt: { gt: appointmentDate },
+          },
+          select: {
+            startAt: true,
+            endAt: true,
+          },
+        })
+        .catch((error) => {
+          if (isMissingDoctorBlackoutsTableError(error)) {
+            return [] as Array<{ startAt: Date; endAt: Date }>;
+          }
+          throw error;
+        })) as Promise<Array<{ startAt: Date; endAt: Date }>>;
 
       const [availability, appointments, blackouts] = await Promise.all([
         availabilityPromise,
