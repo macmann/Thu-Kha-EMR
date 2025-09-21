@@ -40,3 +40,9 @@ export class UnprocessableEntityError extends HttpError {
     super(422, message, details);
   }
 }
+
+export class ServiceUnavailableError extends HttpError {
+  constructor(message = 'Service Unavailable', details?: unknown) {
+    super(503, message, details);
+  }
+}

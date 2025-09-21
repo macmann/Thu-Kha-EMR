@@ -25,6 +25,7 @@ import {
   ConflictError,
   HttpError,
   NotFoundError,
+  ServiceUnavailableError,
 } from '../utils/httpErrors.js';
 import type {
   AppPrismaClient,
@@ -57,6 +58,36 @@ router.use(requireAuth);
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 
 const statusValues = ['Scheduled', 'CheckedIn', 'InProgress', 'Completed', 'Cancelled'] as const satisfies readonly AppointmentStatus[];
+
+function isMissingAppointmentsTableError(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+    return false;
+  }
+
+  if (error.code === 'P2010') {
+    const meta = error.meta as { code?: string } | undefined;
+    if (meta?.code !== '42P01' && meta?.code !== '42703') {
+      return false;
+    }
+  } else if (error.code !== 'P2021' && error.code !== 'P2022') {
+    return false;
+  }
+
+  const meta = error.meta as { table?: string; modelName?: string } | undefined;
+  const target = meta?.table ?? meta?.modelName;
+
+  if (typeof target === 'string' && /appointment/i.test(target)) {
+    return true;
+  }
+
+  return /appointment/i.test(error.message);
+}
+
+function createAppointmentsUnavailableError(): ServiceUnavailableError {
+  return new ServiceUnavailableError(
+    'Appointments storage is not available. Please run database migrations to create the Appointment table.'
+  );
+}
 
 const dateParam = z
   .coerce.string()
@@ -104,17 +135,24 @@ router.get(
         doctorId,
         appointmentDate
       );
-      const appointmentsPromise = prisma.appointment.findMany({
-        where: {
-          doctorId,
-          date: appointmentDate,
-          status: { not: 'Cancelled' },
-        },
-        select: {
-          startTimeMin: true,
-          endTimeMin: true,
-        },
-      }) as Promise<Array<{ startTimeMin: number; endTimeMin: number }>>;
+      const appointmentsPromise = (prisma.appointment
+        .findMany({
+          where: {
+            doctorId,
+            date: appointmentDate,
+            status: { not: 'Cancelled' },
+          },
+          select: {
+            startTimeMin: true,
+            endTimeMin: true,
+          },
+        })
+        .catch((error) => {
+          if (isMissingAppointmentsTableError(error)) {
+            return [] as Array<{ startTimeMin: number; endTimeMin: number }>;
+          }
+          throw error;
+        })) as Promise<Array<{ startTimeMin: number; endTimeMin: number }>>;
       const blackoutsPromise = prisma.doctorBlackout.findMany({
         where: {
           doctorId,
@@ -444,6 +482,11 @@ router.delete(
 );
 
 function handleError(error: unknown, next: NextFunction) {
+  if (isMissingAppointmentsTableError(error)) {
+    next(createAppointmentsUnavailableError());
+    return;
+  }
+
   if (error instanceof HttpError) {
     next(error);
     return;
