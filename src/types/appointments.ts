@@ -70,7 +70,19 @@ type VisitDelegate = {
   create: (args: any) => Promise<any>;
 };
 
+type BaseTransactionClient = Omit<
+  PrismaClient,
+  '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends'
+>;
+
 export type AppPrismaClient = PrismaClient & {
+  appointment: AppointmentDelegate;
+  doctorAvailability: AvailabilityDelegate;
+  doctorBlackout: BlackoutDelegate;
+  visit: VisitDelegate;
+};
+
+export type AppPrismaTransactionClient = BaseTransactionClient & {
   appointment: AppointmentDelegate;
   doctorAvailability: AvailabilityDelegate;
   doctorBlackout: BlackoutDelegate;

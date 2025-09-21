@@ -28,6 +28,7 @@ import {
 } from '../utils/httpErrors.js';
 import type {
   AppPrismaClient,
+  AppPrismaTransactionClient,
   AppointmentFindManyArgs,
   AppointmentStatus,
   AppointmentUpdateData,
@@ -242,7 +243,8 @@ router.patch(
       }
 
       if (body.status !== appointment.status) {
-        const allowed = allowedTransitions[appointment.status] ?? [];
+        const currentStatus = appointment.status as AppointmentStatus;
+        const allowed = allowedTransitions[currentStatus] ?? [];
         if (!allowed.includes(body.status)) {
           throw new ConflictError('Invalid status transition');
         }
@@ -254,7 +256,9 @@ router.patch(
 
       if (body.status === 'Completed') {
         const result = await prisma.$transaction(async (tx) => {
-          const updatedAppointment = await tx.appointment.update({
+          const client = tx as AppPrismaTransactionClient;
+
+          const updatedAppointment = await client.appointment.update({
             where: { appointmentId },
             data: {
               status: body.status,
@@ -266,7 +270,7 @@ router.patch(
             updatedAppointment.date.toISOString().slice(0, 10)
           );
 
-          const existingVisit = await tx.visit.findFirst({
+          const existingVisit = await client.visit.findFirst({
             where: {
               patientId: updatedAppointment.patientId,
               doctorId: updatedAppointment.doctorId,
@@ -279,7 +283,7 @@ router.patch(
             return existingVisit.visitId;
           }
 
-          const visit = await tx.visit.create({
+          const visit = await client.visit.create({
             data: {
               patientId: updatedAppointment.patientId,
               doctorId: updatedAppointment.doctorId,
