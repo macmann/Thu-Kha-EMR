@@ -22,6 +22,7 @@ import {
 import { toDateOnly } from '../utils/time.js';
 import {
   BadRequestError,
+  ConflictError,
   HttpError,
   NotFoundError,
 } from '../utils/httpErrors.js';
@@ -227,7 +228,7 @@ router.patch(
       if (body.status !== appointment.status) {
         const allowed = allowedTransitions[appointment.status] ?? [];
         if (!allowed.includes(body.status)) {
-          throw new BadRequestError('Invalid status transition');
+          throw new ConflictError('Invalid status transition');
         }
       }
 
