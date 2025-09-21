@@ -17,21 +17,35 @@ export async function getDoctorAvailabilityForDate(
   doctorId: string,
   date: Date
 ): Promise<AvailabilityWindow[]> {
-  const availability = await prisma.doctorAvailability.findMany({
-    where: {
-      doctorId,
-      dayOfWeek: dayOfWeekUTC(date),
-    },
-    select: {
-      startMin: true,
-      endMin: true,
-    },
-    orderBy: {
-      startMin: 'asc',
-    },
-  });
+  const dayOfWeek = dayOfWeekUTC(date);
 
-  return availability;
+  if (typeof prisma.doctorAvailability?.findMany === 'function') {
+    return prisma.doctorAvailability.findMany({
+      where: {
+        doctorId,
+        dayOfWeek,
+      },
+      select: {
+        startMin: true,
+        endMin: true,
+      },
+      orderBy: {
+        startMin: 'asc',
+      },
+    });
+  }
+
+  const fallbackAvailability = await prisma.$queryRaw<Array<{ startMin: number; endMin: number }>>`
+    SELECT "startMin", "endMin"
+    FROM "DoctorAvailability"
+    WHERE "doctorId" = ${doctorId} AND "dayOfWeek" = ${dayOfWeek}
+    ORDER BY "startMin" ASC
+  `;
+
+  return fallbackAvailability.map((window) => ({
+    startMin: Number(window.startMin),
+    endMin: Number(window.endMin),
+  }));
 }
 
 export async function hasDoctorBlackout(
