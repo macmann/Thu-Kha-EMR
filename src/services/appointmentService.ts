@@ -1,4 +1,4 @@
-import type { PrismaClient } from '@prisma/client';
+import type { AppPrismaClient } from '../types/appointments.js';
 import type { CreateAppointmentInput, UpdateAppointmentInput } from '../validation/appointment.js';
 import { composeDateTime, dayOfWeekUTC, toDateOnly } from '../utils/time.js';
 import {
@@ -13,7 +13,7 @@ export type AvailabilityWindow = {
 };
 
 export async function getDoctorAvailabilityForDate(
-  prisma: PrismaClient,
+  prisma: AppPrismaClient,
   doctorId: string,
   date: Date
 ): Promise<AvailabilityWindow[]> {
@@ -35,7 +35,7 @@ export async function getDoctorAvailabilityForDate(
 }
 
 export async function hasDoctorBlackout(
-  prisma: PrismaClient,
+  prisma: AppPrismaClient,
   doctorId: string,
   date: Date,
   startMin: number,
@@ -63,7 +63,7 @@ export async function hasDoctorBlackout(
 }
 
 export async function hasDoctorOverlap(
-  prisma: PrismaClient,
+  prisma: AppPrismaClient,
   doctorId: string,
   date: Date,
   startMin: number,
@@ -99,7 +99,7 @@ export async function hasDoctorOverlap(
   return Boolean(overlap);
 }
 
-async function ensurePatientExists(prisma: PrismaClient, patientId: string): Promise<void> {
+async function ensurePatientExists(prisma: AppPrismaClient, patientId: string): Promise<void> {
   const patient = await prisma.patient.findUnique({
     where: { patientId },
     select: { patientId: true },
@@ -110,7 +110,7 @@ async function ensurePatientExists(prisma: PrismaClient, patientId: string): Pro
   }
 }
 
-async function ensureDoctorExists(prisma: PrismaClient, doctorId: string): Promise<void> {
+async function ensureDoctorExists(prisma: AppPrismaClient, doctorId: string): Promise<void> {
   const doctor = await prisma.doctor.findUnique({
     where: { doctorId },
     select: { doctorId: true },
@@ -122,7 +122,7 @@ async function ensureDoctorExists(prisma: PrismaClient, doctorId: string): Promi
 }
 
 async function assertWithinAvailability(
-  prisma: PrismaClient,
+  prisma: AppPrismaClient,
   doctorId: string,
   date: Date,
   startMin: number,
@@ -138,7 +138,7 @@ async function assertWithinAvailability(
 }
 
 async function assertNoBlackout(
-  prisma: PrismaClient,
+  prisma: AppPrismaClient,
   doctorId: string,
   date: Date,
   startMin: number,
@@ -152,7 +152,7 @@ async function assertNoBlackout(
 }
 
 async function assertNoOverlap(
-  prisma: PrismaClient,
+  prisma: AppPrismaClient,
   doctorId: string,
   date: Date,
   startMin: number,
@@ -167,7 +167,7 @@ async function assertNoOverlap(
 }
 
 export async function assertCreatable(
-  prisma: PrismaClient,
+  prisma: AppPrismaClient,
   dto: CreateAppointmentInput
 ): Promise<void> {
   const { patientId, doctorId, date: dateStr, startTimeMin, endTimeMin } = dto;
@@ -180,7 +180,7 @@ export async function assertCreatable(
 }
 
 export async function assertUpdatable(
-  prisma: PrismaClient,
+  prisma: AppPrismaClient,
   appointmentId: string,
   dto: UpdateAppointmentInput
 ): Promise<void> {

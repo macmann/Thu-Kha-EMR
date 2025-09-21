@@ -1,11 +1,11 @@
-import { AnyZodObject, ZodError } from 'zod';
+import { ZodError, type ZodTypeAny } from 'zod';
 import { Request, Response, NextFunction } from 'express';
 import { HttpError } from '../utils/httpErrors.js';
 
 interface Schema {
-  body?: AnyZodObject;
-  query?: AnyZodObject;
-  params?: AnyZodObject;
+  body?: ZodTypeAny;
+  query?: ZodTypeAny;
+  params?: ZodTypeAny;
 }
 
 export function validate(schema: Schema) {
