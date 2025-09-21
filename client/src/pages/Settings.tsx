@@ -1,12 +1,68 @@
-import { ChangeEvent, FormEvent, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import { AvatarIcon, CheckIcon, PatientsIcon, SettingsIcon } from '../components/icons';
 import { useSettings } from '../context/SettingsProvider';
+import {
+  DoctorAvailabilitySlot,
+  createDoctorAvailability,
+  listDoctorAvailability,
+} from '../api/client';
 
 type DoctorFormState = {
   name: string;
   department: string;
 };
+
+const DAY_OPTIONS = [
+  { label: 'Sunday', value: 0 },
+  { label: 'Monday', value: 1 },
+  { label: 'Tuesday', value: 2 },
+  { label: 'Wednesday', value: 3 },
+  { label: 'Thursday', value: 4 },
+  { label: 'Friday', value: 5 },
+  { label: 'Saturday', value: 6 },
+];
+
+function parseErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error) {
+    try {
+      const parsed = JSON.parse(error.message);
+      if (parsed && typeof parsed.message === 'string') {
+        return parsed.message;
+      }
+    } catch {
+      /* ignore parse failure */
+    }
+    if (error.message) {
+      return error.message;
+    }
+  }
+  return fallback;
+}
+
+function timeStringToMinutes(value: string): number | null {
+  if (!value) return null;
+  const [hoursStr, minutesStr] = value.split(':');
+  const hours = Number(hoursStr);
+  const minutes = Number(minutesStr);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+    return null;
+  }
+  return hours * 60 + minutes;
+}
+
+function formatTime(minutes: number): string {
+  const clampedMinutes = Math.max(0, Math.min(24 * 60, minutes));
+  const hours = Math.floor(clampedMinutes / 60);
+  const mins = clampedMinutes % 60;
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const displayHour = hours % 12 === 0 ? 12 : hours % 12;
+  return `${displayHour}:${mins.toString().padStart(2, '0')} ${period}`;
+}
+
+function formatTimeRange(startMin: number, endMin: number): string {
+  return `${formatTime(startMin)} – ${formatTime(endMin)}`;
+}
 
 export default function Settings() {
   const {
@@ -25,11 +81,86 @@ export default function Settings() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [doctorForm, setDoctorForm] = useState<DoctorFormState>({ name: '', department: '' });
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string>('');
+  const [availabilitySlots, setAvailabilitySlots] = useState<DoctorAvailabilitySlot[]>([]);
+  const [defaultAvailability, setDefaultAvailability] = useState<{ startMin: number; endMin: number }[]>([]);
+  const [availabilityForm, setAvailabilityForm] = useState({ dayOfWeek: '1', start: '09:00', end: '17:00' });
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null);
+  const [availabilitySuccess, setAvailabilitySuccess] = useState<string | null>(null);
+  const [addingAvailability, setAddingAvailability] = useState(false);
 
   const totalUsers = users.length;
   const totalDoctors = doctors.length;
   const latestDoctor = totalDoctors > 0 ? doctors[totalDoctors - 1] : undefined;
   const latestUser = totalUsers > 0 ? users[totalUsers - 1] : undefined;
+
+  useEffect(() => {
+    if (!doctors.length) {
+      setSelectedDoctorId('');
+      setAvailabilitySlots([]);
+      setDefaultAvailability([]);
+      return;
+    }
+
+    setSelectedDoctorId((previous) => {
+      if (previous && doctors.some((doctor) => doctor.doctorId === previous)) {
+        return previous;
+      }
+      return doctors[0].doctorId;
+    });
+  }, [doctors]);
+
+  useEffect(() => {
+    if (!selectedDoctorId) {
+      setAvailabilitySlots([]);
+      setAvailabilityLoading(false);
+      setAvailabilityError(null);
+      setAvailabilitySuccess(null);
+      return;
+    }
+
+    let active = true;
+    setAvailabilityLoading(true);
+    setAvailabilityError(null);
+    setAvailabilitySuccess(null);
+
+    listDoctorAvailability(selectedDoctorId)
+      .then((response) => {
+        if (!active) return;
+        setAvailabilitySlots(response.availability);
+        setDefaultAvailability(response.defaultAvailability);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setAvailabilitySlots([]);
+        setAvailabilityError(parseErrorMessage(error, 'Unable to load availability.'));
+      })
+      .finally(() => {
+        if (!active) return;
+        setAvailabilityLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedDoctorId]);
+
+  const groupedAvailability = useMemo(() => {
+    return DAY_OPTIONS.map((option) => ({
+      ...option,
+      slots: availabilitySlots
+        .filter((slot) => slot.dayOfWeek === option.value)
+        .sort((a, b) => a.startMin - b.startMin),
+    }));
+  }, [availabilitySlots]);
+
+  const defaultAvailabilityLabel = useMemo(() => {
+    if (defaultAvailability.length > 0) {
+      return defaultAvailability.map((window) => formatTimeRange(window.startMin, window.endMin)).join(', ');
+    }
+    return formatTimeRange(9 * 60, 17 * 60);
+  }, [defaultAvailability]);
 
   function handleLogoChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -62,8 +193,57 @@ export default function Settings() {
     const trimmedDepartment = doctorForm.department.trim();
     if (!trimmedName || !trimmedDepartment) return;
 
-    await addDoctor({ name: trimmedName, department: trimmedDepartment });
+    const created = await addDoctor({ name: trimmedName, department: trimmedDepartment });
     setDoctorForm({ name: '', department: '' });
+    setSelectedDoctorId(created.doctorId);
+    setAvailabilityForm({ dayOfWeek: '1', start: '09:00', end: '17:00' });
+  }
+
+  async function handleAddAvailability(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedDoctorId) {
+      setAvailabilityError('Select a doctor to add availability.');
+      return;
+    }
+
+    const dayOfWeek = Number(availabilityForm.dayOfWeek);
+    const startMin = timeStringToMinutes(availabilityForm.start);
+    const endMin = timeStringToMinutes(availabilityForm.end);
+
+    if (startMin === null || endMin === null) {
+      setAvailabilityError('Provide valid start and end times.');
+      return;
+    }
+
+    if (endMin <= startMin) {
+      setAvailabilityError('End time must be later than start time.');
+      return;
+    }
+
+    setAddingAvailability(true);
+    setAvailabilityError(null);
+    setAvailabilitySuccess(null);
+
+    try {
+      const created = await createDoctorAvailability(selectedDoctorId, {
+        dayOfWeek,
+        startMin,
+        endMin,
+      });
+
+      setAvailabilitySlots((previous) => {
+        const next = [...previous, created];
+        next.sort((a, b) =>
+          a.dayOfWeek === b.dayOfWeek ? a.startMin - b.startMin : a.dayOfWeek - b.dayOfWeek
+        );
+        return next;
+      });
+      setAvailabilitySuccess('Availability window added.');
+    } catch (error) {
+      setAvailabilityError(parseErrorMessage(error, 'Unable to add availability window.'));
+    } finally {
+      setAddingAvailability(false);
+    }
   }
 
   const headerStatus = (
@@ -318,6 +498,154 @@ export default function Settings() {
                   <p className="mt-3 text-sm text-gray-500">
                     No doctors added yet. Create your first provider above to start scheduling visits.
                   </p>
+                )}
+              </div>
+
+              <div className="mt-8 border-t border-gray-100 pt-6">
+                <h3 className="text-sm font-semibold text-gray-900">Doctor Availability</h3>
+                {totalDoctors === 0 ? (
+                  <p className="mt-3 text-sm text-gray-500">
+                    Add a doctor above to configure custom availability. Providers without custom slots follow the
+                    default schedule of {defaultAvailabilityLabel}.
+                  </p>
+                ) : (
+                  <div className="mt-4 space-y-5">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="text-sm font-medium text-gray-700" htmlFor="availability-doctor">
+                          Select Doctor
+                        </label>
+                        <select
+                          id="availability-doctor"
+                          value={selectedDoctorId}
+                          onChange={(event) => {
+                            setSelectedDoctorId(event.target.value);
+                            setAvailabilityForm({ dayOfWeek: '1', start: '09:00', end: '17:00' });
+                            setAvailabilityError(null);
+                            setAvailabilitySuccess(null);
+                          }}
+                          className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        >
+                          {doctors.map((doctor) => (
+                            <option key={doctor.doctorId} value={doctor.doctorId}>
+                              {doctor.name} • {doctor.department}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3 text-xs text-blue-700">
+                        Configure specific windows for days you need to override the default {defaultAvailabilityLabel}{' '}
+                        schedule.
+                      </div>
+                    </div>
+
+                    <form onSubmit={handleAddAvailability} className="grid gap-4 md:grid-cols-4">
+                      <div>
+                        <label className="text-sm font-medium text-gray-700" htmlFor="availability-day">
+                          Day of Week
+                        </label>
+                        <select
+                          id="availability-day"
+                          value={availabilityForm.dayOfWeek}
+                          onChange={(event) => {
+                            setAvailabilityForm((prev) => ({ ...prev, dayOfWeek: event.target.value }));
+                            setAvailabilityError(null);
+                            setAvailabilitySuccess(null);
+                          }}
+                          className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        >
+                          {DAY_OPTIONS.map((option) => (
+                            <option key={option.value} value={String(option.value)}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-700" htmlFor="availability-start">
+                          Start Time
+                        </label>
+                        <input
+                          id="availability-start"
+                          type="time"
+                          value={availabilityForm.start}
+                          onChange={(event) => {
+                            setAvailabilityForm((prev) => ({ ...prev, start: event.target.value }));
+                            setAvailabilityError(null);
+                            setAvailabilitySuccess(null);
+                          }}
+                          className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-700" htmlFor="availability-end">
+                          End Time
+                        </label>
+                        <input
+                          id="availability-end"
+                          type="time"
+                          value={availabilityForm.end}
+                          onChange={(event) => {
+                            setAvailabilityForm((prev) => ({ ...prev, end: event.target.value }));
+                            setAvailabilityError(null);
+                            setAvailabilitySuccess(null);
+                          }}
+                          className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <button
+                          type="submit"
+                          disabled={addingAvailability}
+                          className={`inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-semibold text-white shadow transition ${
+                            addingAvailability ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'
+                          }`}
+                        >
+                          {addingAvailability ? 'Saving…' : 'Add Availability'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {availabilityError && (
+                      <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                        {availabilityError}
+                      </div>
+                    )}
+                    {availabilitySuccess && (
+                      <div className="rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+                        {availabilitySuccess}
+                      </div>
+                    )}
+
+                    <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                      {availabilityLoading ? (
+                        <p className="text-sm text-gray-500">Loading availability…</p>
+                      ) : (
+                        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                          {groupedAvailability.map((group) => (
+                            <div key={group.value} className="rounded-xl bg-white p-4 shadow-sm">
+                              <dt className="text-sm font-semibold text-gray-900">{group.label}</dt>
+                              <dd className="mt-2 space-y-2 text-sm text-gray-600">
+                                {group.slots.length > 0 ? (
+                                  group.slots.map((slot) => (
+                                    <div
+                                      key={slot.availabilityId}
+                                      className="flex items-center justify-between rounded-lg bg-blue-50 px-3 py-2 text-blue-700"
+                                    >
+                                      <span>{formatTimeRange(slot.startMin, slot.endMin)}</span>
+                                      <span className="text-xs font-medium uppercase tracking-wide text-blue-500">Custom</span>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <p className="text-xs text-gray-500">Default hours {defaultAvailabilityLabel}</p>
+                                )}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

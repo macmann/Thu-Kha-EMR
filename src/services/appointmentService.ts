@@ -13,6 +13,18 @@ export type AvailabilityWindow = {
   endMin: number;
 };
 
+export const DEFAULT_AVAILABILITY_WINDOWS: AvailabilityWindow[] = [
+  { startMin: 9 * 60, endMin: 17 * 60 },
+];
+
+function withDefaultAvailability(windows: AvailabilityWindow[]): AvailabilityWindow[] {
+  if (windows.length > 0) {
+    return windows;
+  }
+
+  return DEFAULT_AVAILABILITY_WINDOWS.map((window) => ({ ...window }));
+}
+
 type AvailabilityTableColumns = {
   doctorId: string;
   dayOfWeek: string;
@@ -132,7 +144,7 @@ export async function getDoctorAvailabilityForDate(
 
   if (typeof prisma.doctorAvailability?.findMany === 'function') {
     try {
-      return await prisma.doctorAvailability.findMany({
+      const windows = await prisma.doctorAvailability.findMany({
         where: {
           doctorId,
           dayOfWeek,
@@ -145,6 +157,7 @@ export async function getDoctorAvailabilityForDate(
           startMin: 'asc',
         },
       });
+      return withDefaultAvailability(windows);
     } catch (error) {
       if (!isMissingRelationOrColumnError(error)) {
         throw error;
@@ -152,7 +165,8 @@ export async function getDoctorAvailabilityForDate(
     }
   }
 
-  return queryAvailabilityFallback(prisma, doctorId, dayOfWeek);
+  const fallback = await queryAvailabilityFallback(prisma, doctorId, dayOfWeek);
+  return withDefaultAvailability(fallback);
 }
 
 export async function hasDoctorBlackout(

@@ -15,6 +15,20 @@ export interface Doctor {
   department: string;
 }
 
+export interface DoctorAvailabilitySlot {
+  availabilityId: string;
+  doctorId: string;
+  dayOfWeek: number;
+  startMin: number;
+  endMin: number;
+}
+
+export interface DoctorAvailabilityResponse {
+  doctorId: string;
+  availability: DoctorAvailabilitySlot[];
+  defaultAvailability: { startMin: number; endMin: number }[];
+}
+
 export interface Diagnosis {
   diagnosis: string;
 }
@@ -126,6 +140,21 @@ export interface CreateDoctorPayload {
 
 export async function createDoctor(payload: CreateDoctorPayload): Promise<Doctor> {
   return fetchJSON('/doctors', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listDoctorAvailability(doctorId: string): Promise<DoctorAvailabilityResponse> {
+  return fetchJSON(`/doctors/${doctorId}/availability`);
+}
+
+export function createDoctorAvailability(
+  doctorId: string,
+  payload: { dayOfWeek: number; startMin: number; endMin: number },
+): Promise<DoctorAvailabilitySlot> {
+  return fetchJSON(`/doctors/${doctorId}/availability`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

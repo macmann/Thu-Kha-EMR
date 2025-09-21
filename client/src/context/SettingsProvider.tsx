@@ -13,7 +13,7 @@ interface SettingsContextType {
   doctors: Doctor[];
   updateSettings: (data: { appName?: string; logo?: string | null }) => void;
   addUser: (user: UserAccount) => void;
-  addDoctor: (doctor: { name: string; department: string }) => Promise<void>;
+  addDoctor: (doctor: { name: string; department: string }) => Promise<Doctor>;
   widgetEnabled: boolean;
   setWidgetEnabled: (enabled: boolean) => void;
 }
@@ -71,6 +71,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const addDoctor = async (doctor: { name: string; department: string }) => {
     const created = await createDoctor(doctor);
     setDoctors((prev) => [...prev, created]);
+    return created;
   };
 
   return (
