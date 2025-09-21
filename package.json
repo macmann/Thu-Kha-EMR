@@ -11,6 +11,8 @@
     "dev": "concurrently -k -n API,WEB \"tsx watch src/index.ts\" \"cd client && npm run dev\"",
     "dev:api": "tsx watch src/index.ts",
     "dev:web": "cd client && npm run dev",
+    "predev": "npm run migrate:deploy",
+    "predev:api": "npm run migrate:deploy",
     "migrate": "prisma migrate deploy",
     "migrate:deploy": "prisma migrate deploy",
     "seed:csv": "tsx scripts/loadCsv.ts",
