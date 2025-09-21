@@ -165,22 +165,30 @@ export async function hasDoctorBlackout(
   const startAt = composeDateTime(date, startMin);
   const endAt = composeDateTime(date, endMin);
 
-  const blackout = await prisma.doctorBlackout.findFirst({
-    where: {
-      doctorId,
-      startAt: {
-        lt: endAt,
+  try {
+    const blackout = await prisma.doctorBlackout.findFirst({
+      where: {
+        doctorId,
+        startAt: {
+          lt: endAt,
+        },
+        endAt: {
+          gt: startAt,
+        },
       },
-      endAt: {
-        gt: startAt,
+      select: {
+        blackoutId: true,
       },
-    },
-    select: {
-      blackoutId: true,
-    },
-  });
+    });
 
-  return Boolean(blackout);
+    return Boolean(blackout);
+  } catch (error) {
+    if (isMissingRelationOrColumnError(error)) {
+      return false;
+    }
+
+    throw error;
+  }
 }
 
 export async function hasDoctorOverlap(
