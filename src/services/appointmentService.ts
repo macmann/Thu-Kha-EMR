@@ -77,12 +77,17 @@ function normalizeAvailabilityValue(value: unknown): number {
 }
 
 function isMissingRelationOrColumnError(error: unknown): boolean {
-  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2010') {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+    return false;
+  }
+
+  if (error.code === 'P2010') {
     const meta = error.meta as { code?: string } | undefined;
     return meta?.code === '42P01' || meta?.code === '42703';
   }
 
-  return false;
+  // Prisma uses these codes when the queried table or column does not exist.
+  return error.code === 'P2021' || error.code === 'P2022';
 }
 
 async function queryAvailabilityFallback(
