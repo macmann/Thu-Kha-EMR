@@ -108,6 +108,42 @@ describe('POST /api/appointments', () => {
   });
 });
 
+describe('GET /api/appointments', () => {
+  it('returns appointments for a specific date', async () => {
+    const creation = await request(app)
+      .post('/api/appointments')
+      .send({
+        patientId,
+        doctorId,
+        department: 'Cardiology',
+        date: appointmentDate,
+        startTimeMin: startOfDayMinutes,
+        endTimeMin: startOfDayMinutes + 30,
+        reason: 'Listed visit',
+      });
+
+    expect(creation.status).toBe(201);
+
+    const listRes = await request(app)
+      .get('/api/appointments')
+      .query({ date: appointmentDate, limit: '10' });
+
+    expect(listRes.status).toBe(200);
+    expect(Array.isArray(listRes.body.data)).toBe(true);
+    expect(listRes.body.data).toHaveLength(1);
+    expect(listRes.body.data[0].date).toContain(appointmentDate);
+  });
+
+  it('rejects invalid calendar dates', async () => {
+    const res = await request(app)
+      .get('/api/appointments')
+      .query({ date: '2025-02-30' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/invalid/i);
+  });
+});
+
 describe('PATCH /api/appointments/:id/status', () => {
   it('creates a visit when marking appointment completed', async () => {
     const createRes = await request(app)
