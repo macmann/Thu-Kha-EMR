@@ -3,15 +3,17 @@ import { Link } from 'react-router-dom';
 import { searchPatients, type Patient } from '../api/client';
 import DashboardLayout from './DashboardLayout';
 import { PatientsIcon, SearchIcon } from './icons';
+import { useTranslation } from '../hooks/useTranslation';
 
 const quickFilters = [
-  { label: 'Recently Registered', query: '2024' },
-  { label: 'Medicare Coverage', query: 'Medicare' },
-  { label: 'Hypertension', query: 'Hypertension' },
-  { label: 'Diabetes', query: 'Diabetes' },
+  { key: 'recently-registered', label: 'Recently Registered', query: '2024' },
+  { key: 'medicare-coverage', label: 'Medicare Coverage', query: 'Medicare' },
+  { key: 'hypertension', label: 'Hypertension', query: 'Hypertension' },
+  { key: 'diabetes', label: 'Diabetes', query: 'Diabetes' },
 ];
 
 export default function PatientSearch() {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [debounced, setDebounced] = useState('');
   const [results, setResults] = useState<Patient[]>([]);
@@ -64,7 +66,7 @@ export default function PatientSearch() {
         <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
         <input
           type="search"
-          placeholder="Search patients by name, ID, or insurance..."
+          placeholder={t('Search patients by name, ID, or insurance...')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="w-full rounded-full border border-gray-200 bg-gray-50 py-2 pl-10 pr-4 text-sm text-gray-700 placeholder:text-gray-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
@@ -74,18 +76,26 @@ export default function PatientSearch() {
         to="/register"
         className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-700"
       >
-        Register Patient
+        {t('Register Patient')}
       </Link>
     </div>
   );
 
   const hasQuery = debounced.length > 0;
   const resultCount = results.length;
+  const recordLabel = resultCount === 1 ? t('record') : t('records');
+  const resultsSummary = hasQuery
+    ? t('Showing {count} matching {recordLabel}.', { count: resultCount, recordLabel })
+    : t('Start typing to explore the patient directory.');
+  const matchesLabel =
+    resultCount === 1
+      ? t('{count} match', { count: resultCount })
+      : t('{count} matches', { count: resultCount });
 
   return (
     <DashboardLayout
-      title="Patient Directory"
-      subtitle="Find and manage patient records across the organization."
+      title={t('Patient Directory')}
+      subtitle={t('Find and manage patient records across the organization.')}
       activeItem="patients"
       headerChildren={headerContent}
     >
@@ -93,16 +103,12 @@ export default function PatientSearch() {
         <section className="rounded-2xl bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Search Results</h2>
-              <p className="mt-1 text-sm text-gray-600">
-                {hasQuery
-                  ? `Showing ${resultCount} matching ${resultCount === 1 ? 'record' : 'records'}.`
-                  : 'Start typing to explore the patient directory.'}
-              </p>
+              <h2 className="text-lg font-semibold text-gray-900">{t('Search Results')}</h2>
+              <p className="mt-1 text-sm text-gray-600">{resultsSummary}</p>
             </div>
             {hasQuery && (
               <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-600">
-                {resultCount} match{resultCount === 1 ? '' : 'es'}
+                {matchesLabel}
               </span>
             )}
           </div>
@@ -111,22 +117,22 @@ export default function PatientSearch() {
             {isLoading ? (
               <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
                 <SearchIcon className="h-10 w-10 animate-spin text-blue-500" />
-                <div className="text-sm font-medium text-gray-700">Searching for matching patients...</div>
-                <p className="text-xs text-gray-500">Hang tight while we gather the latest records.</p>
+                <div className="text-sm font-medium text-gray-700">{t('Searching for matching patients...')}</div>
+                <p className="text-xs text-gray-500">{t('Hang tight while we gather the latest records.')}</p>
               </div>
             ) : resultCount > 0 ? (
               <table className="min-w-full divide-y divide-gray-100 text-sm">
                 <thead className="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                   <tr>
-                    <th className="px-6 py-3">Patient</th>
-                    <th className="px-6 py-3">Date of Birth</th>
-                    <th className="px-6 py-3">Insurance</th>
-                    <th className="px-6 py-3 text-right">Actions</th>
+                    <th className="px-6 py-3">{t('Patient')}</th>
+                    <th className="px-6 py-3">{t('Date of Birth')}</th>
+                    <th className="px-6 py-3">{t('Insurance')}</th>
+                    <th className="px-6 py-3 text-right">{t('Actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">
                   {results.map((patient) => {
-                    const coverage = patient.insurance?.trim() || 'Self-pay';
+                    const coverage = patient.insurance?.trim() || t('Self-pay');
 
                     return (
                       <tr key={patient.patientId} className="transition hover:bg-blue-50/40">
@@ -147,7 +153,7 @@ export default function PatientSearch() {
                             to={`/patients/${patient.patientId}`}
                             className="inline-flex items-center rounded-full bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-blue-700"
                           >
-                            View Profile
+                            {t('View Profile')}
                           </Link>
                         </td>
                       </tr>
@@ -160,11 +166,11 @@ export default function PatientSearch() {
                 <PatientsIcon className="h-10 w-10 text-gray-300" />
                 <div className="text-sm font-medium text-gray-700">
                   {hasQuery
-                    ? 'No patients match your search just yet.'
-                    : 'Search for patients by name, patient ID, or insurance provider.'}
+                    ? t('No patients match your search just yet.')
+                    : t('Search for patients by name, patient ID, or insurance provider.')}
                 </div>
                 {!hasQuery && (
-                  <p className="text-xs text-gray-500">Try "Jane" or "Medicare" to explore the directory.</p>
+                  <p className="text-xs text-gray-500">{t('Try "Jane" or "Medicare" to explore the directory.')}</p>
                 )}
               </div>
             )}
@@ -173,14 +179,14 @@ export default function PatientSearch() {
 
         <aside className="space-y-6">
           <div className="rounded-2xl bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900">Quick Filters</h3>
-            <p className="mt-1 text-sm text-gray-600">Jump into commonly referenced patient segments.</p>
+            <h3 className="text-lg font-semibold text-gray-900">{t('Quick Filters')}</h3>
+            <p className="mt-1 text-sm text-gray-600">{t('Jump into commonly referenced patient segments.')}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               {quickFilters.map((filter) => {
                 const isActive = query.toLowerCase() === filter.query.toLowerCase();
                 return (
                   <button
-                    key={filter.label}
+                    key={filter.key}
                     type="button"
                     onClick={() => setQuery(filter.query)}
                     className={`rounded-full px-4 py-2 text-xs font-medium transition ${
@@ -189,7 +195,7 @@ export default function PatientSearch() {
                         : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
                     }`}
                   >
-                    {filter.label}
+                    {t(filter.label)}
                   </button>
                 );
               })}
@@ -197,15 +203,15 @@ export default function PatientSearch() {
           </div>
 
           <div className="rounded-2xl bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900">Need to add someone?</h3>
+            <h3 className="text-lg font-semibold text-gray-900">{t('Need to add someone?')}</h3>
             <p className="mt-2 text-sm text-gray-600">
-              Can&apos;t find the patient you&apos;re looking for? Create a new record in just a few steps.
+              {t("Can't find the patient you're looking for? Create a new record in just a few steps.")}
             </p>
             <Link
               to="/register"
               className="mt-4 inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-700"
             >
-              Register Patient
+              {t('Register Patient')}
             </Link>
           </div>
         </aside>
