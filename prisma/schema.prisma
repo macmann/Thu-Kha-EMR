@@ -56,6 +56,7 @@ model Doctor {
   blackouts      DoctorBlackout[]
   visits       Visit[]
   observations Observation[]
+  user         User?
 }
 
 model Appointment {
