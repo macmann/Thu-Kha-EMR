@@ -649,18 +649,18 @@ function observationHasChanges(
     return true;
   }
 
-  const numericFields: Array<keyof VisitFormObservationValues> = [
+  const numericFields = [
     'bpSystolic',
     'bpDiastolic',
     'heartRate',
     'temperatureC',
     'spo2',
     'bmi',
-  ];
+  ] as const satisfies ReadonlyArray<keyof VisitFormObservationValues & keyof Observation>;
 
   for (const field of numericFields) {
     const nextValue = next[field] ?? null;
-    const latestValue = (latest as Record<string, number | null | undefined>)[field] ?? null;
+    const latestValue = latest[field] ?? null;
     if (nextValue !== latestValue) {
       return true;
     }
