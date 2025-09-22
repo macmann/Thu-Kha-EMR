@@ -9,7 +9,24 @@ import {
   type Appointment,
   type AppointmentStatus,
 } from '../api/appointments';
-import { addObservation, getVisit, listPatientVisits } from '../api/client';
+import {
+  createVisit,
+  getVisit,
+  listDoctors,
+  listPatientVisits,
+  type Doctor,
+  type Observation,
+  type VisitDetail,
+} from '../api/client';
+import VisitForm from '../components/VisitForm';
+import {
+  createVisitFormInitialValues,
+  persistVisitFormValues,
+  visitDetailToInitialValues,
+  type VisitFormInitialValues,
+  type VisitFormObservationValues,
+  type VisitFormSubmitValues,
+} from '../utils/visitForm';
 
 export default function Home() {
   const { user } = useAuth();
@@ -158,10 +175,12 @@ function DoctorQueueDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [note, setNote] = useState('');
   const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null);
+  const [selectedVisitDetail, setSelectedVisitDetail] = useState<VisitDetail | null>(null);
+  const [visitInitialValues, setVisitInitialValues] = useState<VisitFormInitialValues | null>(null);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [invitingId, setInvitingId] = useState<string | null>(null);
-  const [completing, setCompleting] = useState(false);
+  const [savingVisit, setSavingVisit] = useState(false);
 
   const loadQueue = useCallback(async () => {
     setLoading(true);
@@ -182,6 +201,30 @@ function DoctorQueueDashboard() {
   }, [loadQueue]);
 
   useEffect(() => {
+    let ignore = false;
+
+    async function loadDoctorsList() {
+      try {
+        const list = await listDoctors();
+        if (!ignore) {
+          setDoctors(list);
+        }
+      } catch (err) {
+        if (!ignore) {
+          console.error(err);
+          setError(parseErrorMessage(err, 'Unable to load doctors.'));
+        }
+      }
+    }
+
+    loadDoctorsList();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!appointments.length) {
       setSelectedId(null);
       return;
@@ -194,24 +237,31 @@ function DoctorQueueDashboard() {
     });
   }, [appointments]);
 
-  useEffect(() => {
-    setNote('');
-    setSuccess(null);
-    setError(null);
-    setSelectedVisitId(null);
-  }, [selectedId]);
-
   const selected = appointments.find((appt) => appt.appointmentId === selectedId) ?? null;
 
   useEffect(() => {
+    setSuccess(null);
+    setError(null);
+    setSelectedVisitId(null);
+    setSelectedVisitDetail(null);
+    setSavingVisit(false);
+
     if (!selected) {
+      setVisitInitialValues(null);
       return;
     }
 
-    let ignore = false;
-    const appointment = selected;
+    const baseValues = createVisitFormInitialValues({
+      visitDate: normalizeDateKey(selected.date),
+      doctorId: selected.doctorId,
+      department: selected.department,
+      reason: selected.reason ?? undefined,
+    });
+    setVisitInitialValues(baseValues);
 
-    async function loadExistingVisitNote(current: Appointment) {
+    let ignore = false;
+
+    async function loadExistingVisitDetails(current: Appointment) {
       try {
         const visits = await listPatientVisits(current.patientId);
         const appointmentDate = normalizeDateKey(current.date);
@@ -225,32 +275,33 @@ function DoctorQueueDashboard() {
           return;
         }
 
-        const visit = await getVisit(match.visitId);
-        const latestNote = visit.observations[0]?.noteText ?? '';
-
+        const detail = await getVisit(match.visitId);
         if (!ignore) {
           setSelectedVisitId(match.visitId);
-          setNote((current) => {
-            if (current.trim().length > 0) {
-              return current;
-            }
-            return latestNote;
-          });
+          setSelectedVisitDetail(detail);
+          setVisitInitialValues(visitDetailToInitialValues(detail));
         }
       } catch (err) {
         if (!ignore) {
           console.error(err);
-          setError(parseErrorMessage(err, 'Unable to load existing visit notes.'));
+          setError(parseErrorMessage(err, 'Unable to load existing visit details.'));
         }
       }
     }
 
-    loadExistingVisitNote(appointment);
+    loadExistingVisitDetails(selected);
 
     return () => {
       ignore = true;
     };
-  }, [selected?.appointmentId, selected?.patientId, selected?.doctorId, selected?.date]);
+  }, [
+    selected?.appointmentId,
+    selected?.patientId,
+    selected?.doctorId,
+    selected?.date,
+    selected?.department,
+    selected?.reason,
+  ]);
 
   const handleInvite = async (appointment: Appointment) => {
     setInvitingId(appointment.appointmentId);
@@ -268,45 +319,84 @@ function DoctorQueueDashboard() {
     }
   };
 
-  const handleComplete = async (appointment: Appointment) => {
-    if (!note.trim()) {
-      setError('Add visit notes before completing the appointment.');
+  const handleVisitSubmit = async (values: VisitFormSubmitValues) => {
+    if (!selected) {
+      setError('Select an appointment before saving visit details.');
       return;
     }
-    setCompleting(true);
+
+    if (!values.doctorId) {
+      setError('A doctor must be selected for the visit.');
+      return;
+    }
+
+    setSavingVisit(true);
     setSuccess(null);
     setError(null);
+
     try {
-      const result = await patchStatus(appointment.appointmentId, { status: 'Completed' });
-      let visitId: string | null = selectedVisitId;
-      if ('visitId' in result && typeof result.visitId === 'string') {
-        visitId = result.visitId;
-        setSelectedVisitId(result.visitId);
+      let visitId = selectedVisitId;
+      let detail = selectedVisitDetail;
+
+      if (!visitId) {
+        const visit = await createVisit({
+          patientId: selected.patientId,
+          visitDate: values.visitDate,
+          doctorId: values.doctorId,
+          department: values.department,
+          reason: values.reason,
+        });
+        visitId = visit.visitId;
+        await persistVisitFormValues(visitId, values);
+        detail = await getVisit(visitId);
       } else {
-        const visits = await listPatientVisits(appointment.patientId);
-        const appointmentDate = normalizeDateKey(appointment.date);
-        const match = visits.find(
-          (visit) =>
-            visit.doctor.doctorId === appointment.doctorId && normalizeDateKey(visit.visitDate) === appointmentDate,
-        );
-        visitId = match?.visitId ?? null;
-        if (visitId) {
-          setSelectedVisitId(visitId);
+        const additions = computeVisitAdditions(values, detail);
+        const hasAdditions =
+          additions.diagnoses.length > 0 ||
+          additions.medications.length > 0 ||
+          additions.labs.length > 0 ||
+          Boolean(additions.observation);
+
+        if (hasAdditions) {
+          await persistVisitFormValues(visitId, additions);
+          detail = await getVisit(visitId);
         }
       }
 
-      if (!visitId) {
-        throw new Error('Unable to locate visit record for this appointment.');
+      if (detail) {
+        setSelectedVisitDetail(detail);
+        setVisitInitialValues(visitDetailToInitialValues(detail));
       }
 
-      await addObservation(visitId, { noteText: note.trim() });
-      setNote('');
-      setSuccess('Visit notes saved and appointment completed.');
+      if (visitId) {
+        setSelectedVisitId(visitId);
+      }
+
+      if (selected.status !== 'Completed') {
+        const result = await patchStatus(selected.appointmentId, { status: 'Completed' });
+        if ('visitId' in result && typeof result.visitId === 'string') {
+          visitId = result.visitId;
+          setSelectedVisitId(result.visitId);
+          if (!detail || detail.visitId !== result.visitId) {
+            const refreshed = await getVisit(result.visitId);
+            setSelectedVisitDetail(refreshed);
+            setVisitInitialValues(visitDetailToInitialValues(refreshed));
+          }
+        }
+      }
+
+      setSuccess(
+        selected.status === 'Completed'
+          ? 'Visit details updated.'
+          : 'Visit saved and appointment completed.',
+      );
       await loadQueue();
+      setSelectedId(selected.appointmentId);
     } catch (err) {
-      setError(parseErrorMessage(err, 'Unable to complete the appointment.'));
+      console.error(err);
+      setError(parseErrorMessage(err, 'Unable to save visit details.'));
     } finally {
-      setCompleting(false);
+      setSavingVisit(false);
     }
   };
 
@@ -405,17 +495,49 @@ function DoctorQueueDashboard() {
                 </dl>
 
                 <div className="space-y-3">
-                  <label className="text-sm font-medium text-gray-700" htmlFor="visit-notes">
-                    Visit notes
-                  </label>
-                  <textarea
-                    id="visit-notes"
-                    rows={6}
-                    value={note}
-                    onChange={(event) => setNote(event.target.value)}
-                    placeholder="Document key findings, interventions, and next steps."
-                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  />
+                  <h3 className="text-sm font-medium text-gray-700">Visit documentation</h3>
+                  {visitInitialValues ? (
+                    <VisitForm
+                      doctors={doctors}
+                      initialValues={visitInitialValues}
+                      onSubmit={handleVisitSubmit}
+                      saving={savingVisit}
+                      disableDoctorSelection
+                      disableVisitDate
+                      submitLabel={
+                        selected.status === 'Completed'
+                          ? 'Update Visit'
+                          : 'Save Visit & Complete'
+                      }
+                      submitDisabled={
+                        !(selected.status === 'InProgress' || selected.status === 'Completed')
+                      }
+                      extraActions={
+                        selected.status === 'Scheduled' || selected.status === 'CheckedIn'
+                          ? (
+                              <button
+                                type="button"
+                                onClick={() => handleInvite(selected)}
+                                disabled={invitingId === selected.appointmentId}
+                                className={`rounded-full px-4 py-2 text-sm font-semibold text-white shadow transition ${
+                                  invitingId === selected.appointmentId
+                                    ? 'cursor-not-allowed bg-blue-300'
+                                    : 'bg-blue-600 hover:bg-blue-700'
+                                }`}
+                              >
+                                {invitingId === selected.appointmentId
+                                  ? 'Inviting...'
+                                  : 'Invite Patient'}
+                              </button>
+                            )
+                          : null
+                      }
+                    />
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 text-sm text-gray-500">
+                      Loading visit form...
+                    </div>
+                  )}
                 </div>
 
                 {error && (
@@ -424,35 +546,6 @@ function DoctorQueueDashboard() {
                 {success && (
                   <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{success}</div>
                 )}
-
-                <div className="flex flex-wrap gap-3">
-                  {(selected.status === 'Scheduled' || selected.status === 'CheckedIn') && (
-                    <button
-                      type="button"
-                      onClick={() => handleInvite(selected)}
-                      disabled={invitingId === selected.appointmentId}
-                      className={`rounded-full px-4 py-2 text-sm font-semibold text-white shadow transition ${
-                        invitingId === selected.appointmentId
-                          ? 'cursor-not-allowed bg-blue-300'
-                          : 'bg-blue-600 hover:bg-blue-700'
-                      }`}
-                    >
-                      {invitingId === selected.appointmentId ? 'Inviting...' : 'Invite Patient'}
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => handleComplete(selected)}
-                    disabled={selected.status !== 'InProgress' || completing}
-                    className={`rounded-full px-4 py-2 text-sm font-semibold text-white shadow transition ${
-                      selected.status !== 'InProgress' || completing
-                        ? 'cursor-not-allowed bg-gray-300 text-gray-600'
-                        : 'bg-green-600 hover:bg-green-700'
-                    }`}
-                  >
-                    {completing ? 'Saving...' : 'Save Notes & Complete'}
-                  </button>
-                </div>
               </div>
             ) : (
               <div className="flex h-full flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-8 text-center text-sm text-gray-500">
@@ -464,6 +557,116 @@ function DoctorQueueDashboard() {
       )}
     </DashboardLayout>
   );
+}
+
+function computeVisitAdditions(
+  values: VisitFormSubmitValues,
+  detail: VisitDetail | null,
+): VisitFormSubmitValues {
+  if (!detail) {
+    return values;
+  }
+
+  const existingDiagnoses = new Set(
+    detail.diagnoses.map((diagnosis) => createDiagnosisKey(diagnosis.diagnosis)),
+  );
+  const diagnoses = values.diagnoses.filter((diagnosis) => {
+    const key = createDiagnosisKey(diagnosis);
+    if (!key || existingDiagnoses.has(key)) {
+      return false;
+    }
+    existingDiagnoses.add(key);
+    return true;
+  });
+
+  const existingMedications = new Set(
+    detail.medications.map((medication) =>
+      createMedicationKey({ drugName: medication.drugName, dosage: medication.dosage ?? undefined }),
+    ),
+  );
+  const medications = values.medications.filter((medication) => {
+    const key = createMedicationKey(medication);
+    if (!key || existingMedications.has(key)) {
+      return false;
+    }
+    existingMedications.add(key);
+    return true;
+  });
+
+  const existingLabs = new Set(detail.labResults.map((lab) => createLabKey(lab)));
+  const labs = values.labs.filter((lab) => {
+    const key = createLabKey(lab);
+    if (!key || existingLabs.has(key)) {
+      return false;
+    }
+    existingLabs.add(key);
+    return true;
+  });
+
+  let observation: VisitFormObservationValues | undefined;
+  if (values.observation) {
+    const latestObservation = detail.observations[0];
+    if (observationHasChanges(values.observation, latestObservation)) {
+      observation = values.observation;
+    }
+  }
+
+  return {
+    ...values,
+    diagnoses,
+    medications,
+    labs,
+    observation,
+  };
+}
+
+function createDiagnosisKey(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function createMedicationKey(medication: { drugName: string; dosage?: string }): string {
+  const name = medication.drugName.trim().toLowerCase();
+  const dose = medication.dosage ? medication.dosage.trim().toLowerCase() : '';
+  return `${name}|${dose}`;
+}
+
+function createLabKey(lab: { testName: string; resultValue?: number | null; unit?: string | null }): string {
+  const name = lab.testName.trim().toLowerCase();
+  const value = lab.resultValue !== undefined && lab.resultValue !== null ? String(lab.resultValue) : '';
+  const unit = lab.unit ? lab.unit.trim().toLowerCase() : '';
+  return `${name}|${value}|${unit}`;
+}
+
+function observationHasChanges(
+  next: VisitFormObservationValues,
+  latest?: Observation,
+): boolean {
+  if (!latest) {
+    return true;
+  }
+
+  if (next.noteText.trim() !== (latest.noteText ?? '').trim()) {
+    return true;
+  }
+
+  const numericFields: Array<keyof VisitFormObservationValues> = [
+    'bpSystolic',
+    'bpDiastolic',
+    'heartRate',
+    'temperatureC',
+    'spo2',
+    'bmi',
+  ];
+
+  for (const field of numericFields) {
+    const nextValue = next[field] ?? null;
+    const latestValue = (latest as Record<string, number | null | undefined>)[field] ?? null;
+    if (nextValue !== latestValue) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 const statusVisuals: Record<AppointmentStatus, { label: string; chip: string; dot: string }> = {
