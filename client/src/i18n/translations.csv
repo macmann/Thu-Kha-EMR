@@ -9,6 +9,7 @@ Settings,Settings,ချိန်ညှိမှုများ
 Team Member,Team Member,အသင်းဝင်
 Signed-in user,Signed-in user,ဝင်ရောက်ထားသောအသုံးပြုသူ
 Doctor,Doctor,ဆရာဝန်
+Department,Department,ဌာန
 Administrative Assistant,Administrative Assistant,စီမံရေးကူညီသူ
 IT Administrator,IT Administrator,IT အုပ်ချုပ်ရေးမှူး
 Sign in to your account,Sign in to your account,သင့်အကောင့်သို့ ဝင်ရောက်ပါ
@@ -134,3 +135,155 @@ Doctor Coverage,Doctor Coverage,ဆရာဝန် ဝင်ရောက်မ�
 Loading doctor data...,Loading doctor data...,ဆရာဝန် ဒေတာများကို တင်နေပါသည်...
 Unable to load doctor data.,Unable to load doctor data.,ဆရာဝန် ဒေတာကို တင်မရပါ။
 All doctors have user accounts.,All doctors have user accounts.,ဆရာဝန်အားလုံးတွင် အသုံးပြုသူအကောင့်များ ရှိပြီးဖြစ်သည်။
+Failed to save visit,Failed to save visit,လည်ပတ်မှုကို သိမ်းဆည်း၍ မအောင်မြင်ပါ။
+Record a visit,Record a visit,လည်ပတ်မှုကို မှတ်တမ်းတင်ပါ
+Loading patient context...,Loading patient context...,လူနာ အချက်အလက်များကို တင်နေပါသည်...
+Document the encounter so the care team stays aligned.,Document the encounter so the care team stays aligned.,အများစု ကုသရေးအသင်းတန်းကို တစ်သားတည်း ထားနိုင်ရန် တွေ့ဆုံမှုကို မှတ်တမ်းတင်ပါ။
+Not recorded,Not recorded,မှတ်တမ်းမတင်ရသေးပါ
+Invalid date,Invalid date,ရက်စွဲမမှန်ပါ
+Back to patient record,Back to patient record,လူနာမှတ်တမ်းသို့ ပြန်သွားပါ
+New visits sync instantly with the patient chart.,New visits sync instantly with the patient chart.,လည်ပတ်အသစ်များကို လူနာမှတ်တမ်းနှင့် ချက်ချင်း သဟဇာတဖြစ်စေပါ။
+Add visit for {name},Add visit for {name},{name} အတွက် လည်ပတ်မှု သွင်းပါ
+Retrieving patient details...,Retrieving patient details...,လူနာ အသေးစိတ်အချက်အလက်များကို ရယူနေပါသည်...
+Visit details,Visit details,လည်ပတ် အသေးစိတ်
+Visit Date,Visit Date,လည်ပတ်မှု ရက်စွဲ
+"Capture the visit reason, diagnoses, and treatment plan.","Capture the visit reason, diagnoses, and treatment plan.",လည်ပတ်ရသည့် အကြောင်းရင်း၊ ရောဂါခွဲခြားချက်နှင့် ကုသရေးအစီအစဉ်ကို မှတ်တမ်းတင်ပါ။
+Required,Required,လိုအပ်ပါသည်
+Need a quick template?,Need a quick template?,မြန်ဆန်သော စံနမူနာတစ်ခု လိုပါသလား?
+"Use the notes section to outline patient concerns, assessment, and plan in a SOAP-style format for rapid charting.","Use the notes section to outline patient concerns, assessment, and plan in a SOAP-style format for rapid charting.",SOAP ပုံစံဖြင့် လူနာ၏ အစိုးရအမြင်များ၊ အကဲဖြတ်ချက်များနှင့် အစီအစဉ်များကို မှတ်ချက်ခုံတွင် ရေးသားပြီး မြန်ဆန်စွာ မှတ်တမ်းတင်ပါ။
+Patient snapshot,Patient snapshot,လူနာ အကျဉ်းချုံး
+Key chart details for this encounter.,Key chart details for this encounter.,ဒီတစ်ကြိမ် တွေ့ဆုံမှုအတွက် အဓိက မှတ်တမ်းအချက်အလက်များ။
+Age,Age,အသက်
+{count} years,{count} years,{count} နှစ်
+Coverage,Coverage,အာမခံအကာအကွယ်
+Contact,Contact,ဆက်သွယ်ရန်
+Team updates,Team updates,အသင်း အပ်ဒိတ်များ
+Mention notable trends or follow-up actions so care coordinators and providers stay aligned across subsequent visits.,Mention notable trends or follow-up actions so care coordinators and providers stay aligned across subsequent visits.,မကြာခဏဖြစ်ပေါ်သော လက်ရှိအခြေအနေများနှင့် ဆက်လက်လုပ်ဆောင်ရမည့် အရေးယူချက်များကို ဖော်ပြပေးပါက ကုသရေးညှိနှိုင်းသူနှင့် ပံ့ပိုးသူများသည် နောက်ထပ် လည်ပတ်မှုများတွင် သဟဇာတရှိနေပါမည်။
+• Flag any medication changes in the medication list.,• Flag any medication changes in the medication list.,• ဆေးဝါးစာရင်းတွင် ပြောင်းလဲမှုများ ရှိပါက မှတ်သားထားပါ။
+• Log lab orders to populate the analytics dashboards.,• Log lab orders to populate the analytics dashboards.,• လက်တင်အစီအစဉ်များကို မှတ်တမ်းတင်ကာ ခွဲခြမ်းစိတ်ဖြာ ဒက်ရှ်ဘုတ်များကို ပြည့်စုံစေပါ။
+• Capture observation notes for nurses reviewing the chart.,• Capture observation notes for nurses reviewing the chart.,• မှတ်တမ်းကို ပြန်လည်စစ်ဆေးမည့် သူနာပြုများအတွက် သတိပြုမှတ်စုများကို မှတ်တမ်းတင်ပါ။
+error.patient-missing-id,Patient identifier is missing.,လူနာထောက်ပြချက် မရှိပါ။
+error.patient-load,Unable to load patient details right now.,လူနာအသေးစိတ်ကို ယခု မတင်နိုင်ပါ။
+Add date of birth,Add date of birth,မွေးသက္ကရာဇ် ထည့်ပါ
+Failed to register patient,Failed to register patient,လူနာကို စာရင်းသွင်းခြင်း မအောင်မြင်ပါ
+View Patient Directory,View Patient Directory,လူနာ လမ်းညွှန်စာရင်းကို ကြည့်ပါ
+All new records sync instantly across the care team.,All new records sync instantly across the care team.,မှတ်တမ်းအသစ်များအားလုံးကို ကုသရေးအသင်းနှင့် ချက်ချင်း သဟဇာတဖြစ်စေပါ။
+Capture demographic details to create a new patient record.,Capture demographic details to create a new patient record.,လူနာမှတ်တမ်းအသစ် ဖန်တီးရန် လူမှုအချက်အလက် အသေးစိတ်များကို မှတ်တမ်းတင်ပါ။
+Patient Information,Patient Information,လူနာ အချက်အလက်
+We'll use these details to generate the official chart and identifiers.,We'll use these details to generate the official chart and identifiers.,အမှုထမ်းမှတ်တမ်းနှင့် အမှတ်အသားများ ဖန်တီးရန် ဤအချက်အလက်များကို အသုံးပြုပါမည်။
+Step 1 of 1,Step 1 of 1,အဆင့် ၁ / ၁
+Full name,Full name,အမည်အပြည့်
+"e.g. Jane Smith","e.g. Jane Smith",ဥပမာ။ Jane Smith
+Used to calculate age for visit planning and reports.,Used to calculate age for visit planning and reports.,လည်ပတ်အစီအစဉ်နှင့် အစီရင်ခံစာများအတွက် အသက်တွက်ရန် အသုံးပြုသည်။
+Insurance partner,Insurance partner,အာမခံ ပူးပေါင်းမိတ်ဖက်
+"e.g. Medicare","e.g. Medicare",ဥပမာ။ Medicare
+Include private or public coverage information.,Include private or public coverage information.,ပုဂ္ဂလိက သို့မဟုတ် အများပြည်သူ အာမခံအချက်အလက်များကို ထည့်သွင်းပါ။
+Ready to create the chart?,Ready to create the chart?,မှတ်တမ်းဖိုင်ဖန်တီးရန် Siddhi ဖြစ်နေပြီလား?
+Review the details above before saving. You can always edit later.,Review the details above before saving. You can always edit later.,သိမ်းမီ အထက်ပါ အသေးစိတ်များကို ပြန်သုံးသပ်ပါ။ နောင်တွင် ပြင်ဆင်နိုင်ပါသေးတယ်။
+Cancel,Cancel,ဖျက်သိမ်းပါ
+Save Patient,Save Patient,လူနာကို သိမ်းဆည်းပါ
+Live Preview,Live Preview,အသက်တမ်းမူကြမ်း
+New patient profile,New patient profile,လူနာ ပရိုဖိုင်အသစ်
+Not captured yet,Not captured yet,မယူရှိရသေးပါ
+Next steps,Next steps,နောက်ထပ် လုပ်ဆောင်ရမည့်အဆင့်များ
+"After saving, you can add medical history, visits, and observations.","After saving, you can add medical history, visits, and observations.",သိမ်းဆည်းပြီးနောက် ဆေးဘက်မှတ်တမ်း၊ လည်ပတ်မှုများနှင့် သတိပြုမှတ်စုများကို ထပ်တိုးထည့်နိုင်ပါသည်။
+• Schedule an initial visit with the assigned provider.,• Schedule an initial visit with the assigned provider.,• သတ်မှတ်ထားသော ပံ့ပိုးသူနှင့် မူလ လည်ပတ်ချိန်းကို ချိန်းဆွဲပါ။
+• Upload prior records or insurance documents if available.,• Upload prior records or insurance documents if available.,• ရှိပါက မူလမှတ်တမ်းများ သို့မဟုတ် အာမခံစာရွက်စာတမ်းများကို အပ်လုဒ်လုပ်ပါ။
+• Notify the care team about new patient onboarding.,• Notify the care team about new patient onboarding.,• လူနာအသစ် ဝင်ရောက်လာမှုကို ကုသရေးအသင်းထံ သတင်းပို့ပါ။
+New Appointment,New Appointment,ချိန်းအသစ်
+Cancel this appointment?,Cancel this appointment?,ဤချိန်းကို ဖျက်သိမ်းမလား?
+Visit created,Visit created,လည်ပတ်မှု ဖန်တီးပြီးပါပြီ
+A visit was created for {name}.,A visit was created for {name}.,{name} အတွက် လည်ပတ်မှုတစ်ခု ဖန်တီးပြီးပါပြီ။
+Open visit details,Open visit details,လည်ပတ် အသေးစိတ်ကို ဖွင့်ကြည့်ပါ
+Monitor and manage patient visits as they progress through the day.,Monitor and manage patient visits as they progress through the day.,တစ်နေ့တာအတွင်း လူနာ လည်ပတ်မှုများကို စောင့်ကြည့်ပြီး စီမံပါ။
+Filters,Filters,စိစစ်မှုများ
+"Refine appointments by schedule, doctor, or status.","Refine appointments by schedule, doctor, or status.",ချိန်းစာရင်းများကို အချိန်ဇယား၊ ဆရာဝန်၊ အခြေအနေအလိုက် တိုးတက်စိစစ်ပါ။
+Refresh,Refresh,ပြန်လည်တင်ပါ
+Clear filters,Clear filters,စိစစ်မှုများကို ရှင်းပါ
+Date,Date,ရက်စွဲ
+Single day,Single day,တစ်ရက်တည်း
+Date range,Date range,ရက်စွဲ ကာလ
+Leave blank to show all dates,Leave blank to show all dates,ရက်စွဲအားလုံးကို ပြချင်လျှင် ဤနေရာကို ထားခဲ့ပါ
+From,From,အစ
+"to","to",မှ
+To,To,အဆုံး
+All doctors,All doctors,ဆရာဝန်များအားလုံး
+Viewing your schedule.,Viewing your schedule.,သင့်အချိန်ဇယားကို ကြည့်နေပါသည်။
+Loading doctors...,Loading doctors...,ဆရာဝန်စာရင်းကို တင်နေပါသည်...
+All statuses,All statuses,အခြေအနေများအားလုံး
+Schedule overview,Schedule overview,အချိန်ဇယား အနှစ်ချုပ်
+Scheduled Appointments,Scheduled Appointments,ချိန်းထားသော ချိန်းများ
+Week of {date},Week of {date},{date} အပါတ်
+Day view,Day view,တစ်ရက်မြင်ကွင်း
+Week view,Week view,တစ်အပါတ်မြင်ကွင်း
+Add at 8:00 AM,Add at 8:00 AM,မနံ့ ၈:၀၀ တွင် ထည့်သွင်းပါ
+Click anywhere on the grid to schedule a new appointment.,Click anywhere on the grid to schedule a new appointment.,ချိန်းအသစ်ချိန်းဆွဲရန် ဇယားပေါ်တွင် မည်သည့်နေရာမဆို နှိပ်ပါ။
+Click to add,Click to add,ထည့်ရန် နှိပ်ပါ
+Loading appointments...,Loading appointments...,ချိန်းစာရင်းများကို တင်နေပါသည်...
+Unable to load appointments right now.,Unable to load appointments right now.,ယခုချိန်းစာရင်းများကို တင်မရပါ။
+Showing {count} appointment.,Showing {count} appointment.,ချိန်း {count} ခု ပြနေသည်။
+Showing {count} appointments.,Showing {count} appointments.,ချိန်း {count} ခုများကို ပြနေသည်။
+Refresh list,Refresh list,စာရင်းကို ပြန်တင်ပါ
+Fetching the latest appointments...,Fetching the latest appointments...,ချိန်းစာရင်း အသစ်များကို ရယူနေပါသည်...
+Please wait while we load the schedule.,Please wait while we load the schedule.,အချိန်ဇယားကို တင်နေပါသဖြင့် ခဏစောင့်ပါ။
+Try again,Try again,ထပ်ကြိုးစားပါ
+Time,Time,အချိန်
+Patient ID: {id},Patient ID: {id},လူနာ ID: {id}
+ID: {id},ID: {id},ID: {id}
+Updating status...,Updating status...,အခြေအနေကို ပြင်နေပါသည်...
+No appointments match the selected filters.,No appointments match the selected filters.,ရွေးချယ်ထားသော စိစစ်မှုများနှင့် ကိုက်ညီသည့် ချိန်းများ မရှိပါ။
+Adjust the filters to explore more of the schedule.,Adjust the filters to explore more of the schedule.,အချိန်ဇယားတိုးချဲ့ကြည့်ရန် စိစစ်မှုများကို ပြင်ဆင်ပါ။
+Something went wrong. Please try again.,Something went wrong. Please try again.,အချို့ ပြဿနာရှိနေသည်။ ထပ်မံ ကြိုးစားပါ။
+Loading visit history...,Loading visit history...,လည်ပတ်မှတ်တမ်းကို တင်နေပါသည်...
+error.patient-visits-load,Unable to load the full visit history.,လည်ပတ်မှတ်တမ်း အပြည့်အစုံကို တင်မရပါ။
+No visits recorded in the system.,No visits recorded in the system.,စနစ်တွင် လည်ပတ်မှတ်တမ်းများ မရှိသေးပါ။
+Add visit,Add visit,လည်ပတ်မှု ထည့်သွင်းပါ
+View visit,View visit,လည်ပတ်မှတ်တမ်းကို ကြည့်ပါ
+Loading patient record...,Loading patient record...,လူနာမှတ်တမ်းကို တင်နေပါသည်...
+Back to patient directory,Back to patient directory,လူနာ လမ်းညွှန်စာရင်းသို့ ပြန်သွားပါ
+Patient Overview,Patient Overview,လူနာ အကျဉ်းချုံး
+Patient Profile,Patient Profile,လူနာ ပရိုဖိုင်
+Review demographic details and the latest clinical activity for this patient.,Review demographic details and the latest clinical activity for this patient.,ဤလူနာအတွက် လူမှုအချက်အလက်များနှင့် လက်ရှိ ကုသရေး လှုပ်ရှားမှုများကို ပြန်လည်သုံးသပ်ပါ။
+Primary contact,Primary contact,အဓိက ဆက်သွယ်ရန်
+{count} yrs,{count} yrs,{count} နှစ်
+Gender,Gender,လိင်အမျိုးအစား
+Last visit on {date} with {name} ({department}).,Last visit on {date} with {name} ({department}).,{date} တွင် {name} ({department}) နှင့် လည်ပတ်ခဲ့သည်။
+No recorded visits yet. Add a visit to begin the clinical timeline.,No recorded visits yet. Add a visit to begin the clinical timeline.,လည်ပတ်မှတ်တမ်း မရှိသေးပါ။ ကုသရေး လမ်းကြောင်းကို စတင်ရန် လည်ပတ်မှုတစ်ခု ထည့်သွင်းပါ။
+Clinical Timeline,Clinical Timeline,ကုသရေး လမ်းကြောင်း
+Explore recent encounters and the complete visit history.,Explore recent encounters and the complete visit history.,မကြာသေးမီ တွေ့ဆုံမှုများနှင့် လည်ပတ်မှတ်တမ်း အပြည့်အစုံကို စူးစမ်းပါ။
+Patient detail tabs,Patient detail tabs,လူနာအသေးစိတ် တပ်များ
+Care Summary,Care Summary,ကုသရေး အကျဉ်းချုံး
+Visit History,Visit History,လည်ပတ် မှတ်တမ်း
+Male,Male,ကျား
+Female,Female,မ
+Pending,Pending,ဆိုင်းငံ့
+Collected {date},Collected {date},{date} တွင် စုဆောင်းခဲ့သည်။
+Select Doctor,Select Doctor,ဆရာဝန်ကို ရွေးပါ
+Diagnoses (one per line),Diagnoses (one per line),ရောဂါခွဲခြားချက်များ (တစ်ကြောင်းတစ်ခု)
+Medications (drug|dosage per line),Medications (drug|dosage per line),ဆေးဝါး (ဆေးအမည်|နှုန်းထား ကို တစ်ကြောင်းစီ)
+Labs (test|value|unit per line),Labs (test|value|unit per line),လက်တင်များ (စမ်းသပ်ချက်|တန်ဖိုး|ယူနစ် ကို တစ်ကြောင်းစီ)
+Observation Note,Observation Note,သတိပြု မှတ်စု
+BP Systolic,BP Systolic,သွေးဖိအား အမြင့် (Systolic)
+BP Diastolic,BP Diastolic,သွေးဖိအား အနိမ့် (Diastolic)
+Heart Rate,Heart Rate,နှလုံးခုန်နှုန်း
+Temp (°C),Temp (°C),အပူချိန် (°C)
+SpO₂,SpO₂,SpO₂
+BMI,BMI,ခန္ဓာကိုယ်အလေးချိန်ညွှန်ကိန်း (BMI)
+Save Visit,Save Visit,လည်ပတ်မှုကို သိမ်းပါ
+Reason,Reason,အကြောင်းရင်း
+Saving...,Saving...,သိမ်းနေပါသည်...
+Diagnoses,Diagnoses,ရောဂါခွဲခြားချက်များ
+Medications,Medications,ဆေးဝါးများ
+Key labs,Key labs,အရေးကြီး လက်တင်များ
+Observations,Observations,သတိပြုချက်များ
+Visit with {name},Visit with {name},{name} နှင့် လည်ပတ်မှု
+Open visit,Open visit,လည်ပတ်မှတ်တမ်းကို ဖွင့်ပါ
+No diagnoses recorded.,No diagnoses recorded.,ရောဂါခွဲခြားချက် မမှတ်တမ်းတင်ရသေးပါ။
+No medications documented.,No medications documented.,ဆေးဝါးမှတ်တမ်း မရှိပါ။
+No lab highlights for this visit.,No lab highlights for this visit.,ဤလည်ပတ်မှုတွင် အထင်ရှား လက်တင်မရှိပါ။
+No recent clinician notes.,No recent clinician notes.,သူနာပြုမှတ်စု အသစ် မရှိပါ။
+Loading patient details...,Loading patient details...,လူနာ အသေးစိတ်ကို တင်နေပါသည်...
+Patient details unavailable.,Patient details unavailable.,လူနာအသေးစိတ် မရရှိနိုင်ပါ။
+No visits recorded yet.,No visits recorded yet.,လည်ပတ်မှတ်တမ်း မရှိသေးပါ။
+Add the first visit,Add the first visit,ပထမဆုံး လည်ပတ်မှုကို ထည့်သွင်းပါ
+Not provided,Not provided,မပေးထားပါ

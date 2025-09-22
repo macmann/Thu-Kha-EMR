@@ -7,6 +7,7 @@ import {
   type VisitFormSubmitValues,
   type VisitFormObservationValues,
 } from '../utils/visitForm';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface VisitFormProps {
   doctors: Doctor[];
@@ -48,6 +49,7 @@ export default function VisitForm({
   submitDisabled = false,
   extraActions = null,
 }: VisitFormProps) {
+  const { t } = useTranslation();
   const [state, setState] = useState<VisitFormState>(() =>
     toState(initialValues ?? createVisitFormInitialValues()),
   );
@@ -136,7 +138,7 @@ export default function VisitForm({
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
       <div>
-        <label className="block text-sm font-medium text-gray-700">Visit Date</label>
+        <label className="block text-sm font-medium text-gray-700">{t('Visit Date')}</label>
         <input
           type="date"
           value={state.visitDate}
@@ -148,7 +150,7 @@ export default function VisitForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Doctor</label>
+        <label className="block text-sm font-medium text-gray-700">{t('Doctor')}</label>
         <select
           value={state.doctorId}
           onChange={(event) => {
@@ -165,7 +167,7 @@ export default function VisitForm({
           disabled={disableDoctorSelection}
         >
           <option value="" disabled>
-            Select Doctor
+            {t('Select Doctor')}
           </option>
           {doctors.map((doctor) => (
             <option key={doctor.doctorId} value={doctor.doctorId}>
@@ -176,7 +178,7 @@ export default function VisitForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Department</label>
+        <label className="block text-sm font-medium text-gray-700">{t('Department')}</label>
         <input
           type="text"
           value={state.department}
@@ -187,7 +189,7 @@ export default function VisitForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Reason</label>
+        <label className="block text-sm font-medium text-gray-700">{t('Reason')}</label>
         <input
           type="text"
           value={state.reason}
@@ -197,7 +199,7 @@ export default function VisitForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Diagnoses (one per line)</label>
+        <label className="block text-sm font-medium text-gray-700">{t('Diagnoses (one per line)')}</label>
         <textarea
           value={state.diagnoses}
           onChange={(event) => setState((current) => ({ ...current, diagnoses: event.target.value }))}
@@ -207,7 +209,7 @@ export default function VisitForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Medications (drug|dosage per line)</label>
+        <label className="block text-sm font-medium text-gray-700">{t('Medications (drug|dosage per line)')}</label>
         <textarea
           value={state.medications}
           onChange={(event) => setState((current) => ({ ...current, medications: event.target.value }))}
@@ -217,7 +219,7 @@ export default function VisitForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Labs (test|value|unit per line)</label>
+        <label className="block text-sm font-medium text-gray-700">{t('Labs (test|value|unit per line)')}</label>
         <textarea
           value={state.labs}
           onChange={(event) => setState((current) => ({ ...current, labs: event.target.value }))}
@@ -227,7 +229,7 @@ export default function VisitForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Observation Note</label>
+        <label className="block text-sm font-medium text-gray-700">{t('Observation Note')}</label>
         <textarea
           value={state.obsNote}
           onChange={(event) => setState((current) => ({ ...current, obsNote: event.target.value }))}
@@ -238,7 +240,7 @@ export default function VisitForm({
 
       <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700">BP Systolic</label>
+          <label className="block text-sm font-medium text-gray-700">{t('BP Systolic')}</label>
           <input
             type="number"
             value={state.bpSystolic}
@@ -247,7 +249,7 @@ export default function VisitForm({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">BP Diastolic</label>
+          <label className="block text-sm font-medium text-gray-700">{t('BP Diastolic')}</label>
           <input
             type="number"
             value={state.bpDiastolic}
@@ -256,7 +258,7 @@ export default function VisitForm({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">Heart Rate</label>
+          <label className="block text-sm font-medium text-gray-700">{t('Heart Rate')}</label>
           <input
             type="number"
             value={state.heartRate}
@@ -265,7 +267,7 @@ export default function VisitForm({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">Temp (°C)</label>
+          <label className="block text-sm font-medium text-gray-700">{t('Temp (°C)')}</label>
           <input
             type="number"
             value={state.temperatureC}
@@ -274,7 +276,7 @@ export default function VisitForm({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">SpO2</label>
+          <label className="block text-sm font-medium text-gray-700">{t('SpO₂')}</label>
           <input
             type="number"
             value={state.spo2}
@@ -283,7 +285,7 @@ export default function VisitForm({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">BMI</label>
+          <label className="block text-sm font-medium text-gray-700">{t('BMI')}</label>
           <input
             type="number"
             value={state.bmi}
@@ -301,7 +303,7 @@ export default function VisitForm({
             saving || submitDisabled ? 'cursor-not-allowed bg-gray-300 text-gray-600' : 'bg-blue-600 hover:bg-blue-700'
           }`}
         >
-          {saving ? 'Saving...' : submitLabel}
+          {saving ? t('Saving...') : t(submitLabel)}
         </button>
         {extraActions}
       </div>
