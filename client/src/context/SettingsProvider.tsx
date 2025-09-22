@@ -10,6 +10,7 @@ import {
   type UpdateUserPayload,
   type UserAccount,
 } from '../api/client';
+import { useAuth } from './AuthProvider';
 
 interface SettingsContextType {
   appName: string;
@@ -32,6 +33,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [users, setUsers] = useState<UserAccount[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [widgetEnabled, setWidgetEnabled] = useState<boolean>(false);
+  const { accessToken } = useAuth();
 
   useEffect(() => {
     const stored = localStorage.getItem('appSettings');
@@ -48,14 +50,48 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   useEffect(() => {
-    listDoctors().then(setDoctors).catch(() => setDoctors([]));
-  }, []);
+    if (!accessToken) {
+      setDoctors([]);
+      return;
+    }
+
+    let active = true;
+    listDoctors()
+      .then((data) => {
+        if (!active) return;
+        setDoctors(data);
+      })
+      .catch(() => {
+        if (!active) return;
+        setDoctors([]);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [accessToken]);
 
   useEffect(() => {
+    if (!accessToken) {
+      setUsers([]);
+      return;
+    }
+
+    let active = true;
     listUsers()
-      .then(setUsers)
-      .catch(() => setUsers([]));
-  }, []);
+      .then((data) => {
+        if (!active) return;
+        setUsers(data);
+      })
+      .catch(() => {
+        if (!active) return;
+        setUsers([]);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [accessToken]);
 
   useEffect(() => {
     localStorage.setItem(
