@@ -11,6 +11,7 @@ import {
 } from './icons';
 import { useAuth } from '../context/AuthProvider';
 import { useSettings } from '../context/SettingsProvider';
+import { useTranslation } from '../hooks/useTranslation';
 
 type NavigationKey = 'dashboard' | 'patients' | 'appointments' | 'reports' | 'settings';
 
@@ -38,12 +39,13 @@ interface DashboardLayoutProps {
 }
 
 function DefaultHeaderSearch() {
+  const { t } = useTranslation();
   return (
     <div className="relative w-full md:w-72">
       <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
       <input
         type="search"
-        placeholder="Search patients..."
+        placeholder={t('Search patients...')}
         className="w-full rounded-full border border-gray-200 bg-gray-50 py-2 pl-10 pr-4 text-sm text-gray-700 placeholder:text-gray-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
       />
     </div>
@@ -59,7 +61,8 @@ export default function DashboardLayout({
 }: DashboardLayoutProps) {
   const { user } = useAuth();
   const { appName } = useSettings();
-  const roleLabel = user ? ROLE_LABELS[user.role] ?? user.role : 'Team Member';
+  const { t } = useTranslation();
+  const roleLabel = user ? t(ROLE_LABELS[user.role] ?? 'Team Member') : t('Team Member');
   const navItems = navigation.filter((item) => {
     if (item.key === 'settings') {
       return user?.role === 'ITAdmin';
@@ -69,7 +72,7 @@ export default function DashboardLayout({
   return (
     <div className="flex min-h-screen bg-gray-50">
       <aside className="hidden w-72 flex-col border-r border-gray-200 bg-white px-6 py-8 shadow-sm md:flex">
-        <div className="text-lg font-semibold text-blue-600">{appName || 'EMR System'}</div>
+        <div className="text-lg font-semibold text-blue-600">{appName || t('EMR System')}</div>
         <nav className="mt-8 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -82,7 +85,7 @@ export default function DashboardLayout({
                 }`}
               >
                 <Icon className="h-5 w-5" />
-                <span>{item.name}</span>
+                <span>{t(item.name)}</span>
               </div>
             );
 
@@ -106,7 +109,7 @@ export default function DashboardLayout({
             <AvatarIcon className="h-6 w-6" />
           </div>
           <div>
-            <div className="text-sm font-medium text-gray-900">{user?.email ?? 'Signed-in user'}</div>
+            <div className="text-sm font-medium text-gray-900">{user?.email ?? t('Signed-in user')}</div>
             <div className="text-xs text-gray-500">{roleLabel}</div>
           </div>
         </div>
@@ -123,7 +126,7 @@ export default function DashboardLayout({
               {headerChildren ?? <DefaultHeaderSearch />}
               <div className="flex items-center gap-3">
                 <div className="hidden flex-col text-right text-xs text-gray-500 sm:flex">
-                  <span className="font-medium text-gray-700">{user?.email ?? 'Signed-in user'}</span>
+                  <span className="font-medium text-gray-700">{user?.email ?? t('Signed-in user')}</span>
                   <span>{roleLabel}</span>
                 </div>
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white">

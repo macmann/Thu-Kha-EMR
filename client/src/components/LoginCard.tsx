@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface LoginCardProps {
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
@@ -15,6 +16,7 @@ export default function LoginCard({
   appName,
   logo,
 }: LoginCardProps) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-2xl bg-white p-8 shadow">
       <div className="mb-6 flex flex-col items-center">
@@ -42,7 +44,7 @@ export default function LoginCard({
           </div>
         )}
         <h1 className="text-2xl font-bold text-gray-900">{appName}</h1>
-        <p className="mt-2 text-sm text-gray-600">Sign in to your account</p>
+        <p className="mt-2 text-sm text-gray-600">{t('Sign in to your account')}</p>
       </div>
 
       <form onSubmit={onSubmit} className="space-y-6">
@@ -51,7 +53,7 @@ export default function LoginCard({
             htmlFor="username"
             className="block text-sm font-medium text-gray-700"
           >
-            Username or Email
+            {t('Username or Email')}
           </label>
           <input
             id="username"
@@ -69,7 +71,7 @@ export default function LoginCard({
             htmlFor="password"
             className="block text-sm font-medium text-gray-700"
           >
-            Password
+            {t('Password')}
           </label>
           <input
             id="password"
@@ -91,10 +93,10 @@ export default function LoginCard({
               onChange={onChange}
               className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
-            <span className="ml-2 text-sm text-gray-700">Remember me</span>
+            <span className="ml-2 text-sm text-gray-700">{t('Remember me')}</span>
           </label>
           <a href="#" className="text-sm text-blue-600 hover:text-blue-500">
-            Forgot your password?
+            {t('Forgot your password?')}
           </a>
         </div>
 
@@ -102,7 +104,7 @@ export default function LoginCard({
           type="submit"
           className="w-full rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          Login
+          {t('Login')}
         </button>
       </form>
     </div>

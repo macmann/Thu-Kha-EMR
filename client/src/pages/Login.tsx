@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthProvider';
 import LoginCard from '../components/LoginCard';
 import PageLayout from '../components/PageLayout';
 import { useSettings } from '../context/SettingsProvider';
+import { useTranslation } from '../hooks/useTranslation';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -13,6 +14,7 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const { appName, logo } = useSettings();
+  const { t } = useTranslation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,7 +22,7 @@ export default function Login() {
     setSuccess(null);
     try {
       await login(email, password);
-      setSuccess('Login successful');
+      setSuccess(t('Login successful'));
       navigate('/');
     } catch (err: any) {
       setError(err.message);
