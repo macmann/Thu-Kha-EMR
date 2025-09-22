@@ -12,6 +12,7 @@ import {
 } from '../api/appointments';
 import { listDoctors, type Doctor } from '../api/client';
 import { useAuth } from '../context/AuthProvider';
+import { useTranslation } from '../hooks/useTranslation';
 
 const DAY_START_MINUTE = 8 * 60;
 const DAY_END_MINUTE = 18 * 60;
@@ -23,8 +24,10 @@ type DateMode = 'single' | 'range';
 type ToastState = {
   id: number;
   title: string;
+  titleParams?: Record<string, string | number>;
   message: string;
-  link?: { to: string; label: string };
+  messageParams?: Record<string, string | number>;
+  link?: { to: string; label: string; labelParams?: Record<string, string | number> };
 };
 
 const allowedTransitions: Record<AppointmentStatus, AppointmentStatusPatch[]> = {
@@ -198,6 +201,7 @@ export default function AppointmentsPage() {
   const userRole = user?.role ?? 'ITAdmin';
   const isDoctorUser = userRole === 'Doctor';
   const canCreateAppointment = userRole === 'AdminAssistant' || userRole === 'ITAdmin';
+  const { t } = useTranslation();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -390,7 +394,7 @@ export default function AppointmentsPage() {
         to="/appointments/new"
         className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
       >
-        New Appointment
+        {t('New Appointment')}
       </Link>
     </div>
   ) : null;
@@ -419,7 +423,7 @@ export default function AppointmentsPage() {
     requireConfirm?: boolean,
   ) {
     if (requireConfirm) {
-      const confirmed = window.confirm('Cancel this appointment?');
+      const confirmed = window.confirm(t('Cancel this appointment?'));
       if (!confirmed) return;
     }
 
@@ -440,7 +444,8 @@ export default function AppointmentsPage() {
         setToast({
           id: Date.now(),
           title: 'Visit created',
-          message: `A visit was created for ${appointment.patient.name}.`,
+          message: 'A visit was created for {name}.',
+          messageParams: { name: appointment.patient.name },
           link: { to: `/visits/${result.visitId}`, label: 'Open visit details' },
         });
       } else {
@@ -524,8 +529,8 @@ export default function AppointmentsPage() {
 
   return (
     <DashboardLayout
-      title="Appointments"
-      subtitle="Monitor and manage patient visits as they progress through the day."
+      title={t('Appointments')}
+      subtitle={t('Monitor and manage patient visits as they progress through the day.')}
       activeItem="appointments"
       headerChildren={headerActions}
     >
@@ -535,15 +540,15 @@ export default function AppointmentsPage() {
             <div className="pointer-events-auto flex w-80 items-start gap-3 rounded-2xl bg-white p-4 shadow-lg ring-1 ring-black/5">
               <span className="mt-1 h-2.5 w-2.5 flex-shrink-0 rounded-full bg-green-500" aria-hidden="true" />
               <div className="flex-1 text-sm">
-                <div className="font-semibold text-gray-900">{toast.title}</div>
-                <p className="mt-1 text-gray-600">{toast.message}</p>
+                <div className="font-semibold text-gray-900">{t(toast.title, toast.titleParams)}</div>
+                <p className="mt-1 text-gray-600">{t(toast.message, toast.messageParams)}</p>
                 {toast.link && (
                   <Link
                     to={toast.link.to}
                     className="mt-3 inline-flex items-center text-sm font-semibold text-blue-600 hover:text-blue-700"
                     onClick={() => setToast(null)}
                   >
-                    {toast.link.label}
+                    {t(toast.link.label, toast.link.labelParams)}
                   </Link>
                 )}
               </div>
@@ -563,8 +568,8 @@ export default function AppointmentsPage() {
           <section className="rounded-2xl bg-white p-6 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
-                <p className="mt-1 text-sm text-gray-600">Refine appointments by schedule, doctor, or status.</p>
+                <h2 className="text-lg font-semibold text-gray-900">{t('Filters')}</h2>
+                <p className="mt-1 text-sm text-gray-600">{t('Refine appointments by schedule, doctor, or status.')}</p>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -572,7 +577,7 @@ export default function AppointmentsPage() {
                   onClick={handleRefresh}
                   className="inline-flex items-center justify-center rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
                 >
-                  Refresh
+                  {t('Refresh')}
                 </button>
                 <button
                   type="button"
@@ -584,14 +589,14 @@ export default function AppointmentsPage() {
                       : 'border border-gray-100 text-gray-300'
                   }`}
                 >
-                  Clear filters
+                  {t('Clear filters')}
                 </button>
               </div>
             </div>
 
             <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
               <div className="space-y-3">
-                <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Date</div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">{t('Date')}</div>
                 <div className="flex flex-wrap gap-3">
                   <div className="inline-flex overflow-hidden rounded-full border border-gray-200 bg-white shadow-sm">
                     <button
@@ -603,7 +608,7 @@ export default function AppointmentsPage() {
                           : 'text-gray-600 hover:bg-gray-50'
                       }`}
                     >
-                      Single day
+                      {t('Single day')}
                     </button>
                     <button
                       type="button"
@@ -614,7 +619,7 @@ export default function AppointmentsPage() {
                           : 'text-gray-600 hover:bg-gray-50'
                       }`}
                     >
-                      Date range
+                      {t('Date range')}
                     </button>
                   </div>
                 </div>
@@ -626,7 +631,7 @@ export default function AppointmentsPage() {
                       onChange={(event) => setSingleDate(event.target.value)}
                       className="w-full rounded-full border border-gray-200 px-4 py-2 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 lg:w-auto"
                     />
-                    <span className="self-center text-xs text-gray-400">Leave blank to show all dates</span>
+                    <span className="self-center text-xs text-gray-400">{t('Leave blank to show all dates')}</span>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -635,22 +640,22 @@ export default function AppointmentsPage() {
                       value={fromDate}
                       onChange={(event) => setFromDate(event.target.value)}
                       className="w-full rounded-full border border-gray-200 px-4 py-2 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 sm:w-auto"
-                      placeholder="From"
+                      placeholder={t('From')}
                     />
-                    <span className="text-sm text-gray-400">to</span>
+                    <span className="text-sm text-gray-400">{t('to')}</span>
                     <input
                       type="date"
                       value={toDate}
                       onChange={(event) => setToDate(event.target.value)}
                       className="w-full rounded-full border border-gray-200 px-4 py-2 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 sm:w-auto"
-                      placeholder="To"
+                      placeholder={t('To')}
                     />
                   </div>
                 )}
               </div>
 
               <div className="space-y-3">
-                <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Doctor</div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">{t('Doctor')}</div>
                 <select
                   value={effectiveDoctorId}
                   onChange={(event) => setDoctorId(event.target.value)}
@@ -659,7 +664,7 @@ export default function AppointmentsPage() {
                     isDoctorUser ? 'cursor-not-allowed bg-gray-100 text-gray-500' : ''
                   }`}
                 >
-                  <option value="">All doctors</option>
+                  <option value="">{t('All doctors')}</option>
                   {doctors.map((doctor) => (
                     <option key={doctor.doctorId} value={doctor.doctorId}>
                       {doctor.name} — {doctor.department}
@@ -667,16 +672,16 @@ export default function AppointmentsPage() {
                   ))}
                 </select>
                 {isDoctorUser ? (
-                  <p className="text-xs text-gray-400">Viewing your schedule.</p>
+                  <p className="text-xs text-gray-400">{t('Viewing your schedule.')}</p>
                 ) : doctorError ? (
-                  <p className="text-xs text-red-600">{doctorError}</p>
+                  <p className="text-xs text-red-600">{t(doctorError)}</p>
                 ) : doctorsLoading ? (
-                  <p className="text-xs text-gray-400">Loading doctors...</p>
+                  <p className="text-xs text-gray-400">{t('Loading doctors...')}</p>
                 ) : null}
               </div>
 
               <div className="space-y-3">
-                <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Status</div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">{t('Status')}</div>
                 <select
                   value={statusFilter}
                   onChange={(event) => {
@@ -689,10 +694,10 @@ export default function AppointmentsPage() {
                   }}
                   className="w-full rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                 >
-                  <option value="">All statuses</option>
+                  <option value="">{t('All statuses')}</option>
                   {statusOptions.map((status) => (
                     <option key={status} value={status}>
-                      {statusVisuals[status].label}
+                      {t(statusVisuals[status].label)}
                     </option>
                   ))}
                 </select>
@@ -703,9 +708,11 @@ export default function AppointmentsPage() {
           <section className="rounded-2xl bg-white p-6 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">Schedule overview</h2>
+                <h2 className="text-lg font-semibold text-gray-900">{t('Schedule overview')}</h2>
                 <p className="mt-1 text-sm text-gray-600">
-                  {calendarView === 'day' ? focusDateDisplay : `Week of ${focusDateDisplay}`}
+                  {calendarView === 'day'
+                    ? focusDateDisplay
+                    : t('Week of {date}', { date: focusDateDisplay })}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
@@ -717,7 +724,7 @@ export default function AppointmentsPage() {
                       calendarView === 'day' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    Day view
+                    {t('Day view')}
                   </button>
                   <button
                     type="button"
@@ -726,7 +733,7 @@ export default function AppointmentsPage() {
                       calendarView === 'week' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    Week view
+                    {t('Week view')}
                   </button>
                 </div>
                 {canCreateAppointment && (
@@ -741,7 +748,7 @@ export default function AppointmentsPage() {
                     }
                     className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
                   >
-                    Add at 8:00 AM
+                    {t('Add at 8:00 AM')}
                   </button>
                 )}
               </div>
@@ -784,7 +791,7 @@ export default function AppointmentsPage() {
                     })}
                     {dayAppointments.length === 0 && (
                       <div className="pointer-events-none absolute left-1/2 top-1/2 w-56 -translate-x-1/2 -translate-y-1/2 text-center text-sm text-gray-400">
-                        Click anywhere on the grid to schedule a new appointment.
+                        {t('Click anywhere on the grid to schedule a new appointment.')}
                       </div>
                     )}
                     {dayAppointments.map((appointment) => {
@@ -882,7 +889,7 @@ export default function AppointmentsPage() {
                           </div>
                           {columnAppointments.length === 0 && (
                             <div className="pointer-events-none absolute left-1/2 top-1/2 w-40 -translate-x-1/2 -translate-y-1/2 text-center text-[11px] text-gray-400">
-                              Click to add
+                              {t('Click to add')}
                             </div>
                           )}
                           {columnAppointments.map((appointment) => {
@@ -923,20 +930,22 @@ export default function AppointmentsPage() {
 
           {actionError && (
             <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {actionError}
+              {t(actionError)}
             </div>
           )}
 
           <section className="rounded-2xl bg-white p-6 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">Scheduled Appointments</h2>
+                <h2 className="text-lg font-semibold text-gray-900">{t('Scheduled Appointments')}</h2>
                 <p className="mt-1 text-sm text-gray-600">
                   {loading
-                    ? 'Loading appointments...'
+                    ? t('Loading appointments...')
                     : error
-                      ? 'Unable to load appointments right now.'
-                      : `Showing ${appointments.length} appointment${appointments.length === 1 ? '' : 's'}.`}
+                      ? t('Unable to load appointments right now.')
+                      : appointments.length === 1
+                        ? t('Showing {count} appointment.', { count: appointments.length })
+                        : t('Showing {count} appointments.', { count: appointments.length })}
                 </p>
               </div>
               <button
@@ -944,7 +953,7 @@ export default function AppointmentsPage() {
                 onClick={handleRefresh}
                 className="inline-flex items-center justify-center rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
               >
-                Refresh list
+                {t('Refresh list')}
               </button>
             </div>
 
@@ -952,19 +961,19 @@ export default function AppointmentsPage() {
               {loading ? (
                 <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
                   <CalendarIcon className="h-10 w-10 animate-spin text-blue-500" />
-                  <div className="text-sm font-medium text-gray-700">Fetching the latest appointments...</div>
-                  <p className="text-xs text-gray-500">Please wait while we load the schedule.</p>
+                  <div className="text-sm font-medium text-gray-700">{t('Fetching the latest appointments...')}</div>
+                  <p className="text-xs text-gray-500">{t('Please wait while we load the schedule.')}</p>
                 </div>
               ) : error ? (
                 <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
                   <CalendarIcon className="h-10 w-10 text-red-300" />
-                  <div className="text-sm font-medium text-red-600">{error}</div>
+                  <div className="text-sm font-medium text-red-600">{t(error)}</div>
                   <button
                     type="button"
                     onClick={handleRefresh}
                     className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
                   >
-                    Try again
+                    {t('Try again')}
                   </button>
                 </div>
               ) : appointments.length > 0 ? (
@@ -972,12 +981,12 @@ export default function AppointmentsPage() {
                   <table className="min-w-full divide-y divide-gray-100 text-sm">
                     <thead className="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                       <tr>
-                        <th className="px-6 py-3">Time</th>
-                        <th className="px-6 py-3">Patient</th>
-                        <th className="px-6 py-3">Doctor</th>
-                        <th className="px-6 py-3">Department</th>
-                        <th className="px-6 py-3">Status</th>
-                        <th className="px-6 py-3 text-right">Actions</th>
+                        <th className="px-6 py-3">{t('Time')}</th>
+                        <th className="px-6 py-3">{t('Patient')}</th>
+                        <th className="px-6 py-3">{t('Doctor')}</th>
+                        <th className="px-6 py-3">{t('Department')}</th>
+                        <th className="px-6 py-3">{t('Status')}</th>
+                        <th className="px-6 py-3 text-right">{t('Actions')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 bg-white">
@@ -994,11 +1003,11 @@ export default function AppointmentsPage() {
                             </td>
                             <td className="px-6 py-4 align-top">
                               <div className="font-medium text-gray-900">{appointment.patient.name}</div>
-                              <div className="mt-1 text-xs text-gray-500">ID: {appointment.patient.patientId}</div>
+                              <div className="mt-1 text-xs text-gray-500">{t('ID: {id}', { id: appointment.patient.patientId })}</div>
                             </td>
                             <td className="px-6 py-4 align-top">
                               <div className="font-medium text-gray-900">{appointment.doctor.name}</div>
-                              <div className="mt-1 text-xs text-gray-500">ID: {appointment.doctor.doctorId}</div>
+                              <div className="mt-1 text-xs text-gray-500">{t('ID: {id}', { id: appointment.doctor.doctorId })}</div>
                             </td>
                             <td className="px-6 py-4 align-top text-gray-700">{appointment.department}</td>
                             <td className="px-6 py-4 align-top">
@@ -1006,7 +1015,7 @@ export default function AppointmentsPage() {
                                 className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${visuals.chipClass}`}
                               >
                                 <span className={`h-2 w-2 rounded-full ${visuals.dotClass}`} aria-hidden="true" />
-                                {visuals.label}
+                                {t(visuals.label)}
                               </span>
                             </td>
                             <td className="px-6 py-4 align-top text-right">
@@ -1028,13 +1037,13 @@ export default function AppointmentsPage() {
                                       }
                                       className={className}
                                     >
-                                      {action.label}
+                                      {t(action.label)}
                                     </button>
                                   );
                                 })}
                               </div>
                               {busy && (
-                                <div className="mt-2 text-xs font-medium text-blue-600">Updating status...</div>
+                                <div className="mt-2 text-xs font-medium text-blue-600">{t('Updating status...')}</div>
                               )}
                             </td>
                           </tr>
@@ -1047,9 +1056,9 @@ export default function AppointmentsPage() {
                 <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
                   <CalendarIcon className="h-10 w-10 text-gray-300" />
                   <div className="text-sm font-medium text-gray-700">
-                    No appointments match the selected filters.
+                    {t('No appointments match the selected filters.')}
                   </div>
-                  <p className="text-xs text-gray-500">Adjust the filters to explore more of the schedule.</p>
+                  <p className="text-xs text-gray-500">{t('Adjust the filters to explore more of the schedule.')}</p>
                 </div>
               )}
             </div>

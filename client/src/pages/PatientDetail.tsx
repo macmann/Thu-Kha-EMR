@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import { PatientsIcon, SearchIcon } from '../components/icons';
@@ -9,20 +9,7 @@ import {
   type PatientSummary,
   type Visit,
 } from '../api/client';
-
-function formatDate(value: string | Date | null | undefined) {
-  if (!value) return '—';
-  const date = typeof value === 'string' ? new Date(value) : value;
-  if (Number.isNaN(date.getTime())) return '—';
-  return date.toLocaleDateString();
-}
-
-function formatDateTime(value: string | Date | null | undefined) {
-  if (!value) return '—';
-  const date = typeof value === 'string' ? new Date(value) : value;
-  if (Number.isNaN(date.getTime())) return '—';
-  return date.toLocaleString();
-}
+import { useTranslation } from '../hooks/useTranslation';
 
 function calculateAge(dob: string) {
   const birth = new Date(dob);
@@ -36,18 +23,11 @@ function calculateAge(dob: string) {
   return age;
 }
 
-function formatGender(gender?: string | null) {
-  if (!gender) return 'Not recorded';
-  const normalized = gender.toLowerCase();
-  if (normalized === 'm') return 'Male';
-  if (normalized === 'f') return 'Female';
-  return gender;
-}
-
 export default function PatientDetail() {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const initialTab =
     new URLSearchParams(location.search).get('tab') === 'visits'
       ? 'visits'
@@ -61,6 +41,31 @@ export default function PatientDetail() {
   const [visitsLoading, setVisitsLoading] = useState(false);
   const [visitsError, setVisitsError] = useState<string | null>(null);
 
+  const formatDateValue = useCallback((value: string | Date | null | undefined) => {
+    if (!value) return '—';
+    const date = typeof value === 'string' ? new Date(value) : value;
+    if (Number.isNaN(date.getTime())) return '—';
+    return date.toLocaleDateString();
+  }, []);
+
+  const formatDateTimeValue = useCallback((value: string | Date | null | undefined) => {
+    if (!value) return '—';
+    const date = typeof value === 'string' ? new Date(value) : value;
+    if (Number.isNaN(date.getTime())) return '—';
+    return date.toLocaleString();
+  }, []);
+
+  const formatGenderValue = useCallback(
+    (gender?: string | null) => {
+      if (!gender) return t('Not recorded');
+      const normalized = gender.toLowerCase();
+      if (normalized === 'm') return t('Male');
+      if (normalized === 'f') return t('Female');
+      return gender;
+    },
+    [t],
+  );
+
   useEffect(() => {
     setActiveTab(initialTab);
   }, [initialTab]);
@@ -68,7 +73,7 @@ export default function PatientDetail() {
   useEffect(() => {
     const patientId = id;
     if (!patientId) {
-      setError('Patient identifier is missing.');
+      setError('error.patient-missing-id');
       setLoading(false);
       return;
     }
@@ -87,7 +92,7 @@ export default function PatientDetail() {
       } catch (err) {
         console.error(err);
         if (!cancelled) {
-          setError('Unable to load patient details right now.');
+          setError('error.patient-load');
         }
       } finally {
         if (!cancelled) {
@@ -127,7 +132,7 @@ export default function PatientDetail() {
       } catch (err) {
         console.error(err);
         if (!cancelled) {
-          setVisitsError('Unable to load the full visit history.');
+          setVisitsError('error.patient-visits-load');
         }
       } finally {
         if (!cancelled) {
@@ -166,37 +171,39 @@ export default function PatientDetail() {
         to="/patients"
         className="inline-flex items-center justify-center rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
       >
-        Patient Directory
+        {t('Patient Directory')}
       </Link>
       {id && (
         <Link
           to={`/patients/${id}/visits/new`}
           className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
         >
-          Add Visit
+          {t('Add visit')}
         </Link>
       )}
     </div>
   );
 
   const subtitle = patient
-    ? `Patient ID: ${patient.patientId}`
+    ? t('Patient ID: {id}', { id: patient.patientId })
     : loading
-      ? 'Loading patient details...'
-      : error ?? 'Patient details unavailable.';
+      ? t('Loading patient details...')
+      : error
+        ? t(error)
+        : t('Patient details unavailable.');
 
   function renderSummary(p: PatientSummary) {
     if (!p.visits || p.visits.length === 0) {
       return (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-6 py-12 text-center">
           <PatientsIcon className="h-12 w-12 text-gray-300" />
-          <p className="text-sm font-medium text-gray-600">No visits recorded yet.</p>
+          <p className="text-sm font-medium text-gray-600">{t('No visits recorded yet.')}</p>
           {id && (
             <Link
               to={`/patients/${id}/visits/new`}
               className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
             >
-              Add the first visit
+              {t('Add the first visit')}
             </Link>
           )}
         </div>
@@ -212,15 +219,12 @@ export default function PatientDetail() {
           const observations = visit.observations ?? [];
 
           return (
-            <article
-              key={visit.visitId}
-              className="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-sm"
-            >
+            <article key={visit.visitId} className="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-sm">
               <div className="flex flex-wrap justify-between gap-4">
                 <div>
-                  <div className="text-sm font-medium text-blue-600">{formatDate(visit.visitDate)}</div>
+                  <div className="text-sm font-medium text-blue-600">{formatDateValue(visit.visitDate)}</div>
                   <h3 className="mt-1 text-lg font-semibold text-gray-900">
-                    Visit with {visit.doctor.name}
+                    {t('Visit with {name}', { name: visit.doctor.name })}
                   </h3>
                   <p className="mt-1 text-sm text-gray-500">{visit.doctor.department}</p>
                 </div>
@@ -228,14 +232,14 @@ export default function PatientDetail() {
                   to={`/visits/${visit.visitId}`}
                   className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
                 >
-                  Open visit
+                  {t('Open visit')}
                 </Link>
               </div>
 
               <div className="mt-5 grid gap-5 lg:grid-cols-2">
                 <div className="space-y-4">
                   <div>
-                    <div className="text-sm font-semibold text-gray-900">Diagnoses</div>
+                    <div className="text-sm font-semibold text-gray-900">{t('Diagnoses')}</div>
                     {diagnoses.length > 0 ? (
                       <div className="mt-2 flex flex-wrap gap-2">
                         {diagnoses.map((diag) => (
@@ -248,12 +252,12 @@ export default function PatientDetail() {
                         ))}
                       </div>
                     ) : (
-                      <p className="mt-2 text-sm text-gray-500">No diagnoses recorded.</p>
+                      <p className="mt-2 text-sm text-gray-500">{t('No diagnoses recorded.')}</p>
                     )}
                   </div>
 
                   <div>
-                    <div className="text-sm font-semibold text-gray-900">Medications</div>
+                    <div className="text-sm font-semibold text-gray-900">{t('Medications')}</div>
                     {medications.length > 0 ? (
                       <div className="mt-2 flex flex-wrap gap-2">
                         {medications.map((med, index) => {
@@ -269,21 +273,21 @@ export default function PatientDetail() {
                         })}
                       </div>
                     ) : (
-                      <p className="mt-2 text-sm text-gray-500">No medications documented.</p>
+                      <p className="mt-2 text-sm text-gray-500">{t('No medications documented.')}</p>
                     )}
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <div>
-                    <div className="text-sm font-semibold text-gray-900">Key labs</div>
+                    <div className="text-sm font-semibold text-gray-900">{t('Key labs')}</div>
                     {labs.length > 0 ? (
                       <div className="mt-2 space-y-3">
                         {labs.map((lab, index) => {
                           const value =
                             lab.resultValue !== null && lab.resultValue !== undefined
                               ? `${lab.resultValue}${lab.unit ? ` ${lab.unit}` : ''}`
-                              : 'Pending';
+                              : t('Pending');
                           return (
                             <div
                               key={`${lab.testName}-${lab.testDate ?? index}`}
@@ -293,7 +297,7 @@ export default function PatientDetail() {
                               <div className="mt-1 text-base font-semibold text-blue-900">{value}</div>
                               {lab.testDate && (
                                 <div className="text-xs text-blue-600">
-                                  Collected {formatDate(lab.testDate)}
+                                  {t('Collected {date}', { date: formatDateValue(lab.testDate) })}
                                 </div>
                               )}
                             </div>
@@ -301,26 +305,23 @@ export default function PatientDetail() {
                         })}
                       </div>
                     ) : (
-                      <p className="mt-2 text-sm text-gray-500">No lab highlights for this visit.</p>
+                      <p className="mt-2 text-sm text-gray-500">{t('No lab highlights for this visit.')}</p>
                     )}
                   </div>
 
                   <div>
-                    <div className="text-sm font-semibold text-gray-900">Observations</div>
+                    <div className="text-sm font-semibold text-gray-900">{t('Observations')}</div>
                     {observations.length > 0 ? (
                       <ul className="mt-2 space-y-2 text-sm text-gray-700">
                         {observations.map((obs) => (
-                          <li
-                            key={obs.obsId}
-                            className="rounded-lg border border-gray-200 bg-gray-100 px-4 py-3"
-                          >
+                          <li key={obs.obsId} className="rounded-lg border border-gray-200 bg-gray-100 px-4 py-3">
                             <div>{obs.noteText}</div>
-                            <div className="mt-1 text-xs text-gray-500">{formatDateTime(obs.createdAt)}</div>
+                            <div className="mt-1 text-xs text-gray-500">{formatDateTimeValue(obs.createdAt)}</div>
                           </li>
                         ))}
                       </ul>
                     ) : (
-                      <p className="mt-2 text-sm text-gray-500">No recent clinician notes.</p>
+                      <p className="mt-2 text-sm text-gray-500">{t('No recent clinician notes.')}</p>
                     )}
                   </div>
                 </div>
@@ -338,7 +339,7 @@ export default function PatientDetail() {
         <div className="flex items-center justify-center rounded-2xl border border-gray-100 bg-gray-50 py-16">
           <div className="flex flex-col items-center gap-3">
             <SearchIcon className="h-8 w-8 animate-spin text-blue-500" />
-            <p className="text-sm text-gray-600">Loading visit history...</p>
+            <p className="text-sm text-gray-600">{t('Loading visit history...')}</p>
           </div>
         </div>
       );
@@ -347,7 +348,7 @@ export default function PatientDetail() {
     if (visitsError) {
       return (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
-          {visitsError}
+          {t(visitsError)}
         </div>
       );
     }
@@ -360,13 +361,13 @@ export default function PatientDetail() {
       return (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-6 py-12 text-center">
           <PatientsIcon className="h-12 w-12 text-gray-300" />
-          <p className="text-sm font-medium text-gray-600">No visits recorded in the system.</p>
+          <p className="text-sm font-medium text-gray-600">{t('No visits recorded in the system.')}</p>
           {id && (
             <Link
               to={`/patients/${id}/visits/new`}
               className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
             >
-              Add visit
+              {t('Add visit')}
             </Link>
           )}
         </div>
@@ -382,9 +383,9 @@ export default function PatientDetail() {
           >
             <div className="flex flex-wrap justify-between gap-4">
               <div>
-                <div className="text-sm font-medium text-blue-600">{formatDate(visit.visitDate)}</div>
+                <div className="text-sm font-medium text-blue-600">{formatDateValue(visit.visitDate)}</div>
                 <h3 className="mt-1 text-lg font-semibold text-gray-900">
-                  Visit with {visit.doctor.name}
+                  {t('Visit with {name}', { name: visit.doctor.name })}
                 </h3>
                 <div className="mt-2 flex flex-wrap gap-2 text-xs font-medium">
                   <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-blue-600">
@@ -401,7 +402,7 @@ export default function PatientDetail() {
                 to={`/visits/${visit.visitId}`}
                 className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
               >
-                View visit
+                {t('View visit')}
               </Link>
             </div>
           </article>
@@ -410,15 +411,15 @@ export default function PatientDetail() {
     );
   }
 
-  const contact = patient?.contact?.trim() || 'Not provided';
-  const coverage = patient?.insurance?.trim() || 'Self-pay';
-  const gender = formatGender(patient?.gender);
+  const contact = patient?.contact?.trim() || t('Not provided');
+  const coverage = patient?.insurance?.trim() || t('Self-pay');
+  const gender = formatGenderValue(patient?.gender);
   const age = patient ? calculateAge(patient.dob) : null;
   const lastVisit = patient?.visits?.[0] ?? null;
 
   return (
     <DashboardLayout
-      title={patient?.name ?? 'Patient Profile'}
+      title={patient?.name ?? t('Patient Profile')}
       subtitle={subtitle}
       activeItem="patients"
       headerChildren={headerActions}
@@ -427,17 +428,17 @@ export default function PatientDetail() {
         <div className="flex justify-center">
           <div className="flex flex-col items-center gap-3 rounded-2xl bg-white p-10 shadow-sm">
             <SearchIcon className="h-10 w-10 animate-spin text-blue-500" />
-            <p className="text-sm font-medium text-gray-600">Loading patient record...</p>
+            <p className="text-sm font-medium text-gray-600">{t('Loading patient record...')}</p>
           </div>
         </div>
       ) : error ? (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-700 shadow-sm">
-          <p className="text-sm font-semibold">{error}</p>
+          <p className="text-sm font-semibold">{t(error)}</p>
           <Link
             to="/patients"
             className="mt-4 inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-medium text-red-600 shadow-sm hover:bg-red-100"
           >
-            Back to patient directory
+            {t('Back to patient directory')}
           </Link>
         </div>
       ) : patient ? (
@@ -445,26 +446,26 @@ export default function PatientDetail() {
           <section className="rounded-2xl bg-white p-6 shadow-sm">
             <div className="flex flex-wrap justify-between gap-6">
               <div>
-                <p className="text-sm font-medium text-blue-600">Patient Overview</p>
+                <p className="text-sm font-medium text-blue-600">{t('Patient Overview')}</p>
                 <h2 className="mt-1 text-2xl font-semibold text-gray-900">{patient.name}</h2>
-                <p className="mt-1 text-sm text-gray-500">Patient ID: {patient.patientId}</p>
+                <p className="mt-1 text-sm text-gray-500">{t('Patient ID: {id}', { id: patient.patientId })}</p>
                 <p className="mt-2 text-sm text-gray-600">
-                  Review demographic details and the latest clinical activity for this patient.
+                  {t('Review demographic details and the latest clinical activity for this patient.')}
                 </p>
               </div>
               <div className="min-w-[12rem] rounded-xl bg-gray-50 p-4">
                 <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Primary contact
+                  {t('Primary contact')}
                 </div>
                 <div className="mt-2 text-base font-semibold text-gray-900">{contact}</div>
               </div>
             </div>
             <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {[
-                { label: 'Date of Birth', value: formatDate(patient.dob) },
-                { label: 'Age', value: age !== null ? `${age} yrs` : '—' },
-                { label: 'Insurance', value: coverage },
-                { label: 'Gender', value: gender },
+                { label: t('Date of Birth'), value: formatDateValue(patient.dob) },
+                { label: t('Age'), value: age !== null ? t('{count} yrs', { count: age }) : '—' },
+                { label: t('Insurance'), value: coverage },
+                { label: t('Gender'), value: gender },
               ].map((stat) => (
                 <div
                   key={stat.label}
@@ -485,22 +486,24 @@ export default function PatientDetail() {
               }`}
             >
               {lastVisit
-                ? `Last visit on ${formatDate(lastVisit.visitDate)} with ${lastVisit.doctor.name} (${lastVisit.doctor.department}).`
-                : 'No recorded visits yet. Add a visit to begin the clinical timeline.'}
+                ? t('Last visit on {date} with {name} ({department}).', {
+                    date: formatDateValue(lastVisit.visitDate),
+                    name: lastVisit.doctor.name,
+                    department: lastVisit.doctor.department,
+                  })
+                : t('No recorded visits yet. Add a visit to begin the clinical timeline.')}
             </div>
           </section>
 
           <section className="rounded-2xl bg-white p-6 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">Clinical Timeline</h2>
-                <p className="mt-1 text-sm text-gray-600">
-                  Explore recent encounters and the complete visit history.
-                </p>
+                <h2 className="text-lg font-semibold text-gray-900">{t('Clinical Timeline')}</h2>
+                <p className="mt-1 text-sm text-gray-600">{t('Explore recent encounters and the complete visit history.')}</p>
               </div>
               <nav
                 role="tablist"
-                aria-label="Patient detail tabs"
+                aria-label={t('Patient detail tabs')}
                 className="inline-flex rounded-full bg-gray-100 p-1 text-sm font-medium"
               >
                 <button
@@ -514,7 +517,7 @@ export default function PatientDetail() {
                       : 'text-gray-600 hover:text-gray-800'
                   }`}
                 >
-                  Care Summary
+                  {t('Care Summary')}
                 </button>
                 <button
                   type="button"
@@ -527,7 +530,7 @@ export default function PatientDetail() {
                       : 'text-gray-600 hover:text-gray-800'
                   }`}
                 >
-                  Visit History
+                  {t('Visit History')}
                 </button>
               </nav>
             </div>
