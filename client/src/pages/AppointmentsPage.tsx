@@ -800,12 +800,16 @@ export default function AppointmentsPage() {
                           className="absolute left-1 right-1 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-left text-xs font-medium text-blue-900 shadow-sm transition hover:border-blue-300 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                           style={{ top: `${top}%`, height: `${height}%` }}
                         >
-                          <div className="text-[11px] font-semibold uppercase tracking-wide text-blue-500">
-                            {appointment.doctor.name}
-                          </div>
-                          <div className="mt-1 text-sm font-semibold text-blue-900">{appointment.patient.name}</div>
-                          <div className="mt-1 text-[11px] text-blue-700">
-                            {formatTimeRange(appointment.startTimeMin, appointment.endTimeMin)}
+                          <div className="flex w-full flex-wrap items-center gap-x-2 gap-y-1 leading-tight">
+                            <span className="text-[11px] font-semibold uppercase tracking-wide text-blue-500">
+                              {appointment.doctor.name}
+                            </span>
+                            <span className="text-sm font-semibold text-blue-900">
+                              {appointment.patient.name}
+                            </span>
+                            <span className="ml-auto text-[11px] font-medium text-blue-700">
+                              {formatTimeRange(appointment.startTimeMin, appointment.endTimeMin)}
+                            </span>
                           </div>
                         </button>
                       );
@@ -894,12 +898,16 @@ export default function AppointmentsPage() {
                                 className="absolute left-1 right-1 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-left text-xs font-medium text-blue-900 shadow-sm transition hover:border-blue-300 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 style={{ top: `${top}%`, height: `${height}%` }}
                               >
-                                <div className="text-[11px] font-semibold uppercase tracking-wide text-blue-500">
-                                  {appointment.doctor.name}
-                                </div>
-                                <div className="mt-1 text-sm font-semibold text-blue-900">{appointment.patient.name}</div>
-                                <div className="mt-1 text-[11px] text-blue-700">
-                                  {formatTimeRange(appointment.startTimeMin, appointment.endTimeMin)}
+                                <div className="flex w-full flex-wrap items-center gap-x-2 gap-y-1 leading-tight">
+                                  <span className="text-[11px] font-semibold uppercase tracking-wide text-blue-500">
+                                    {appointment.doctor.name}
+                                  </span>
+                                  <span className="text-sm font-semibold text-blue-900">
+                                    {appointment.patient.name}
+                                  </span>
+                                  <span className="ml-auto text-[11px] font-medium text-blue-700">
+                                    {formatTimeRange(appointment.startTimeMin, appointment.endTimeMin)}
+                                  </span>
                                 </div>
                               </button>
                             );
