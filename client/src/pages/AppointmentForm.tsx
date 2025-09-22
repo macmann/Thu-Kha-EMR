@@ -11,6 +11,9 @@ import {
   type AvailabilitySlot,
 } from '../api/appointments';
 
+const MINUTES_IN_DAY = 24 * 60;
+const APPOINTMENT_SLOT_MINUTES = 15;
+
 type PatientOption = {
   patientId: string;
   name: string;
@@ -43,7 +46,7 @@ function parseErrorMessage(error: unknown): string {
 }
 
 function formatTime(minutes: number): string {
-  const clamped = Math.max(0, Math.min(24 * 60, minutes));
+  const clamped = Math.max(0, Math.min(MINUTES_IN_DAY, minutes));
   const hours = Math.floor(clamped / 60);
   const mins = clamped % 60;
   const period = hours >= 12 ? 'PM' : 'AM';
@@ -70,15 +73,42 @@ function parseMinuteParam(value: string | null): number | null {
   if (!value) return null;
   const parsed = Number.parseInt(value, 10);
   if (!Number.isFinite(parsed)) return null;
-  return Math.max(0, Math.min(24 * 60, parsed));
+  return Math.max(0, Math.min(MINUTES_IN_DAY, parsed));
 }
 
-function deriveDefaultEnd(start: number): number {
-  const preferred = Math.min(start + 60, 24 * 60);
-  if (preferred > start) return preferred;
-  const fallback = Math.min(start + 30, 24 * 60);
-  if (fallback > start) return fallback;
-  return start;
+function deriveDefaultEnd(start: number): number | null {
+  const preferred = start + APPOINTMENT_SLOT_MINUTES;
+  if (preferred < MINUTES_IN_DAY) {
+    return preferred;
+  }
+  return null;
+}
+
+function expandAvailabilityToSlots(slots: AvailabilitySlot[]): AvailabilitySlot[] {
+  const expanded: AvailabilitySlot[] = [];
+
+  for (const slot of slots) {
+    const safeStart = Math.max(0, Math.min(slot.startMin, MINUTES_IN_DAY));
+    const safeEnd = Math.max(0, Math.min(slot.endMin, MINUTES_IN_DAY));
+
+    if (safeEnd - safeStart < APPOINTMENT_SLOT_MINUTES) {
+      continue;
+    }
+
+    const alignedStart = Math.ceil(safeStart / APPOINTMENT_SLOT_MINUTES) * APPOINTMENT_SLOT_MINUTES;
+
+    for (
+      let current = alignedStart;
+      current + APPOINTMENT_SLOT_MINUTES <= safeEnd && current + APPOINTMENT_SLOT_MINUTES < MINUTES_IN_DAY;
+      current += APPOINTMENT_SLOT_MINUTES
+    ) {
+      expanded.push({ startMin: current, endMin: current + APPOINTMENT_SLOT_MINUTES });
+    }
+  }
+
+  return expanded.sort((a, b) =>
+    a.startMin === b.startMin ? a.endMin - b.endMin : a.startMin - b.startMin,
+  );
 }
 
 export default function AppointmentForm() {
@@ -260,7 +290,7 @@ export default function AppointmentForm() {
       try {
         const availability = await getAvailability(doctorId, date);
         if (!cancelled) {
-          setFreeSlots(availability.freeSlots);
+          setFreeSlots(expandAvailabilityToSlots(availability.freeSlots));
         }
       } catch (error) {
         if (!cancelled) {
@@ -300,7 +330,8 @@ export default function AppointmentForm() {
     if (nextEnd !== null) {
       setEndTimeMin(nextEnd);
     } else if (nextStart !== null) {
-      setEndTimeMin(deriveDefaultEnd(nextStart));
+      const derivedEnd = deriveDefaultEnd(nextStart);
+      setEndTimeMin(derivedEnd !== null ? derivedEnd : '');
     }
   }, [isEditing, searchParamsKey]);
 
@@ -333,7 +364,7 @@ export default function AppointmentForm() {
 
   const timeOptions = useMemo(() => {
     const options: Array<{ label: string; value: number }> = [];
-    for (let minutes = 0; minutes < 24 * 60; minutes += 15) {
+    for (let minutes = 0; minutes < MINUTES_IN_DAY; minutes += APPOINTMENT_SLOT_MINUTES) {
       options.push({ value: minutes, label: formatTime(minutes) });
     }
     return options;
@@ -663,10 +694,20 @@ export default function AppointmentForm() {
                       id="start-time"
                       value={typeof startTimeMin === 'number' ? startTimeMin : ''}
                       onChange={(event) => {
-                        const value = event.target.value ? Number(event.target.value) : '';
+                        const rawValue = event.target.value;
+                        const value = rawValue ? Number(rawValue) : '';
                         setStartTimeMin(value);
-                        if (typeof endTimeMin === 'number' && value !== '' && endTimeMin <= Number(value)) {
+
+                        if (value === '') {
                           setEndTimeMin('');
+                          return;
+                        }
+
+                        if (typeof value === 'number') {
+                          if (typeof endTimeMin !== 'number' || endTimeMin <= value) {
+                            const nextEnd = deriveDefaultEnd(value);
+                            setEndTimeMin(nextEnd !== null && nextEnd > value ? nextEnd : '');
+                          }
                         }
                       }}
                       className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
