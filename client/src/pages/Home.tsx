@@ -9,7 +9,7 @@ import {
   type Appointment,
   type AppointmentStatus,
 } from '../api/appointments';
-import { addObservation, listPatientVisits } from '../api/client';
+import { addObservation, getVisit, listPatientVisits } from '../api/client';
 
 export default function Home() {
   const { user } = useAuth();
@@ -159,6 +159,7 @@ function DoctorQueueDashboard() {
   const [success, setSuccess] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [note, setNote] = useState('');
+  const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null);
   const [invitingId, setInvitingId] = useState<string | null>(null);
   const [completing, setCompleting] = useState(false);
 
@@ -197,9 +198,59 @@ function DoctorQueueDashboard() {
     setNote('');
     setSuccess(null);
     setError(null);
+    setSelectedVisitId(null);
   }, [selectedId]);
 
   const selected = appointments.find((appt) => appt.appointmentId === selectedId) ?? null;
+
+  useEffect(() => {
+    if (!selected) {
+      return;
+    }
+
+    let ignore = false;
+    const appointment = selected;
+
+    async function loadExistingVisitNote(current: Appointment) {
+      try {
+        const visits = await listPatientVisits(current.patientId);
+        const appointmentDate = normalizeDateKey(current.date);
+        const match = visits.find(
+          (visit) =>
+            visit.doctor.doctorId === current.doctorId &&
+            normalizeDateKey(visit.visitDate) === appointmentDate,
+        );
+
+        if (!match) {
+          return;
+        }
+
+        const visit = await getVisit(match.visitId);
+        const latestNote = visit.observations[0]?.noteText ?? '';
+
+        if (!ignore) {
+          setSelectedVisitId(match.visitId);
+          setNote((current) => {
+            if (current.trim().length > 0) {
+              return current;
+            }
+            return latestNote;
+          });
+        }
+      } catch (err) {
+        if (!ignore) {
+          console.error(err);
+          setError(parseErrorMessage(err, 'Unable to load existing visit notes.'));
+        }
+      }
+    }
+
+    loadExistingVisitNote(appointment);
+
+    return () => {
+      ignore = true;
+    };
+  }, [selected?.appointmentId, selected?.patientId, selected?.doctorId, selected?.date]);
 
   const handleInvite = async (appointment: Appointment) => {
     setInvitingId(appointment.appointmentId);
@@ -227,9 +278,10 @@ function DoctorQueueDashboard() {
     setError(null);
     try {
       const result = await patchStatus(appointment.appointmentId, { status: 'Completed' });
-      let visitId: string | null = null;
+      let visitId: string | null = selectedVisitId;
       if ('visitId' in result && typeof result.visitId === 'string') {
         visitId = result.visitId;
+        setSelectedVisitId(result.visitId);
       } else {
         const visits = await listPatientVisits(appointment.patientId);
         const appointmentDate = normalizeDateKey(appointment.date);
@@ -238,6 +290,9 @@ function DoctorQueueDashboard() {
             visit.doctor.doctorId === appointment.doctorId && normalizeDateKey(visit.visitDate) === appointmentDate,
         );
         visitId = match?.visitId ?? null;
+        if (visitId) {
+          setSelectedVisitId(visitId);
+        }
       }
 
       if (!visitId) {
