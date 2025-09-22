@@ -43,9 +43,13 @@ export async function fetchJSON(
       }
       return retryRes.json();
     }
+    setAccessToken(null);
   }
 
   if (!response.ok) {
+    if (response.status === 401) {
+      setAccessToken(null);
+    }
     const errText = await response.text();
     throw new Error(errText || response.statusText);
   }

@@ -1,10 +1,15 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Doctor, listDoctors, createDoctor } from '../api/client';
-
-interface UserAccount {
-  email: string;
-  password: string;
-}
+import {
+  createDoctor,
+  createUserAccount,
+  listDoctors,
+  listUsers,
+  updateUserAccount,
+  type CreateUserPayload,
+  type Doctor,
+  type UpdateUserPayload,
+  type UserAccount,
+} from '../api/client';
 
 interface SettingsContextType {
   appName: string;
@@ -12,7 +17,8 @@ interface SettingsContextType {
   users: UserAccount[];
   doctors: Doctor[];
   updateSettings: (data: { appName?: string; logo?: string | null }) => void;
-  addUser: (user: UserAccount) => void;
+  addUser: (user: CreateUserPayload) => Promise<UserAccount>;
+  updateUser: (id: string, data: UpdateUserPayload) => Promise<UserAccount>;
   addDoctor: (doctor: { name: string; department: string }) => Promise<Doctor>;
   widgetEnabled: boolean;
   setWidgetEnabled: (enabled: boolean) => void;
@@ -34,7 +40,6 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const parsed = JSON.parse(stored);
         if (parsed.appName) setAppName(parsed.appName);
         if (parsed.logo) setLogo(parsed.logo);
-        if (Array.isArray(parsed.users)) setUsers(parsed.users);
         if (typeof parsed.widgetEnabled === 'boolean') setWidgetEnabled(parsed.widgetEnabled);
       } catch {
         /* ignore */
@@ -47,11 +52,17 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   useEffect(() => {
+    listUsers()
+      .then(setUsers)
+      .catch(() => setUsers([]));
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem(
       'appSettings',
-      JSON.stringify({ appName, logo, users, widgetEnabled }),
+      JSON.stringify({ appName, logo, widgetEnabled }),
     );
-  }, [appName, logo, users, widgetEnabled]);
+  }, [appName, logo, widgetEnabled]);
 
   useEffect(() => {
     if (typeof document !== 'undefined') {
@@ -64,8 +75,20 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (data.logo !== undefined) setLogo(data.logo);
   };
 
-  const addUser = (user: UserAccount) => {
-    setUsers((prev) => [...prev, user]);
+  const addUser = async (user: CreateUserPayload) => {
+    const created = await createUserAccount(user);
+    setUsers((prev) => [...prev, created].sort((a, b) => a.email.localeCompare(b.email)));
+    return created;
+  };
+
+  const updateUser = async (id: string, data: UpdateUserPayload) => {
+    const updated = await updateUserAccount(id, data);
+    setUsers((prev) =>
+      prev
+        .map((item) => (item.userId === id ? updated : item))
+        .sort((a, b) => a.email.localeCompare(b.email)),
+    );
+    return updated;
   };
 
   const addDoctor = async (doctor: { name: string; department: string }) => {
@@ -83,6 +106,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         doctors,
         updateSettings,
         addUser,
+        updateUser,
         addDoctor,
         widgetEnabled,
         setWidgetEnabled,

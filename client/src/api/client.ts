@@ -1,5 +1,7 @@
 import { fetchJSON } from './http';
 
+export type Role = 'Doctor' | 'AdminAssistant' | 'ITAdmin';
+
 export interface Patient {
   patientId: string;
   name: string;
@@ -99,11 +101,19 @@ export interface CohortResult {
   };
 }
 
-export interface Tokens {
-  accessToken: string;
+export interface LoginUserInfo {
+  userId: string;
+  role: Role;
+  email: string;
+  doctorId?: string | null;
 }
 
-export async function login(email: string, password: string): Promise<Tokens> {
+export interface LoginResponse {
+  accessToken: string;
+  user: LoginUserInfo;
+}
+
+export async function login(email: string, password: string): Promise<LoginResponse> {
   return fetchJSON('/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -305,4 +315,49 @@ export async function cohort(params: CohortParams): Promise<CohortResult[]> {
   qs.set('value', String(params.value));
   qs.set('months', String(params.months));
   return fetchJSON(`/insights/cohort?${qs.toString()}`);
+}
+
+export interface UserAccount {
+  userId: string;
+  email: string;
+  role: Role;
+  status: 'active' | 'inactive';
+  doctorId?: string | null;
+  doctor?: Doctor | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateUserPayload {
+  email: string;
+  password: string;
+  role: Role;
+  doctorId?: string;
+}
+
+export interface UpdateUserPayload {
+  password?: string;
+  role?: Role;
+  status?: 'active' | 'inactive';
+  doctorId?: string | null;
+}
+
+export function listUsers(): Promise<UserAccount[]> {
+  return fetchJSON('/users');
+}
+
+export function createUserAccount(payload: CreateUserPayload): Promise<UserAccount> {
+  return fetchJSON('/users', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateUserAccount(id: string, payload: UpdateUserPayload): Promise<UserAccount> {
+  return fetchJSON(`/users/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
 }

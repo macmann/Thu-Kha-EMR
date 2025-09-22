@@ -76,6 +76,10 @@ export interface AppointmentListResponse {
   nextCursor?: string | null;
 }
 
+export interface AppointmentQueueResponse {
+  data: Appointment[];
+}
+
 export interface AvailabilitySlot {
   startMin: number;
   endMin: number;
@@ -113,6 +117,11 @@ export function listAppointments(params?: AppointmentListParams): Promise<Appoin
   return fetchJSON(`/appointments${query}`);
 }
 
+export interface AppointmentQueueParams {
+  doctorId?: string;
+  days?: number;
+}
+
 export function getAppointment(id: string): Promise<Appointment> {
   return fetchJSON(`/appointments/${id}`);
 }
@@ -147,4 +156,9 @@ export function patchStatus(
 export function getAvailability(doctorId: string, date: string): Promise<AvailabilityResponse> {
   const query = buildQuery({ doctorId, date });
   return fetchJSON(`/appointments/availability${query}`);
+}
+
+export function getAppointmentQueue(params?: AppointmentQueueParams): Promise<AppointmentQueueResponse> {
+  const query = buildQuery(params as QueryParams | undefined);
+  return fetchJSON(`/appointments/queue${query}`);
 }

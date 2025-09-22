@@ -11,7 +11,7 @@ const diagnosisSchema = z.object({
   diagnosis: z.string().min(1),
 });
 
-router.post('/visits/:id/diagnoses', requireAuth, requireRole('Doctor', 'Admin'), async (req: AuthRequest, res: Response) => {
+router.post('/visits/:id/diagnoses', requireAuth, requireRole('Doctor'), async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   try {
     z.string().uuid().parse(id);
@@ -27,7 +27,7 @@ router.post('/visits/:id/diagnoses', requireAuth, requireRole('Doctor', 'Admin')
   res.status(201).json(diag);
 });
 
-router.get('/', requireAuth, requireRole('Doctor', 'Admin'), async (req: Request, res: Response) => {
+router.get('/', requireAuth, requireRole('Doctor'), async (req: Request, res: Response) => {
   const querySchema = z.object({
     q: z.string().optional(),
     from: z.coerce.date().optional(),

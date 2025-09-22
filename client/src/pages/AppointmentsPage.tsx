@@ -11,6 +11,7 @@ import {
   type AppointmentStatusPatch,
 } from '../api/appointments';
 import { listDoctors, type Doctor } from '../api/client';
+import { useAuth } from '../context/AuthProvider';
 
 const DAY_START_MINUTE = 8 * 60;
 const DAY_END_MINUTE = 18 * 60;
@@ -193,6 +194,10 @@ function formatTimeRange(startMin: number, endMin: number) {
 
 export default function AppointmentsPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const userRole = user?.role ?? 'ITAdmin';
+  const isDoctorUser = userRole === 'Doctor';
+  const canCreateAppointment = userRole === 'AdminAssistant' || userRole === 'ITAdmin';
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -214,6 +219,13 @@ export default function AppointmentsPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [updating, setUpdating] = useState<Record<string, boolean>>({});
   const [toast, setToast] = useState<ToastState | null>(null);
+  const effectiveDoctorId = isDoctorUser ? user?.doctorId ?? '' : doctorId;
+
+  useEffect(() => {
+    if (isDoctorUser) {
+      setDoctorId(user?.doctorId ?? '');
+    }
+  }, [isDoctorUser, user?.doctorId]);
 
   const todayKey = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const focusDateKey = useMemo(() => {
@@ -240,6 +252,21 @@ export default function AppointmentsPage() {
     }
     return markers;
   }, []);
+
+  const allowedActionKeys = useMemo(() => {
+    if (userRole === 'Doctor') {
+      return ['start', 'complete'];
+    }
+    if (userRole === 'AdminAssistant') {
+      return ['check-in', 'cancel'];
+    }
+    return ['check-in', 'start', 'complete', 'cancel'];
+  }, [userRole]);
+
+  const visibleActionConfigs = useMemo(
+    () => actionConfigs.filter((action) => allowedActionKeys.includes(action.key)),
+    [allowedActionKeys],
+  );
 
   const gridMarkers = useMemo(() => {
     const markers: number[] = [];
@@ -321,8 +348,8 @@ export default function AppointmentsPage() {
           if (fromDate) params.from = fromDate;
           if (toDate) params.to = toDate;
         }
-        if (doctorId) {
-          params.doctorId = doctorId;
+        if (effectiveDoctorId) {
+          params.doctorId = effectiveDoctorId;
         }
         if (statusFilter) {
           params.status = statusFilter;
@@ -349,7 +376,7 @@ export default function AppointmentsPage() {
     return () => {
       cancelled = true;
     };
-  }, [dateMode, singleDate, fromDate, toDate, doctorId, statusFilter, refreshToken]);
+  }, [dateMode, singleDate, fromDate, toDate, effectiveDoctorId, statusFilter, refreshToken]);
 
   useEffect(() => {
     if (!toast) return undefined;
@@ -357,7 +384,7 @@ export default function AppointmentsPage() {
     return () => window.clearTimeout(handle);
   }, [toast]);
 
-  const headerActions = (
+  const headerActions = canCreateAppointment ? (
     <div className="flex flex-col gap-2 md:flex-row md:items-center">
       <Link
         to="/appointments/new"
@@ -366,17 +393,19 @@ export default function AppointmentsPage() {
         New Appointment
       </Link>
     </div>
-  );
+  ) : null;
 
   const hasActiveFilters =
-    (dateMode === 'single' ? Boolean(singleDate) : Boolean(fromDate || toDate)) || doctorId !== '' || statusFilter !== '';
+    (dateMode === 'single' ? Boolean(singleDate) : Boolean(fromDate || toDate)) ||
+    (!isDoctorUser && doctorId !== '') ||
+    statusFilter !== '';
 
   function handleClearFilters() {
     setDateMode('single');
     setSingleDate('');
     setFromDate('');
     setToDate('');
-    setDoctorId('');
+    setDoctorId(isDoctorUser ? user?.doctorId ?? '' : '');
     setStatusFilter('');
   }
 
@@ -439,6 +468,7 @@ export default function AppointmentsPage() {
   }
 
   function openCreateSlot(dateKey: string, startMinute: number, endMinute: number) {
+    if (!canCreateAppointment) return;
     const params = new URLSearchParams();
     params.set('date', dateKey);
     params.set('start', String(startMinute));
@@ -447,6 +477,7 @@ export default function AppointmentsPage() {
   }
 
   function handleDayGridClick(event: MouseEvent<HTMLDivElement>) {
+    if (!canCreateAppointment) return;
     const { currentTarget } = event;
     if (!currentTarget) return;
     const rect = currentTarget.getBoundingClientRect();
@@ -464,6 +495,7 @@ export default function AppointmentsPage() {
 
   function handleWeekGridClick(dateKey: string) {
     return (event: MouseEvent<HTMLDivElement>) => {
+      if (!canCreateAppointment) return;
       const { currentTarget } = event;
       if (!currentTarget) return;
       const rect = currentTarget.getBoundingClientRect();
@@ -620,9 +652,12 @@ export default function AppointmentsPage() {
               <div className="space-y-3">
                 <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Doctor</div>
                 <select
-                  value={doctorId}
+                  value={effectiveDoctorId}
                   onChange={(event) => setDoctorId(event.target.value)}
-                  className="w-full rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  disabled={isDoctorUser}
+                  className={`w-full rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${
+                    isDoctorUser ? 'cursor-not-allowed bg-gray-100 text-gray-500' : ''
+                  }`}
                 >
                   <option value="">All doctors</option>
                   {doctors.map((doctor) => (
@@ -631,7 +666,9 @@ export default function AppointmentsPage() {
                     </option>
                   ))}
                 </select>
-                {doctorError ? (
+                {isDoctorUser ? (
+                  <p className="text-xs text-gray-400">Viewing your schedule.</p>
+                ) : doctorError ? (
                   <p className="text-xs text-red-600">{doctorError}</p>
                 ) : doctorsLoading ? (
                   <p className="text-xs text-gray-400">Loading doctors...</p>
@@ -692,19 +729,21 @@ export default function AppointmentsPage() {
                     Week view
                   </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    openCreateSlot(
-                      focusDateKey,
-                      DAY_START_MINUTE,
-                      clampMinutes(DAY_START_MINUTE + 60, DAY_START_MINUTE + MIN_SLOT_MINUTES, DAY_END_MINUTE),
-                    )
-                  }
-                  className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
-                >
-                  Add at 8:00 AM
-                </button>
+                {canCreateAppointment && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      openCreateSlot(
+                        focusDateKey,
+                        DAY_START_MINUTE,
+                        clampMinutes(DAY_START_MINUTE + 60, DAY_START_MINUTE + MIN_SLOT_MINUTES, DAY_END_MINUTE),
+                      )
+                    }
+                    className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
+                  >
+                    Add at 8:00 AM
+                  </button>
+                )}
               </div>
             </div>
 
@@ -964,7 +1003,7 @@ export default function AppointmentsPage() {
                             </td>
                             <td className="px-6 py-4 align-top text-right">
                               <div className="flex flex-wrap justify-end gap-2">
-                                {actionConfigs.map((action) => {
+                                {visibleActionConfigs.map((action) => {
                                   const allowed = allowedTransitions[appointment.status]?.includes(action.targetStatus) ?? false;
                                   const enabled = allowed && !busy;
                                   const tone = toneStyles[action.tone];

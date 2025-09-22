@@ -13,7 +13,7 @@ const medicationSchema = z.object({
   instructions: z.string().optional(),
 });
 
-router.post('/visits/:id/medications', requireAuth, requireRole('Doctor', 'Admin'), async (req: AuthRequest, res: Response) => {
+router.post('/visits/:id/medications', requireAuth, requireRole('Doctor'), async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   try {
     z.string().uuid().parse(id);
@@ -29,7 +29,7 @@ router.post('/visits/:id/medications', requireAuth, requireRole('Doctor', 'Admin
   res.status(201).json(med);
 });
 
-router.get('/', requireAuth, requireRole('Doctor', 'Admin'), async (req: Request, res: Response) => {
+router.get('/', requireAuth, requireRole('Doctor'), async (req: Request, res: Response) => {
   const querySchema = z.object({
     patient_id: z.string().uuid().optional(),
     from: z.coerce.date().optional(),

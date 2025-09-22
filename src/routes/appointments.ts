@@ -9,7 +9,7 @@ import {
   type AvailabilityWindow,
 } from '../services/appointmentService.js';
 import { validate } from '../middleware/validate.js';
-import { requireAuth } from '../modules/auth/index.js';
+import { requireAuth, requireRole, type AuthRequest } from '../modules/auth/index.js';
 import {
   CreateAppointmentSchema,
   UpdateAppointmentBodySchema,
@@ -22,6 +22,7 @@ import {
 import { toDateOnly } from '../utils/time.js';
 import {
   BadRequestError,
+  ForbiddenError,
   ConflictError,
   HttpError,
   NotFoundError,
@@ -112,6 +113,11 @@ const uuidParam = z.coerce.string().trim().uuid();
 const limitedPositiveIntParam = z.coerce.number().int().positive().max(100);
 const positiveIntParam = z.coerce.number().int().positive();
 
+const queueQuerySchema = z.object({
+  doctorId: uuidParam.optional(),
+  days: z.coerce.number().int().min(1).max(7).optional(),
+});
+
 const availabilityQuerySchema = z.object({
   doctorId: uuidParam,
   date: dateParam,
@@ -137,10 +143,19 @@ type TimeSegment = { startMin: number; endMin: number };
 
 router.get(
   '/availability',
+  requireRole('AdminAssistant', 'Doctor'),
   validate({ query: availabilityQuerySchema }),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const { doctorId, date } = req.query as AvailabilityQuery;
+      if (req.user?.role === 'Doctor') {
+        if (!req.user.doctorId) {
+          throw new ForbiddenError('Doctor profile is not linked to this account');
+        }
+        if (req.user.doctorId !== doctorId) {
+          throw new ForbiddenError('You can only view your own availability');
+        }
+      }
       const appointmentDate = toDateOnly(date);
       const availabilityPromise = getDoctorAvailabilityForDate(
         prisma,
@@ -217,8 +232,9 @@ router.get(
 
 router.post(
   '/',
+  requireRole('AdminAssistant'),
   validate({ body: CreateAppointmentSchema }),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const body = req.body as CreateAppointmentInput;
       await assertCreatable(prisma, body);
@@ -247,8 +263,9 @@ router.post(
 
 router.put(
   '/:appointmentId',
+  requireRole('AdminAssistant'),
   validate({ params: UpdateAppointmentParamsSchema, body: UpdateAppointmentBodySchema }),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const { appointmentId } = req.params as z.infer<typeof UpdateAppointmentParamsSchema>;
       const body = req.body as UpdateAppointmentInput;
@@ -291,11 +308,12 @@ const allowedTransitions: Record<AppointmentStatus, AppointmentStatus[]> = {
 
 router.patch(
   '/:appointmentId/status',
+  requireRole('Doctor', 'AdminAssistant'),
   validate({
     params: UpdateAppointmentParamsSchema,
     body: PatchStatusSchema,
   }),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const { appointmentId } = req.params as z.infer<typeof UpdateAppointmentParamsSchema>;
       const body = req.body as PatchStatusInput;
@@ -306,6 +324,25 @@ router.patch(
 
       if (!appointment) {
         throw new NotFoundError('Appointment not found');
+      }
+
+      const user = req.user!;
+      if (user.role === 'Doctor') {
+        if (!user.doctorId) {
+          throw new ForbiddenError('Doctor profile is not linked to this account');
+        }
+        if (appointment.doctorId !== user.doctorId) {
+          throw new ForbiddenError('You can only update your own appointments');
+        }
+      }
+
+      const targetStatus = body.status;
+      if ((targetStatus === 'InProgress' || targetStatus === 'Completed') && user.role !== 'Doctor' && user.role !== 'ITAdmin') {
+        throw new ForbiddenError('Only doctors can start or complete visits');
+      }
+
+      if (targetStatus === 'CheckedIn' && user.role === 'Doctor' && !user.doctorId) {
+        throw new ForbiddenError('Doctor profile is not linked to this account');
       }
 
       if (body.status !== appointment.status) {
@@ -387,9 +424,65 @@ router.patch(
 );
 
 router.get(
+  '/queue',
+  requireRole('Doctor', 'AdminAssistant'),
+  validate({ query: queueQuerySchema }),
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const user = req.user!;
+      const { doctorId: requestedDoctorId, days } = req.query as z.infer<typeof queueQuerySchema>;
+      let doctorId = requestedDoctorId;
+
+      if (user.role === 'Doctor') {
+        if (!user.doctorId) {
+          throw new ForbiddenError('Doctor profile is not linked to this account');
+        }
+        doctorId = user.doctorId;
+      }
+
+      if (!doctorId) {
+        return res.status(400).json({ error: 'doctorId is required' });
+      }
+
+      const doctor = await prisma.doctor.findUnique({ where: { doctorId } });
+      if (!doctor) {
+        throw new NotFoundError('Doctor not found');
+      }
+
+      const now = new Date();
+      const windowDays = days ?? 1;
+      const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+      const end = new Date(start);
+      end.setUTCDate(end.getUTCDate() + windowDays);
+
+      const appointments = await prisma.appointment.findMany({
+        where: {
+          doctorId,
+          status: { in: ['Scheduled', 'CheckedIn', 'InProgress'] },
+          date: { gte: start, lt: end },
+        },
+        include: {
+          patient: { select: { patientId: true, name: true } },
+          doctor: { select: { doctorId: true, name: true, department: true } },
+        },
+        orderBy: [
+          { date: 'asc' },
+          { startTimeMin: 'asc' },
+        ],
+      });
+
+      res.json({ data: appointments });
+    } catch (error) {
+      handleError(error, next);
+    }
+  }
+);
+
+router.get(
   '/',
+  requireRole('Doctor', 'AdminAssistant'),
   validate({ query: listQuerySchema }),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const query = req.query as ListQuery;
       const where: AppointmentWhereInput = {};
@@ -410,8 +503,23 @@ router.get(
         }
       }
 
+      const user = req.user!;
+
       if (query.doctorId) {
+        if (user.role === 'Doctor') {
+          if (!user.doctorId) {
+            throw new ForbiddenError('Doctor profile is not linked to this account');
+          }
+          if (user.doctorId !== query.doctorId) {
+            throw new ForbiddenError('You can only view your own appointments');
+          }
+        }
         where.doctorId = query.doctorId;
+      } else if (user.role === 'Doctor') {
+        if (!user.doctorId) {
+          throw new ForbiddenError('Doctor profile is not linked to this account');
+        }
+        where.doctorId = user.doctorId;
       }
 
       if (query.status) {
@@ -462,8 +570,9 @@ router.get(
 
 router.get(
   '/:appointmentId',
+  requireRole('Doctor', 'AdminAssistant'),
   validate({ params: UpdateAppointmentParamsSchema }),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const { appointmentId } = req.params as z.infer<typeof UpdateAppointmentParamsSchema>;
 
@@ -479,6 +588,15 @@ router.get(
         throw new NotFoundError('Appointment not found');
       }
 
+      if (req.user?.role === 'Doctor') {
+        if (!req.user.doctorId) {
+          throw new ForbiddenError('Doctor profile is not linked to this account');
+        }
+        if (appointment.doctorId !== req.user.doctorId) {
+          throw new ForbiddenError('You can only view your own appointments');
+        }
+      }
+
       res.json(appointment);
     } catch (error) {
       handleError(error, next);
@@ -488,8 +606,9 @@ router.get(
 
 router.delete(
   '/:appointmentId',
+  requireRole('AdminAssistant'),
   validate({ params: UpdateAppointmentParamsSchema }),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const { appointmentId } = req.params as z.infer<typeof UpdateAppointmentParamsSchema>;
       await prisma.appointment.delete({ where: { appointmentId } });

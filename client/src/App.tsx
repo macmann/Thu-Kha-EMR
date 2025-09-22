@@ -37,7 +37,7 @@ function App() {
       <Route
         path="/appointments"
         element={
-          <RouteGuard>
+          <RouteGuard allowedRoles={['Doctor', 'AdminAssistant']}>
             <AppointmentsPage />
           </RouteGuard>
         }
@@ -45,7 +45,7 @@ function App() {
       <Route
         path="/appointments/new"
         element={
-          <RouteGuard>
+          <RouteGuard allowedRoles={['AdminAssistant']}>
             <AppointmentForm />
           </RouteGuard>
         }
@@ -53,7 +53,7 @@ function App() {
       <Route
         path="/appointments/:id"
         element={
-          <RouteGuard>
+          <RouteGuard allowedRoles={['Doctor', 'AdminAssistant']}>
             <AppointmentDetail />
           </RouteGuard>
         }
@@ -77,7 +77,7 @@ function App() {
       <Route
         path="/register"
         element={
-          <RouteGuard>
+          <RouteGuard allowedRoles={['AdminAssistant', 'ITAdmin']}>
             <RegisterPatient />
           </RouteGuard>
         }
@@ -101,7 +101,7 @@ function App() {
       <Route
         path="/settings"
         element={
-          <RouteGuard>
+          <RouteGuard allowedRoles={['ITAdmin']}>
             <Settings />
           </RouteGuard>
         }

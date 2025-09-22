@@ -9,6 +9,8 @@ import {
   SearchIcon,
   SettingsIcon,
 } from './icons';
+import { useAuth } from '../context/AuthProvider';
+import { useSettings } from '../context/SettingsProvider';
 
 type NavigationKey = 'dashboard' | 'patients' | 'appointments' | 'reports' | 'settings';
 
@@ -55,12 +57,21 @@ export default function DashboardLayout({
   headerChildren,
   children,
 }: DashboardLayoutProps) {
+  const { user } = useAuth();
+  const { appName } = useSettings();
+  const roleLabel = user ? ROLE_LABELS[user.role] ?? user.role : 'Team Member';
+  const navItems = navigation.filter((item) => {
+    if (item.key === 'settings') {
+      return user?.role === 'ITAdmin';
+    }
+    return true;
+  });
   return (
     <div className="flex min-h-screen bg-gray-50">
       <aside className="hidden w-72 flex-col border-r border-gray-200 bg-white px-6 py-8 shadow-sm md:flex">
-        <div className="text-lg font-semibold text-blue-600">EMR System</div>
+        <div className="text-lg font-semibold text-blue-600">{appName || 'EMR System'}</div>
         <nav className="mt-8 space-y-1">
-          {navigation.map((item) => {
+          {navItems.map((item) => {
             const Icon = item.icon;
             const content = (
               <div
@@ -95,8 +106,8 @@ export default function DashboardLayout({
             <AvatarIcon className="h-6 w-6" />
           </div>
           <div>
-            <div className="text-sm font-medium text-gray-900">Dr. Smith</div>
-            <div className="text-xs text-gray-500">Administrator</div>
+            <div className="text-sm font-medium text-gray-900">{user?.email ?? 'Signed-in user'}</div>
+            <div className="text-xs text-gray-500">{roleLabel}</div>
           </div>
         </div>
       </aside>
@@ -110,8 +121,14 @@ export default function DashboardLayout({
             </div>
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
               {headerChildren ?? <DefaultHeaderSearch />}
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white">
-                <AvatarIcon className="h-6 w-6" />
+              <div className="flex items-center gap-3">
+                <div className="hidden flex-col text-right text-xs text-gray-500 sm:flex">
+                  <span className="font-medium text-gray-700">{user?.email ?? 'Signed-in user'}</span>
+                  <span>{roleLabel}</span>
+                </div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white">
+                  <AvatarIcon className="h-6 w-6" />
+                </div>
               </div>
             </div>
           </div>
@@ -124,3 +141,9 @@ export default function DashboardLayout({
 }
 
 export type { NavigationKey };
+
+const ROLE_LABELS: Record<string, string> = {
+  Doctor: 'Doctor',
+  AdminAssistant: 'Administrative Assistant',
+  ITAdmin: 'IT Administrator',
+};

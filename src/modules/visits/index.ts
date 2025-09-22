@@ -47,7 +47,7 @@ const visitSchema = z.object({
   observations: z.array(observationSchema).optional(),
 });
 
-router.post('/visits', requireAuth, requireRole('Doctor', 'Admin'), async (req: AuthRequest, res: Response) => {
+router.post('/visits', requireAuth, requireRole('Doctor'), async (req: AuthRequest, res: Response) => {
   const parsed = visitSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.flatten() });

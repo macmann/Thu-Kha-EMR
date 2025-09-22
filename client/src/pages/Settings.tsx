@@ -6,12 +6,31 @@ import {
   DoctorAvailabilitySlot,
   createDoctorAvailability,
   listDoctorAvailability,
+  type Role,
 } from '../api/client';
 
 type DoctorFormState = {
   name: string;
   department: string;
 };
+
+type UserDraft = {
+  role: Role;
+  status: 'active' | 'inactive';
+  doctorId: string | null;
+};
+
+const ROLE_LABELS: Record<Role, string> = {
+  Doctor: 'Doctor',
+  AdminAssistant: 'Administrative Assistant',
+  ITAdmin: 'IT Administrator',
+};
+
+const ROLE_OPTIONS: Array<{ value: Role; label: string }> = [
+  { value: 'Doctor', label: ROLE_LABELS.Doctor },
+  { value: 'AdminAssistant', label: ROLE_LABELS.AdminAssistant },
+  { value: 'ITAdmin', label: ROLE_LABELS.ITAdmin },
+];
 
 const DAY_OPTIONS = [
   { label: 'Sunday', value: 0 },
@@ -72,14 +91,21 @@ export default function Settings() {
     doctors,
     updateSettings,
     addUser,
+    updateUser,
     addDoctor,
     widgetEnabled,
     setWidgetEnabled,
   } = useSettings();
 
   const [name, setName] = useState(appName);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [userForm, setUserForm] = useState<{ email: string; password: string; role: Role; doctorId: string }>(
+    { email: '', password: '', role: 'AdminAssistant', doctorId: '' },
+  );
+  const [userError, setUserError] = useState<string | null>(null);
+  const [userSuccess, setUserSuccess] = useState<string | null>(null);
+  const [addingUser, setAddingUser] = useState(false);
+  const [userDrafts, setUserDrafts] = useState<Record<string, UserDraft>>({});
+  const [userSavingId, setUserSavingId] = useState<string | null>(null);
   const [doctorForm, setDoctorForm] = useState<DoctorFormState>({ name: '', department: '' });
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>('');
   const [availabilitySlots, setAvailabilitySlots] = useState<DoctorAvailabilitySlot[]>([]);
@@ -110,6 +136,31 @@ export default function Settings() {
       return doctors[0].doctorId;
     });
   }, [doctors]);
+
+  useEffect(() => {
+    const drafts: Record<string, UserDraft> = {};
+    users.forEach((user) => {
+      drafts[user.userId] = {
+        role: user.role,
+        status: user.status,
+        doctorId: user.doctorId ?? null,
+      };
+    });
+    setUserDrafts(drafts);
+  }, [users]);
+
+  const assignedDoctorIds = useMemo(() => {
+    const ids = new Set<string>();
+    users.forEach((user) => {
+      if (user.doctorId) ids.add(user.doctorId);
+    });
+    return ids;
+  }, [users]);
+
+  const unassignedDoctors = useMemo(
+    () => doctors.filter((doctor) => !assignedDoctorIds.has(doctor.doctorId)),
+    [doctors, assignedDoctorIds],
+  );
 
   useEffect(() => {
     if (!selectedDoctorId) {
@@ -178,13 +229,83 @@ export default function Settings() {
     updateSettings({ appName: name.trim() || 'EMR System' });
   }
 
-  function handleAddUser(event: FormEvent<HTMLFormElement>) {
+  async function handleAddUser(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!email.trim()) return;
+    const email = userForm.email.trim();
+    const password = userForm.password;
+    if (!email || !password) {
+      setUserError('Email and password are required.');
+      return;
+    }
 
-    addUser({ email: email.trim(), password });
-    setEmail('');
-    setPassword('');
+    if (userForm.role === 'Doctor' && !userForm.doctorId) {
+      setUserError('Select a doctor for doctor accounts.');
+      return;
+    }
+
+    setAddingUser(true);
+    setUserError(null);
+    setUserSuccess(null);
+
+    try {
+      await addUser({
+        email,
+        password,
+        role: userForm.role,
+        doctorId: userForm.role === 'Doctor' ? userForm.doctorId : undefined,
+      });
+      setUserSuccess('User account created.');
+      setUserForm({ email: '', password: '', role: 'AdminAssistant', doctorId: '' });
+    } catch (error) {
+      setUserError(parseErrorMessage(error, 'Unable to create user.'));
+    } finally {
+      setAddingUser(false);
+    }
+  }
+
+  function handleUserFormChange(field: keyof typeof userForm, value: string) {
+    setUserForm((prev) => {
+      const next = { ...prev, [field]: value };
+      if (field === 'role' && value !== 'Doctor') {
+        next.doctorId = '';
+      }
+      return next;
+    });
+  }
+
+  function handleUserDraftChange(userId: string, patch: Partial<UserDraft>) {
+    setUserDrafts((prev) => {
+      const base: UserDraft = prev[userId] ?? { role: 'AdminAssistant', status: 'active', doctorId: null };
+      const next = { ...base, ...patch };
+      if (patch.role && patch.role !== 'Doctor') {
+        next.doctorId = null;
+      }
+      return { ...prev, [userId]: next };
+    });
+  }
+
+  async function handleSaveUser(userId: string) {
+    const draft = userDrafts[userId];
+    if (!draft) return;
+    if (draft.role === 'Doctor' && !draft.doctorId) {
+      setUserError('Select a doctor for doctor accounts.');
+      return;
+    }
+    setUserSavingId(userId);
+    setUserError(null);
+    setUserSuccess(null);
+    try {
+      await updateUser(userId, {
+        role: draft.role,
+        status: draft.status,
+        doctorId: draft.role === 'Doctor' ? draft.doctorId : null,
+      });
+      setUserSuccess('User details updated.');
+    } catch (error) {
+      setUserError(parseErrorMessage(error, 'Unable to update user.'));
+    } finally {
+      setUserSavingId(null);
+    }
   }
 
   async function handleAddDoctor(event: FormEvent<HTMLFormElement>) {
@@ -660,6 +781,17 @@ export default function Settings() {
                 </p>
               </div>
 
+              {userError && (
+                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {userError}
+                </div>
+              )}
+              {userSuccess && (
+                <div className="mt-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                  {userSuccess}
+                </div>
+              )}
+
               <form onSubmit={handleAddUser} className="mt-5 space-y-4">
                 <div>
                   <label className="text-sm font-medium text-gray-700" htmlFor="user-email">
@@ -669,8 +801,8 @@ export default function Settings() {
                     id="user-email"
                     type="email"
                     placeholder="team@clinic.org"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
+                    value={userForm.email}
+                    onChange={(event) => handleUserFormChange('email', event.target.value)}
                     className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                   />
                 </div>
@@ -682,32 +814,183 @@ export default function Settings() {
                     id="user-password"
                     type="password"
                     placeholder="Create a secure password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
+                    value={userForm.password}
+                    onChange={(event) => handleUserFormChange('password', event.target.value)}
                     className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                   />
                 </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700" htmlFor="user-role">
+                      Role
+                    </label>
+                    <select
+                      id="user-role"
+                      value={userForm.role}
+                      onChange={(event) => handleUserFormChange('role', event.target.value as Role)}
+                      className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    >
+                      {ROLE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {userForm.role === 'Doctor' && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700" htmlFor="user-doctor">
+                        Linked Doctor
+                      </label>
+                      <select
+                        id="user-doctor"
+                        value={userForm.doctorId}
+                        onChange={(event) => handleUserFormChange('doctorId', event.target.value)}
+                        className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                      >
+                        <option value="">Select doctor</option>
+                        {unassignedDoctors.map((doctor) => (
+                          <option key={doctor.doctorId} value={doctor.doctorId}>
+                            {doctor.name}
+                          </option>
+                        ))}
+                      </select>
+                      {unassignedDoctors.length === 0 && (
+                        <p className="mt-1 text-xs text-gray-500">All doctors are currently linked to an account.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <button
                   type="submit"
-                  className="w-full rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
+                  disabled={addingUser}
+                  className={`w-full rounded-full px-4 py-2 text-sm font-semibold text-white shadow transition ${
+                    addingUser ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
                 >
-                  Send Invite
+                  {addingUser ? 'Creating...' : 'Send Invite'}
                 </button>
               </form>
 
               <div className="mt-6">
                 <h3 className="text-sm font-semibold text-gray-900">Current Users</h3>
                 {totalUsers > 0 ? (
-                  <ul className="mt-3 space-y-2">
-                    {users.map((user) => (
-                      <li
-                        key={user.email}
-                        className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-700"
-                      >
-                        <span>{user.email}</span>
-                        <span className="text-xs text-gray-500">Password set</span>
-                      </li>
-                    ))}
+                  <ul className="mt-3 space-y-3">
+                    {users.map((user) => {
+                      const draft = userDrafts[user.userId] ?? {
+                        role: user.role,
+                        status: user.status,
+                        doctorId: user.doctorId ?? null,
+                      };
+                      const doctorOptions = doctors.filter((doctor) => {
+                        if (draft.role !== 'Doctor') return false;
+                        if (doctor.doctorId === draft.doctorId) return true;
+                        if (user.doctorId && doctor.doctorId === user.doctorId) return true;
+                        return !assignedDoctorIds.has(doctor.doctorId);
+                      });
+                      const isDirty =
+                        draft.role !== user.role ||
+                        draft.status !== user.status ||
+                        (draft.doctorId ?? null) !== (user.doctorId ?? null);
+                      const saving = userSavingId === user.userId;
+
+                      return (
+                        <li key={user.userId} className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                          <div className="flex flex-col gap-1">
+                            <div className="text-sm font-semibold text-gray-900">{user.email}</div>
+                            <div className="text-xs text-gray-500">
+                              {ROLE_LABELS[user.role]}
+                              {user.status !== 'active' ? ' • Inactive' : ''}
+                            </div>
+                            {user.doctor && (
+                              <div className="text-xs text-gray-500">Linked to {user.doctor.name}</div>
+                            )}
+                          </div>
+                          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                            <div>
+                              <label className="text-xs font-medium text-gray-600" htmlFor={`role-${user.userId}`}>
+                                Role
+                              </label>
+                              <select
+                                id={`role-${user.userId}`}
+                                value={draft.role}
+                                onChange={(event) =>
+                                  handleUserDraftChange(user.userId, {
+                                    role: event.target.value as Role,
+                                  })
+                                }
+                                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                              >
+                                {ROLE_OPTIONS.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-gray-600" htmlFor={`status-${user.userId}`}>
+                                Status
+                              </label>
+                              <select
+                                id={`status-${user.userId}`}
+                                value={draft.status}
+                                onChange={(event) =>
+                                  handleUserDraftChange(user.userId, {
+                                    status: event.target.value as 'active' | 'inactive',
+                                  })
+                                }
+                                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                              >
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                              </select>
+                            </div>
+                            {draft.role === 'Doctor' && (
+                              <div>
+                                <label className="text-xs font-medium text-gray-600" htmlFor={`doctor-${user.userId}`}>
+                                  Linked Doctor
+                                </label>
+                                <select
+                                  id={`doctor-${user.userId}`}
+                                  value={draft.doctorId ?? ''}
+                                  onChange={(event) =>
+                                    handleUserDraftChange(user.userId, {
+                                      doctorId: event.target.value ? event.target.value : null,
+                                    })
+                                  }
+                                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                >
+                                  <option value="">Select doctor</option>
+                                  {doctorOptions.map((doctor) => (
+                                    <option key={doctor.doctorId} value={doctor.doctorId}>
+                                      {doctor.name}
+                                    </option>
+                                  ))}
+                                </select>
+                                {doctorOptions.length === 0 && (
+                                  <p className="mt-1 text-xs text-gray-500">No available doctors to assign.</p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <div className="mt-4 flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => handleSaveUser(user.userId)}
+                              disabled={!isDirty || saving}
+                              className={`rounded-full px-4 py-2 text-sm font-semibold text-white shadow transition ${
+                                !isDirty || saving
+                                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                  : 'bg-blue-600 hover:bg-blue-700'
+                              }`}
+                            >
+                              {saving ? 'Saving...' : 'Save Changes'}
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
                   </ul>
                 ) : (
                   <p className="mt-3 text-sm text-gray-500">No team members yet. Invite your first collaborator above.</p>
