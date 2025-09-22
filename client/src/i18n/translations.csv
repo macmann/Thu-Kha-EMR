@@ -113,3 +113,24 @@ Quick Filters,Quick Filters,ကွပ်မျိုး ရွေးချယ်
 Jump into commonly referenced patient segments.,Jump into commonly referenced patient segments.,အများဆုံး ကိုးကားသော လူနာအဖွဲ့အစည်းများသို့ ချက်ချင်း ဝင်ရောက်ပါ။
 Need to add someone?,Need to add someone?,တစ်ယောက် ထပ်ထည့်လိုပါသလား။
 Can't find the patient you're looking for? Create a new record in just a few steps.,Can't find the patient you're looking for? Create a new record in just a few steps.,ရှာဖွေနေသော လူနာကို မတွေ့ဘူးလား။ အဆင့်အနည်းငယ်သာဖြင့် မှတ်တမ်းအသစ်တစ်ခု ဖန်တီးနိုင်ပါသည်။
+IT Administrator Dashboard,IT Administrator Dashboard,IT အုပ်ချုပ်ရေးမှူး ဒက်ရှ်ဘုတ်
+Monitor user accounts, system access, and staff setup.,Monitor user accounts, system access, and staff setup.,အသုံးပြုသူအကောင့်များ၊ စနစ်ဝင်ရောက်ခွင့်နှင့် ဝန်ထမ်း စနစ်သတ်မှတ်ခြင်းကို စောင့်ကြည့်ပါ။
+Staff Accounts,Staff Accounts,ဝန်ထမ်းအကောင့်များ
+Active Accounts,Active Accounts,လှုပ်ရှားနေသော အကောင့်များ
+Inactive Accounts,Inactive Accounts,ပိတ်ထားသော အကောင့်များ
+Doctor Accounts,Doctor Accounts,ဆရာဝန်အကောင့်များ
+Unassigned Doctors: {count},Unassigned Doctors: {count},ဆရာဝန် မချိတ်ဆက်ရသေးသူများ {count} ယောက်
+No data available.,No data available.,ဒေတာ မရှိပါ။
+Unable to load user accounts.,Unable to load user accounts.,အသုံးပြုသူအကောင့်များကို တင်မရပါ။
+Loading user accounts...,Loading user accounts...,အသုံးပြုသူအကောင့်များကို တင်နေပါသည်...
+Latest User Accounts,Latest User Accounts,အသုံးပြုသူအကောင့် အသစ်များ
+No user accounts available.,No user accounts available.,အသုံးပြုသူအကောင့်များ မရှိသေးပါ။
+Created,Created,ဖန်တီးခဲ့သော
+Doctor Assignment,Doctor Assignment,ဆရာဝန် သတ်မှတ်ချက်
+Not assigned,Not assigned,မသတ်မှတ်ရသေးပါ
+Active,Active,လုပ်ဆောင်နေသည်
+Inactive,Inactive,ပိတ်ထားသည်
+Doctor Coverage,Doctor Coverage,ဆရာဝန် ဝင်ရောက်မှု အခြေအနေ
+Loading doctor data...,Loading doctor data...,ဆရာဝန် ဒေတာများကို တင်နေပါသည်...
+Unable to load doctor data.,Unable to load doctor data.,ဆရာဝန် ဒေတာကို တင်မရပါ။
+All doctors have user accounts.,All doctors have user accounts.,ဆရာဝန်အားလုံးတွင် အသုံးပြုသူအကောင့်များ ရှိပြီးဖြစ်သည်။
