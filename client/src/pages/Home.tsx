@@ -1,12 +1,31 @@
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import { CheckIcon, MessageIcon, RegisterIcon, SearchIcon } from '../components/icons';
+import { useAuth } from '../context/AuthProvider';
+import {
+  getAppointmentQueue,
+  patchStatus,
+  type Appointment,
+  type AppointmentStatus,
+} from '../api/appointments';
+import { addObservation, listPatientVisits } from '../api/client';
 
 export default function Home() {
-  const taskReminders = ['Review Lab results for A. Jones', 'Follow up with Dr. Davis'];
+  const { user } = useAuth();
+
+  if (user?.role === 'Doctor') {
+    return <DoctorQueueDashboard />;
+  }
+
+  return <TeamDashboard role={user?.role} />;
+}
+
+function TeamDashboard({ role }: { role?: string }) {
+  const taskReminders = ['Review lab results for A. Jones', 'Follow up with Dr. Davis'];
   const upcomingAppointments = [
-    { name: 'John Doe', time: '10:00 AM' },
-    { name: 'Jane Smith', time: '11:30 AM' },
+    { name: 'John Doe', time: '10:00 AM', detail: 'General Checkup' },
+    { name: 'Jane Smith', time: '11:30 AM', detail: 'Medication Review' },
   ];
 
   const headerSearch = (
@@ -21,7 +40,16 @@ export default function Home() {
   );
 
   return (
-    <DashboardLayout title="Dashboard" activeItem="dashboard" headerChildren={headerSearch}>
+    <DashboardLayout
+      title="Team Dashboard"
+      activeItem="dashboard"
+      subtitle={
+        role === 'AdminAssistant'
+          ? 'Monitor appointments and keep patients informed.'
+          : 'Track clinic activity and coordinate care.'
+      }
+      headerChildren={headerSearch}
+    >
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
         <div className="flex flex-col rounded-2xl bg-white p-6 shadow-sm">
           <div className="flex items-start gap-4">
@@ -31,7 +59,7 @@ export default function Home() {
             <div>
               <h2 className="text-lg font-semibold text-gray-900">Register New Patient</h2>
               <p className="mt-1 text-sm text-gray-600">
-                Create a new patient record with demographic and health information.
+                Capture demographics and intake information for walk-in patients.
               </p>
             </div>
           </div>
@@ -52,7 +80,7 @@ export default function Home() {
             </div>
             <div>
               <h2 className="text-lg font-semibold text-gray-900">Search Patient Records</h2>
-              <p className="mt-1 text-sm text-gray-600">Find an existing patient by name, ID, or other criteria.</p>
+              <p className="mt-1 text-sm text-gray-600">Look up patients to confirm coverage, history, and contact details.</p>
             </div>
           </div>
           <div className="mt-6">
@@ -70,7 +98,7 @@ export default function Home() {
             <div className="text-sm font-medium text-gray-500">Patients Today</div>
             <div className="mt-2 text-4xl font-semibold text-gray-900">25</div>
           </div>
-          <p className="mt-4 text-sm text-gray-600">New registrations and appointments</p>
+          <p className="mt-4 text-sm text-gray-600">Scheduled visits and walk-ins awaiting triage.</p>
         </div>
 
         <div className="flex flex-col justify-between rounded-2xl bg-white p-6 shadow-sm">
@@ -81,19 +109,24 @@ export default function Home() {
             <div>
               <div className="text-sm font-medium text-gray-500">New Messages</div>
               <div className="mt-2 text-4xl font-semibold text-gray-900">3</div>
-              <p className="mt-2 text-sm text-gray-600">From lab and colleagues</p>
+              <p className="mt-2 text-sm text-gray-600">Updates from labs and internal teams.</p>
             </div>
           </div>
         </div>
 
         <div className="rounded-2xl bg-white p-6 shadow-sm">
-          <div className="text-lg font-semibold text-gray-900">Upcoming Appointments</div>
+          <div className="flex items-center justify-between">
+            <div className="text-lg font-semibold text-gray-900">Upcoming Appointments</div>
+            <Link to="/appointments" className="text-xs font-semibold text-blue-600 hover:underline">
+              View schedule
+            </Link>
+          </div>
           <ul className="mt-4 space-y-3">
             {upcomingAppointments.map((appointment) => (
               <li key={appointment.name} className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3">
                 <div>
                   <div className="text-sm font-medium text-gray-900">{appointment.name}</div>
-                  <div className="text-xs text-gray-500">General Checkup</div>
+                  <div className="text-xs text-gray-500">{appointment.detail}</div>
                 </div>
                 <span className="text-sm font-semibold text-blue-600">{appointment.time}</span>
               </li>
@@ -117,4 +150,330 @@ export default function Home() {
       </div>
     </DashboardLayout>
   );
+}
+
+function DoctorQueueDashboard() {
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [note, setNote] = useState('');
+  const [invitingId, setInvitingId] = useState<string | null>(null);
+  const [completing, setCompleting] = useState(false);
+
+  const loadQueue = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await getAppointmentQueue();
+      setAppointments(response.data);
+    } catch (err) {
+      setError(parseErrorMessage(err, 'Unable to load queue.'));
+      setAppointments([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadQueue();
+  }, [loadQueue]);
+
+  useEffect(() => {
+    if (!appointments.length) {
+      setSelectedId(null);
+      return;
+    }
+    setSelectedId((previous) => {
+      if (previous && appointments.some((appt) => appt.appointmentId === previous)) {
+        return previous;
+      }
+      return appointments[0].appointmentId;
+    });
+  }, [appointments]);
+
+  useEffect(() => {
+    setNote('');
+    setSuccess(null);
+    setError(null);
+  }, [selectedId]);
+
+  const selected = appointments.find((appt) => appt.appointmentId === selectedId) ?? null;
+
+  const handleInvite = async (appointment: Appointment) => {
+    setInvitingId(appointment.appointmentId);
+    setSuccess(null);
+    setError(null);
+    try {
+      await patchStatus(appointment.appointmentId, { status: 'InProgress' });
+      await loadQueue();
+      setSuccess(`Invited ${appointment.patient.name} to the consultation room.`);
+      setSelectedId(appointment.appointmentId);
+    } catch (err) {
+      setError(parseErrorMessage(err, 'Unable to update appointment status.'));
+    } finally {
+      setInvitingId(null);
+    }
+  };
+
+  const handleComplete = async (appointment: Appointment) => {
+    if (!note.trim()) {
+      setError('Add visit notes before completing the appointment.');
+      return;
+    }
+    setCompleting(true);
+    setSuccess(null);
+    setError(null);
+    try {
+      const result = await patchStatus(appointment.appointmentId, { status: 'Completed' });
+      let visitId: string | null = null;
+      if ('visitId' in result && typeof result.visitId === 'string') {
+        visitId = result.visitId;
+      } else {
+        const visits = await listPatientVisits(appointment.patientId);
+        const appointmentDate = normalizeDateKey(appointment.date);
+        const match = visits.find(
+          (visit) =>
+            visit.doctor.doctorId === appointment.doctorId && normalizeDateKey(visit.visitDate) === appointmentDate,
+        );
+        visitId = match?.visitId ?? null;
+      }
+
+      if (!visitId) {
+        throw new Error('Unable to locate visit record for this appointment.');
+      }
+
+      await addObservation(visitId, { noteText: note.trim() });
+      setNote('');
+      setSuccess('Visit notes saved and appointment completed.');
+      await loadQueue();
+    } catch (err) {
+      setError(parseErrorMessage(err, 'Unable to complete the appointment.'));
+    } finally {
+      setCompleting(false);
+    }
+  };
+
+  return (
+    <DashboardLayout
+      title="Today's Queue"
+      activeItem="dashboard"
+      subtitle="Invite your next patient, capture notes, and wrap up the visit."
+      headerChildren={
+        <button
+          type="button"
+          onClick={loadQueue}
+          className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
+        >
+          Refresh Queue
+        </button>
+      }
+    >
+      {loading ? (
+        <div className="flex justify-center">
+          <div className="flex flex-col items-center gap-3 rounded-2xl bg-white p-10 shadow-sm">
+            <SearchIcon className="h-10 w-10 animate-spin text-blue-500" />
+            <p className="text-sm font-medium text-gray-600">Loading your appointments...</p>
+          </div>
+        </div>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-[2fr_3fr]">
+          <section className="rounded-2xl bg-white p-6 shadow-sm">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">Upcoming patients</h2>
+              <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600">
+                {appointments.length} in queue
+              </span>
+            </div>
+            <ul className="mt-4 space-y-3">
+              {appointments.length === 0 ? (
+                <li className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 text-sm text-gray-500">
+                  No patients waiting. Enjoy a short break!
+                </li>
+              ) : (
+                appointments.map((appointment) => {
+                  const status = statusVisuals[appointment.status];
+                  const isSelected = appointment.appointmentId === selectedId;
+                  return (
+                    <li
+                      key={appointment.appointmentId}
+                      className={`rounded-xl border px-4 py-3 transition ${
+                        isSelected ? 'border-blue-300 bg-blue-50' : 'border-gray-200 bg-white hover:border-blue-200'
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setSelectedId(appointment.appointmentId)}
+                        className="flex w-full items-center justify-between text-left"
+                      >
+                        <div>
+                          <div className="text-sm font-semibold text-gray-900">{appointment.patient.name}</div>
+                          <div className="text-xs text-gray-500">
+                            {formatDateDisplay(appointment.date)} · {formatTimeRange(appointment.startTimeMin, appointment.endTimeMin)}
+                          </div>
+                        </div>
+                        <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${status.chip}`}>
+                          <span className={`mr-2 h-2 w-2 rounded-full ${status.dot}`}></span>
+                          {status.label}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          </section>
+
+          <section className="rounded-2xl bg-white p-6 shadow-sm">
+            {selected ? (
+              <div className="flex flex-col gap-6">
+                <div>
+                  <div className="text-sm font-medium text-gray-500">Current patient</div>
+                  <h2 className="mt-1 text-2xl font-semibold text-gray-900">{selected.patient.name}</h2>
+                  <p className="mt-1 text-sm text-gray-600">
+                    {selected.reason || 'No visit reason recorded.'} · {selected.location || 'Room assignment pending'}
+                  </p>
+                </div>
+
+                <dl className="grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500">Scheduled time</dt>
+                    <dd className="mt-1 text-sm font-medium text-gray-900">
+                      {formatDateDisplay(selected.date)} · {formatTimeRange(selected.startTimeMin, selected.endTimeMin)}
+                    </dd>
+                  </div>
+                  <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500">Status</dt>
+                    <dd className="mt-1 text-sm font-medium text-gray-900">{statusVisuals[selected.status].label}</dd>
+                  </div>
+                </dl>
+
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-gray-700" htmlFor="visit-notes">
+                    Visit notes
+                  </label>
+                  <textarea
+                    id="visit-notes"
+                    rows={6}
+                    value={note}
+                    onChange={(event) => setNote(event.target.value)}
+                    placeholder="Document key findings, interventions, and next steps."
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  />
+                </div>
+
+                {error && (
+                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+                )}
+                {success && (
+                  <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{success}</div>
+                )}
+
+                <div className="flex flex-wrap gap-3">
+                  {(selected.status === 'Scheduled' || selected.status === 'CheckedIn') && (
+                    <button
+                      type="button"
+                      onClick={() => handleInvite(selected)}
+                      disabled={invitingId === selected.appointmentId}
+                      className={`rounded-full px-4 py-2 text-sm font-semibold text-white shadow transition ${
+                        invitingId === selected.appointmentId
+                          ? 'cursor-not-allowed bg-blue-300'
+                          : 'bg-blue-600 hover:bg-blue-700'
+                      }`}
+                    >
+                      {invitingId === selected.appointmentId ? 'Inviting...' : 'Invite Patient'}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleComplete(selected)}
+                    disabled={selected.status !== 'InProgress' || completing}
+                    className={`rounded-full px-4 py-2 text-sm font-semibold text-white shadow transition ${
+                      selected.status !== 'InProgress' || completing
+                        ? 'cursor-not-allowed bg-gray-300 text-gray-600'
+                        : 'bg-green-600 hover:bg-green-700'
+                    }`}
+                  >
+                    {completing ? 'Saving...' : 'Save Notes & Complete'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-8 text-center text-sm text-gray-500">
+                Select a patient from the queue to begin charting their visit.
+              </div>
+            )}
+          </section>
+        </div>
+      )}
+    </DashboardLayout>
+  );
+}
+
+const statusVisuals: Record<AppointmentStatus, { label: string; chip: string; dot: string }> = {
+  Scheduled: {
+    label: 'Scheduled',
+    chip: 'bg-blue-50 text-blue-600',
+    dot: 'bg-blue-500',
+  },
+  CheckedIn: {
+    label: 'Checked-in',
+    chip: 'bg-amber-50 text-amber-700',
+    dot: 'bg-amber-500',
+  },
+  InProgress: {
+    label: 'In progress',
+    chip: 'bg-purple-50 text-purple-700',
+    dot: 'bg-purple-500',
+  },
+  Completed: {
+    label: 'Completed',
+    chip: 'bg-green-50 text-green-700',
+    dot: 'bg-green-500',
+  },
+  Cancelled: {
+    label: 'Cancelled',
+    chip: 'bg-gray-100 text-gray-500',
+    dot: 'bg-gray-400',
+  },
+};
+
+function parseErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error) {
+    try {
+      const parsed = JSON.parse(error.message);
+      if (parsed && typeof parsed === 'object' && 'error' in parsed) {
+        const message = (parsed as { error?: string }).error;
+        if (message) return message;
+      }
+    } catch {
+      /* ignore */
+    }
+    return error.message || fallback;
+  }
+  if (typeof error === 'string') return error;
+  return fallback;
+}
+
+function formatDateDisplay(value: string | Date) {
+  const date = typeof value === 'string' ? new Date(value) : value;
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+function formatTimeRange(startMin: number, endMin: number) {
+  return `${formatTime(startMin)} – ${formatTime(endMin)}`;
+}
+
+function formatTime(minutes: number) {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const displayHour = ((hours + 11) % 12) + 1;
+  return `${displayHour}:${mins.toString().padStart(2, '0')} ${period}`;
+}
+
+function normalizeDateKey(value: string) {
+  return value.includes('T') ? value.split('T')[0] : value;
 }

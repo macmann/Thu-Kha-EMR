@@ -1,15 +1,15 @@
-import {
-  Router,
-  type Request,
-  type Response,
-  type NextFunction,
-} from 'express';
+import { Router, type Response, type NextFunction } from 'express';
+import type { Request } from 'express';
 import bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
 
+type RoleName = 'Doctor' | 'AdminAssistant' | 'ITAdmin';
+
 export interface AuthUser {
   userId: string;
-  role: string;
+  role: RoleName;
+  email: string;
+  doctorId?: string;
 }
 
 export interface AuthRequest extends Request {
@@ -18,16 +18,77 @@ export interface AuthRequest extends Request {
 
 const prisma = new PrismaClient();
 
-export function requireAuth(req: AuthRequest, _res: Response, next: NextFunction) {
-  // Authentication disabled; attach anonymous user
-  req.user = { userId: 'anonymous', role: 'Anonymous' };
-  next();
+function parseBearerToken(header: string | undefined): string | null {
+  if (!header) return null;
+  const [scheme, value] = header.split(' ');
+  if (!scheme || scheme.toLowerCase() !== 'bearer') return null;
+  return value?.trim() || null;
 }
 
-export function requireRole(..._roles: string[]) {
-  return (_req: AuthRequest, _res: Response, next: NextFunction) => {
-    // Authorization disabled
+function decodeToken(token: string): {
+  sub?: string;
+  role?: unknown;
+  email?: unknown;
+  doctorId?: unknown;
+} {
+  const parts = token.split('.');
+  if (parts.length < 2) {
+    throw new Error('Invalid token');
+  }
+  const payload = Buffer.from(parts[1], 'base64url').toString('utf8');
+  return JSON.parse(payload);
+}
+
+export async function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const rawToken = parseBearerToken(req.get('authorization'));
+    if (!rawToken) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const payload = decodeToken(rawToken);
+    if (typeof payload.sub !== 'string' || typeof payload.role !== 'string' || typeof payload.email !== 'string') {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { userId: payload.sub },
+      select: { userId: true, email: true, role: true, status: true, doctorId: true },
+    });
+
+    if (!user || user.status !== 'active') {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    req.user = {
+      userId: user.userId,
+      role: user.role as RoleName,
+      email: user.email,
+      doctorId: user.doctorId ?? undefined,
+    };
+
     next();
+  } catch {
+    res.status(401).json({ error: 'Unauthorized' });
+  }
+}
+
+export function requireRole(...roles: RoleName[]) {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    if (user.role === 'ITAdmin') {
+      return next();
+    }
+
+    if (roles.length === 0 || roles.includes(user.role)) {
+      return next();
+    }
+
+    return res.status(403).json({ error: 'Forbidden' });
   };
 }
 
@@ -72,10 +133,23 @@ router.post('/login', async (req: Request, res: Response) => {
     JSON.stringify({ alg: 'none', typ: 'JWT' }),
   ).toString('base64url');
   const payload = Buffer.from(
-    JSON.stringify({ sub: user.userId, role: user.role, email: user.email }),
+    JSON.stringify({
+      sub: user.userId,
+      role: user.role,
+      email: user.email,
+      doctorId: user.doctorId ?? null,
+    }),
   ).toString('base64url');
   const accessToken = `${header}.${payload}.`;
-  res.json({ accessToken });
+  res.json({
+    accessToken,
+    user: {
+      userId: user.userId,
+      role: user.role,
+      email: user.email,
+      doctorId: user.doctorId,
+    },
+  });
 });
 
 export default router;

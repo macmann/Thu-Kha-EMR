@@ -13,24 +13,57 @@ function d(s) { return s ? new Date(`${s}T00:00:00Z`) : null; }
 
 async function seedUsers() {
   const adminEmail = 'admin@example.com';
+  const assistantEmail = 'assistant@example.com';
   const doctorEmail = 'drsmith@example.com';
 
   const adminHash = await bcrypt.hash('AdminPass123!', 10);
+  const assistantHash = await bcrypt.hash('AssistantPass123!', 10);
   const doctorHash = await bcrypt.hash('DoctorPass123!', 10);
 
-  // Avoid upsert prepared-statement issues: find → update/create
+  const doctorRecord = await prisma.doctor.findFirst({
+    where: { name: { equals: 'Dr Smith', mode: 'insensitive' } },
+  });
+
   const admin = await prisma.user.findUnique({ where: { email: adminEmail } });
+  const adminData = {
+    email: adminEmail,
+    passwordHash: adminHash,
+    role: 'ITAdmin',
+    status: 'active',
+    doctorId: null,
+  };
   if (admin) {
-    await prisma.user.update({ where: { email: adminEmail }, data: { passwordHash: adminHash, role: 'Admin', status: 'active' } });
+    await prisma.user.update({ where: { email: adminEmail }, data: adminData });
   } else {
-    await prisma.user.create({ data: { email: adminEmail, passwordHash: adminHash, role: 'Admin', status: 'active' } });
+    await prisma.user.create({ data: adminData });
   }
 
-  const doc = await prisma.user.findUnique({ where: { email: doctorEmail } });
-  if (doc) {
-    await prisma.user.update({ where: { email: doctorEmail }, data: { passwordHash: doctorHash, role: 'Doctor', status: 'active' } });
+  const assistant = await prisma.user.findUnique({ where: { email: assistantEmail } });
+  const assistantData = {
+    email: assistantEmail,
+    passwordHash: assistantHash,
+    role: 'AdminAssistant',
+    status: 'active',
+    doctorId: null,
+  };
+  if (assistant) {
+    await prisma.user.update({ where: { email: assistantEmail }, data: assistantData });
   } else {
-    await prisma.user.create({ data: { email: doctorEmail, passwordHash: doctorHash, role: 'Doctor', status: 'active' } });
+    await prisma.user.create({ data: assistantData });
+  }
+
+  const doctor = await prisma.user.findUnique({ where: { email: doctorEmail } });
+  const doctorData = {
+    email: doctorEmail,
+    passwordHash: doctorHash,
+    role: 'Doctor',
+    status: 'active',
+    doctorId: doctorRecord?.doctorId ?? null,
+  };
+  if (doctor) {
+    await prisma.user.update({ where: { email: doctorEmail }, data: doctorData });
+  } else {
+    await prisma.user.create({ data: doctorData });
   }
 
   console.log('✅ Users seeded');
@@ -360,8 +393,6 @@ async function seedObservations() {
 }
 
 async function main() {
-  await seedUsers();
-
   // ORDER MATTERS
   const doctorMap  = await seedDoctors();
   const patientMap = await seedPatients();
@@ -374,6 +405,7 @@ async function main() {
   await seedMedications();
   await seedLabs();
   await seedObservations();
+  await seedUsers();
 }
 
 main()

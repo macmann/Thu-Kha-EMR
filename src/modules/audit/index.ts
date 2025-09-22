@@ -6,7 +6,7 @@ import { requireAuth, requireRole, type AuthRequest } from '../auth/index.js';
 const prisma = new PrismaClient();
 const router = Router();
 
-router.get('/', requireAuth, requireRole('Admin', 'Auditor'), async (req: AuthRequest, res: Response) => {
+router.get('/', requireAuth, requireRole('ITAdmin'), async (req: AuthRequest, res: Response) => {
   const querySchema = z.object({
     entity: z.string().optional(),
     entity_id: z.string().optional(),

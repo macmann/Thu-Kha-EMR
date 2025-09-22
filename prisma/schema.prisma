@@ -18,8 +18,8 @@ enum Gender {
 
 enum Role {
   Doctor
-  Admin
-  Auditor
+  AdminAssistant
+  ITAdmin
 }
 
 enum AppointmentStatus {
@@ -184,10 +184,14 @@ model User {
   passwordHash String
   role         Role
   status       String   @default("active")
+  doctorId     String?  @db.Uuid
   createdAt    DateTime @default(now())
   updatedAt    DateTime @default(now()) @updatedAt
 
+  doctor   Doctor?  @relation(fields: [doctorId], references: [doctorId])
   sessions Session[]
+
+  @@unique([doctorId])
 }
 
 model Session {

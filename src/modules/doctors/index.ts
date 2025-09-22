@@ -49,7 +49,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
   res.json(doctors);
 });
 
-router.post('/', requireAuth, requireRole('Admin'), async (req: AuthRequest, res: Response) => {
+router.post('/', requireAuth, requireRole('ITAdmin'), async (req: AuthRequest, res: Response) => {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.flatten() });
@@ -94,7 +94,7 @@ router.get(
 router.post(
   '/:doctorId/availability',
   requireAuth,
-  requireRole('Admin'),
+  requireRole('ITAdmin'),
   async (req: AuthRequest, res: Response) => {
     const params = doctorIdSchema.safeParse(req.params);
     if (!params.success) {
