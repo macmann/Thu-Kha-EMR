@@ -2,6 +2,7 @@ import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import { AvatarIcon, CheckIcon, PatientsIcon, SettingsIcon } from '../components/icons';
 import { useSettings } from '../context/SettingsProvider';
+import { useTranslation, type Language } from '../hooks/useTranslation';
 import {
   DoctorAvailabilitySlot,
   createDoctorAvailability,
@@ -96,6 +97,7 @@ export default function Settings() {
     widgetEnabled,
     setWidgetEnabled,
   } = useSettings();
+  const { t, language, setLanguage } = useTranslation();
 
   const [name, setName] = useState(appName);
   const [userForm, setUserForm] = useState<{ email: string; password: string; role: Role; doctorId: string }>(
@@ -212,6 +214,10 @@ export default function Settings() {
     }
     return formatTimeRange(9 * 60, 17 * 60);
   }, [defaultAvailability]);
+
+  function handleLanguageChange(event: ChangeEvent<HTMLSelectElement>) {
+    setLanguage(event.target.value as Language);
+  }
 
   function handleLogoChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -376,18 +382,18 @@ export default function Settings() {
             : 'bg-gray-100 text-gray-500'
         }`}
       >
-        Widget {widgetEnabled ? 'Enabled' : 'Disabled'}
+        {t('Widget {status}', { status: widgetEnabled ? t('Enabled') : t('Disabled') })}
       </span>
       <span>
-        Portal name synced as <span className="font-medium text-gray-800">{appName}</span>
+        {t('Portal name synced as {name}', { name: appName })}
       </span>
     </div>
   );
 
   return (
     <DashboardLayout
-      title="Organization Settings"
-      subtitle="Manage branding, staff accounts, and patient-facing tools."
+      title={t('Organization Settings')}
+      subtitle={t('Manage branding, staff accounts, and patient-facing tools.')}
       activeItem="settings"
       headerChildren={headerStatus}
     >
@@ -488,7 +494,7 @@ export default function Settings() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <label className="text-sm font-medium text-gray-700" htmlFor="app-name">
-                      Application Name
+                      {t('Application Name')}
                     </label>
                     <input
                       id="app-name"
@@ -501,7 +507,7 @@ export default function Settings() {
 
                   <div>
                     <label className="text-sm font-medium text-gray-700" htmlFor="logo-upload">
-                      Logo
+                      {t('Logo')}
                     </label>
                     <input
                       id="logo-upload"
@@ -510,7 +516,25 @@ export default function Settings() {
                       onChange={handleLogoChange}
                       className="mt-2 block w-full text-sm text-gray-500 file:mr-4 file:rounded-full file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-600 hover:file:bg-blue-100"
                     />
-                    <p className="mt-1 text-xs text-gray-500">PNG, JPG or SVG up to 1MB.</p>
+                    <p className="mt-1 text-xs text-gray-500">{t('PNG, JPG or SVG up to 1MB.')}</p>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-gray-700" htmlFor="language-select">
+                      {t('Interface Language')}
+                    </label>
+                    <select
+                      id="language-select"
+                      value={language}
+                      onChange={handleLanguageChange}
+                      className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    >
+                      <option value="en">{t('English')}</option>
+                      <option value="my">မြန်မာ</option>
+                    </select>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {t('Choose the language used across the staff experience.')}
+                    </p>
                   </div>
                 </div>
 

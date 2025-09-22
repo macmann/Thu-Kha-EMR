@@ -1,0 +1,32 @@
+key,en,my
+Search patients...,Search patients...,လူနာများကို ရှာဖွေပါ...
+EMR System,EMR System,EMR စနစ်
+Dashboard,Dashboard,ဒက်ဘုတ်
+Patients,Patients,လူနာများ
+Appointments,Appointments,ချိန်းစာရင်းများ
+Reports,Reports,အစီရင်ခံစာများ
+Settings,Settings,ချိန်ညှိမှုများ
+Team Member,Team Member,အသင်းဝင်
+Signed-in user,Signed-in user,ဝင်ရောက်ထားသောအသုံးပြုသူ
+Doctor,Doctor,ဆရာဝန်
+Administrative Assistant,Administrative Assistant,စီမံရေးကူညီသူ
+IT Administrator,IT Administrator,IT အုပ်ချုပ်ရေးမှူး
+Sign in to your account,Sign in to your account,သင့်အကောင့်သို့ ဝင်ရောက်ပါ
+Username or Email,Username or Email,အသုံးပြုသူအမည် သို့မဟုတ် အီးမေးလ်
+Password,Password,စကားဝှက်
+Remember me,Remember me,ကျွနော့်ကို မှတ်ထားပါ
+Forgot your password?,Forgot your password?,စကားဝှက်မေ့သွားပါသလား။
+Login,Login,စနစ်သို့ ဝင်ရောက်ပါ
+Login successful,Login successful,ဝင်ရောက်မှု အောင်မြင်ပါသည်
+Application Name,Application Name,အက်ပလီကေးရှင်းအမည်
+Logo,Logo,လိုဂို
+"PNG, JPG or SVG up to 1MB.","PNG, JPG or SVG up to 1MB.",PNG၊ JPG သို့မဟုတ် SVG (၁MB ထိ)
+Interface Language,Interface Language,စနစ်အသုံးပြု ဘာသာစကား
+English,English,အင်္ဂလိပ်
+Choose the language used across the staff experience.,Choose the language used across the staff experience.,ဝန်ထမ်းအသုံးပြုမှုအတွက် ဘာသာစကားကို ရွေးချယ်ပါ။
+Widget {status},Widget {status},ဝီဂျက် {status}
+Enabled,Enabled,ဖွင့်ထားသည်
+Disabled,Disabled,ပိတ်ထားသည်
+Portal name synced as {name},Portal name synced as {name},ပေါ်တယ်အမည်ကို {name} ဟုသတ်မှတ်ထားသည်
+Organization Settings,Organization Settings,အဖွဲ့အစည်း ချိန်ညှိမှုများ
+"Manage branding, staff accounts, and patient-facing tools.","Manage branding, staff accounts, and patient-facing tools.",အသင်းအမှတ်တံဆိပ်၊ ဝန်ထမ်းအကောင့်များနှင့် လူနာဆိုင်ရာ ကိရိယာများကို စီမံပါ။
