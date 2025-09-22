@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import { CheckIcon, MessageIcon, RegisterIcon, SearchIcon } from '../components/icons';
@@ -13,9 +13,11 @@ import {
   createVisit,
   getVisit,
   listDoctors,
+  listUsers,
   listPatientVisits,
   type Doctor,
   type Observation,
+  type UserAccount,
   type VisitDetail,
 } from '../api/client';
 import VisitForm from '../components/VisitForm';
@@ -36,7 +38,346 @@ export default function Home() {
     return <DoctorQueueDashboard />;
   }
 
+  if (user?.role === 'ITAdmin') {
+    return <ITAdminDashboard />;
+  }
+
   return <TeamDashboard role={user?.role} />;
+}
+
+function ITAdminDashboard() {
+  const { accessToken } = useAuth();
+  const { t } = useTranslation();
+  const [usersData, setUsersData] = useState<UserAccount[] | null>(null);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState<string | null>(null);
+  const [doctorsData, setDoctorsData] = useState<Doctor[] | null>(null);
+  const [doctorsLoading, setDoctorsLoading] = useState(false);
+  const [doctorsError, setDoctorsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!accessToken) {
+      setUsersData(null);
+      setUsersError(null);
+      setUsersLoading(false);
+      return;
+    }
+
+    let active = true;
+    setUsersLoading(true);
+    setUsersError(null);
+
+    listUsers()
+      .then((data) => {
+        if (!active) return;
+        setUsersData(data);
+        setUsersError(null);
+      })
+      .catch((error) => {
+        if (!active) return;
+        const message = extractErrorMessage(error);
+        setUsersError(message ?? USERS_ERROR_FALLBACK);
+        setUsersData(null);
+      })
+      .finally(() => {
+        if (!active) return;
+        setUsersLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (!accessToken) {
+      setDoctorsData(null);
+      setDoctorsError(null);
+      setDoctorsLoading(false);
+      return;
+    }
+
+    let active = true;
+    setDoctorsLoading(true);
+    setDoctorsError(null);
+
+    listDoctors()
+      .then((data) => {
+        if (!active) return;
+        setDoctorsData(data);
+        setDoctorsError(null);
+      })
+      .catch((error) => {
+        if (!active) return;
+        const message = extractErrorMessage(error);
+        setDoctorsError(message ?? DOCTORS_ERROR_FALLBACK);
+        setDoctorsData(null);
+      })
+      .finally(() => {
+        if (!active) return;
+        setDoctorsLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [accessToken]);
+
+  const userErrorMessage = usersError
+    ? usersError === USERS_ERROR_FALLBACK
+      ? t('Unable to load user accounts.')
+      : usersError
+    : null;
+
+  const doctorErrorMessage = doctorsError
+    ? doctorsError === DOCTORS_ERROR_FALLBACK
+      ? t('Unable to load doctor data.')
+      : doctorsError
+    : null;
+
+  const userStats = useMemo(() => {
+    if (!usersData) {
+      return { total: null, active: null, inactive: null, doctorAccounts: null };
+    }
+    const total = usersData.length;
+    const active = usersData.filter((item) => item.status === 'active').length;
+    const inactive = total - active;
+    const doctorAccounts = usersData.filter((item) => item.role === 'Doctor').length;
+    return { total, active, inactive, doctorAccounts };
+  }, [usersData]);
+
+  const { unassignedDoctors, unassignedCount } = useMemo(() => {
+    if (!usersData || !doctorsData) {
+      return { unassignedDoctors: null as Doctor[] | null, unassignedCount: null as number | null };
+    }
+    const assigned = new Set(
+      usersData
+        .map((account) => account.doctorId)
+        .filter((id): id is string => Boolean(id)),
+    );
+    const unassigned = doctorsData.filter((doctor) => !assigned.has(doctor.doctorId));
+    return { unassignedDoctors: unassigned, unassignedCount: unassigned.length };
+  }, [doctorsData, usersData]);
+
+  const latestUsers = useMemo(() => {
+    if (!usersData) return [] as UserAccount[];
+    return [...usersData]
+      .sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      )
+      .slice(0, 5);
+  }, [usersData]);
+
+  const loadingUserMessage = usersLoading && !usersData ? t('Loading user accounts...') : null;
+  const loadingDoctorMessage =
+    (doctorsLoading || (usersLoading && !usersData)) && !doctorsData
+      ? t('Loading doctor data...')
+      : null;
+
+  const doctorCardHelper =
+    unassignedCount !== null
+      ? t('Unassigned Doctors: {count}', { count: unassignedCount })
+      : undefined;
+
+  const resolvedDoctorError = userErrorMessage ?? doctorErrorMessage;
+
+  return (
+    <DashboardLayout
+      title={t('IT Administrator Dashboard')}
+      subtitle={t('Monitor user accounts, system access, and staff setup.')}
+      activeItem="dashboard"
+    >
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+          <StatsCard
+            title={t('Staff Accounts')}
+            value={userStats.total}
+            loading={usersLoading && !usersData}
+            fallback={t('No data available.')}
+            error={userErrorMessage}
+          />
+          <StatsCard
+            title={t('Active Accounts')}
+            value={userStats.active}
+            loading={usersLoading && !usersData}
+            fallback={t('No data available.')}
+            error={userErrorMessage}
+          />
+          <StatsCard
+            title={t('Inactive Accounts')}
+            value={userStats.inactive}
+            loading={usersLoading && !usersData}
+            fallback={t('No data available.')}
+            error={userErrorMessage}
+          />
+          <StatsCard
+            title={t('Doctor Accounts')}
+            value={userStats.doctorAccounts}
+            loading={usersLoading && !usersData}
+            helper={doctorCardHelper}
+            fallback={t('No data available.')}
+            error={resolvedDoctorError}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+          <div className="rounded-2xl bg-white p-6 shadow-sm xl:col-span-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">{t('Latest User Accounts')}</h2>
+              </div>
+              {usersLoading && usersData && (
+                <span className="text-xs font-medium text-gray-500">{t('Loading user accounts...')}</span>
+              )}
+            </div>
+            {userErrorMessage ? (
+              <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {userErrorMessage}
+              </div>
+            ) : loadingUserMessage ? (
+              <p className="mt-4 text-sm text-gray-500">{loadingUserMessage}</p>
+            ) : usersData && usersData.length > 0 ? (
+              <ul className="mt-4 divide-y divide-gray-100">
+                {latestUsers.map((account) => {
+                  const statusClass =
+                    account.status === 'active'
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-gray-200 text-gray-600';
+                  return (
+                    <li key={account.userId} className="flex items-center justify-between py-3">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{account.email}</div>
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                          <span>{t(ACCOUNT_ROLE_LABELS[account.role])}</span>
+                          {account.doctor?.name ? (
+                            <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                              {account.doctor.name}
+                              {account.doctor.department && (
+                                <span className="ml-1 text-[10px] text-blue-500">{account.doctor.department}</span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500">
+                              {t('Not assigned')}
+                            </span>
+                          )}
+                          <span className="text-[11px] text-gray-400">
+                            {t('Created')} {formatDateTime(account.createdAt)}
+                          </span>
+                        </div>
+                      </div>
+                      <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${statusClass}`}>
+                        {t(STATUS_LABELS[account.status])}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="mt-4 text-sm text-gray-500">{t('No user accounts available.')}</p>
+            )}
+          </div>
+
+          <div className="rounded-2xl bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-900">{t('Doctor Coverage')}</h2>
+            {resolvedDoctorError ? (
+              <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {resolvedDoctorError}
+              </div>
+            ) : loadingDoctorMessage ? (
+              <p className="mt-4 text-sm text-gray-500">{loadingDoctorMessage}</p>
+            ) : !usersData || !doctorsData ? (
+              <p className="mt-4 text-sm text-gray-500">{t('No data available.')}</p>
+            ) : unassignedDoctors && unassignedDoctors.length > 0 ? (
+              <ul className="mt-4 space-y-3">
+                {unassignedDoctors.map((doctor) => (
+                  <li
+                    key={doctor.doctorId}
+                    className="rounded-xl border border-yellow-100 bg-yellow-50 px-4 py-3 text-sm text-yellow-800"
+                  >
+                    <div className="font-medium text-yellow-900">{doctor.name}</div>
+                    <div className="text-xs text-yellow-700">{doctor.department}</div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-4 text-sm text-gray-600">{t('All doctors have user accounts.')}</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </DashboardLayout>
+  );
+}
+
+const ACCOUNT_ROLE_LABELS: Record<UserAccount['role'], string> = {
+  Doctor: 'Doctor',
+  AdminAssistant: 'Administrative Assistant',
+  ITAdmin: 'IT Administrator',
+};
+
+const STATUS_LABELS: Record<UserAccount['status'], 'Active' | 'Inactive'> = {
+  active: 'Active',
+  inactive: 'Inactive',
+};
+
+const USERS_ERROR_FALLBACK = '__fallback_users_error__';
+const DOCTORS_ERROR_FALLBACK = '__fallback_doctors_error__';
+
+interface StatsCardProps {
+  title: string;
+  value: number | null;
+  helper?: string;
+  fallback?: string;
+  loading?: boolean;
+  error?: string | null;
+}
+
+function StatsCard({ title, value, helper, fallback, loading, error }: StatsCardProps) {
+  const displayValue =
+    loading && value === null ? '…' : value !== null ? value.toLocaleString() : '—';
+
+  const showFallback = !loading && value === null;
+  const helperContent = error ?? (showFallback ? fallback : helper) ?? ' ';
+
+  return (
+    <div className="rounded-2xl bg-white p-6 shadow-sm">
+      <div className="text-sm font-medium text-gray-500">{title}</div>
+      <div className="mt-2 text-4xl font-semibold text-gray-900">{displayValue}</div>
+      <div className={`mt-3 text-sm ${error ? 'text-red-600' : 'text-gray-600'}`}>{helperContent}</div>
+    </div>
+  );
+}
+
+function extractErrorMessage(error: unknown): string | null {
+  if (error instanceof Error) {
+    try {
+      const parsed = JSON.parse(error.message) as { message?: string; error?: string };
+      if (parsed?.message && typeof parsed.message === 'string') {
+        return parsed.message;
+      }
+      if (parsed?.error && typeof parsed.error === 'string') {
+        return parsed.error;
+      }
+    } catch {
+      /* ignore */
+    }
+    if (error.message) {
+      return error.message;
+    }
+  }
+  return null;
+}
+
+function formatDateTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '—';
+  }
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
 }
 
 function TeamDashboard({ role }: { role?: string }) {
