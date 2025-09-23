@@ -1,7 +1,6 @@
 import { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthProvider';
-import Header from './Header';
 import { useSettings } from '../context/SettingsProvider';
 import type { Role } from '../api/client';
 
@@ -25,7 +24,6 @@ export default function RouteGuard({ children, allowedRoles }: Props) {
   }
   return (
     <>
-      <Header />
       {children}
       {widgetEnabled && (
         <iframe
