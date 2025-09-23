@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
-import { CheckIcon, MessageIcon, RegisterIcon, SearchIcon } from '../components/icons';
+import { AISummaryIcon, CheckIcon, MessageIcon, RegisterIcon, SearchIcon } from '../components/icons';
 import { useAuth } from '../context/AuthProvider';
 import {
   getAppointmentQueue,
@@ -20,6 +21,7 @@ import {
   type UserAccount,
   type VisitDetail,
 } from '../api/client';
+import { getPatientInsightSummary, type PatientAiSummary } from '../api/insights';
 import VisitForm from '../components/VisitForm';
 import {
   createVisitFormInitialValues,
@@ -517,6 +519,11 @@ function TeamDashboard({ role }: { role?: string }) {
   );
 }
 
+type SummaryEntry =
+  | { status: 'loading' }
+  | { status: 'error'; message: string }
+  | { status: 'success'; summary: PatientAiSummary };
+
 function DoctorQueueDashboard() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -529,8 +536,35 @@ function DoctorQueueDashboard() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [invitingId, setInvitingId] = useState<string | null>(null);
   const [savingVisit, setSavingVisit] = useState(false);
+  const [activeSummaryPatientId, setActiveSummaryPatientId] = useState<string | null>(null);
+  const [summaryState, setSummaryState] = useState<Record<string, SummaryEntry>>({});
   const { t } = useTranslation();
   const statusVisuals = getStatusVisuals(t);
+
+  const fetchSummary = useCallback(
+    (patientId: string) => {
+      setSummaryState((prev) => ({ ...prev, [patientId]: { status: 'loading' } }));
+      getPatientInsightSummary(patientId, { lastN: 5 })
+        .then((response) => {
+          const summary =
+            response.aiSummary ?? { headline: '', bulletPoints: [], generatedAt: new Date().toISOString() };
+          setSummaryState((prev) => ({
+            ...prev,
+            [patientId]: { status: 'success', summary },
+          }));
+        })
+        .catch((err) => {
+          setSummaryState((prev) => ({
+            ...prev,
+            [patientId]: {
+              status: 'error',
+              message: parseErrorMessage(err, t('Unable to generate AI summary.')),
+            },
+          }));
+        });
+    },
+    [t],
+  );
 
   const loadQueue = useCallback(async () => {
     setLoading(true);
@@ -587,7 +621,79 @@ function DoctorQueueDashboard() {
     });
   }, [appointments]);
 
+  useEffect(() => {
+    if (!activeSummaryPatientId) return;
+    const stillInQueue = appointments.some((appointment) => appointment.patientId === activeSummaryPatientId);
+    if (!stillInQueue) {
+      setActiveSummaryPatientId(null);
+    }
+  }, [activeSummaryPatientId, appointments]);
+
   const selected = appointments.find((appt) => appt.appointmentId === selectedId) ?? null;
+
+  const handleSummaryToggle = (
+    event: MouseEvent<HTMLButtonElement>,
+    appointment: Appointment,
+  ) => {
+    event.stopPropagation();
+    const patientId = appointment.patientId;
+    if (!patientId) {
+      return;
+    }
+
+    if (activeSummaryPatientId === patientId) {
+      setActiveSummaryPatientId(null);
+      return;
+    }
+
+    setActiveSummaryPatientId(patientId);
+    const entry = summaryState[patientId];
+    if (!entry || entry.status === 'error') {
+      fetchSummary(patientId);
+    }
+  };
+
+  const renderSummaryContent = (entry: SummaryEntry | undefined, patientId: string) => {
+    if (!entry || entry.status === 'loading') {
+      return <p className="mt-2 text-xs text-gray-500">{t('Loading AI summary...')}</p>;
+    }
+
+    if (entry.status === 'error') {
+      return (
+        <div className="mt-2 space-y-2">
+          <p className="text-xs text-red-600">{entry.message}</p>
+          <button
+            type="button"
+            onClick={(refreshEvent) => {
+              refreshEvent.stopPropagation();
+              fetchSummary(patientId);
+            }}
+            className="text-xs font-semibold text-blue-600 hover:underline"
+          >
+            {t('Refresh summary')}
+          </button>
+        </div>
+      );
+    }
+
+    if (entry.summary.bulletPoints.length === 0) {
+      return <p className="mt-2 text-xs text-gray-500">{t('No AI summary is available.')}</p>;
+    }
+
+    return (
+      <div className="mt-3 space-y-2">
+        <p className="text-[11px] uppercase tracking-wide text-gray-400">
+          {entry.summary.headline || t('AI-generated patient overview')}
+        </p>
+        <ul className="list-disc space-y-1 pl-4 text-[13px] text-gray-700">
+          {entry.summary.bulletPoints.map((point, index) => (
+            <li key={index}>{point}</li>
+          ))}
+        </ul>
+        <p className="text-[11px] text-gray-400">{t('Generated using GPT-5 mini.')}</p>
+      </div>
+    );
+  };
 
   useEffect(() => {
     setSuccess(null);
@@ -680,6 +786,7 @@ function DoctorQueueDashboard() {
       return;
     }
 
+    const summaryPatientId = selected.patientId;
     setSavingVisit(true);
     setSuccess(null);
     setError(null);
@@ -742,6 +849,9 @@ function DoctorQueueDashboard() {
       );
       await loadQueue();
       setSelectedId(selected.appointmentId);
+      if (summaryState[summaryPatientId]) {
+        fetchSummary(summaryPatientId);
+      }
     } catch (err) {
       console.error(err);
       setError(parseErrorMessage(err, t('Unable to save visit details.')));
@@ -790,6 +900,9 @@ function DoctorQueueDashboard() {
                 appointments.map((appointment) => {
                   const status = statusVisuals[appointment.status];
                   const isSelected = appointment.appointmentId === selectedId;
+                  const patientSummaryId = appointment.patientId;
+                  const summaryEntry = summaryState[patientSummaryId];
+                  const summaryOpen = activeSummaryPatientId === patientSummaryId;
                   return (
                     <li
                       key={appointment.appointmentId}
@@ -797,22 +910,47 @@ function DoctorQueueDashboard() {
                         isSelected ? 'border-blue-300 bg-blue-50' : 'border-gray-200 bg-white hover:border-blue-200'
                       }`}
                     >
-                      <button
-                        type="button"
-                        onClick={() => setSelectedId(appointment.appointmentId)}
-                        className="flex w-full items-center justify-between text-left"
-                      >
-                        <div>
-                          <div className="text-sm font-semibold text-gray-900">{appointment.patient.name}</div>
-                          <div className="text-xs text-gray-500">
+                      <div className="flex items-start justify-between gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedId(appointment.appointmentId)}
+                          className="flex flex-1 flex-col text-left"
+                        >
+                          <span className="text-sm font-semibold text-gray-900">{appointment.patient.name}</span>
+                          <span className="mt-1 text-xs text-gray-500">
                             {formatDateDisplay(appointment.date)} · {formatTimeRange(appointment.startTimeMin, appointment.endTimeMin)}
+                          </span>
+                        </button>
+                        <div className="flex flex-col items-end gap-2">
+                          <div className="flex items-center gap-2">
+                            <div className="relative">
+                              <button
+                                type="button"
+                                aria-label={t('AI Summary')}
+                                aria-expanded={summaryOpen}
+                                onClick={(event) => handleSummaryToggle(event, appointment)}
+                                className={`rounded-full border p-2 text-gray-500 transition focus:outline-none focus:ring-2 focus:ring-blue-300 ${
+                                  summaryOpen
+                                    ? 'border-blue-300 bg-blue-50 text-blue-600'
+                                    : 'border-gray-200 hover:border-blue-200 hover:text-blue-600'
+                                }`}
+                              >
+                                <AISummaryIcon className="h-4 w-4" />
+                              </button>
+                              {summaryOpen && (
+                                <div className="absolute right-0 z-20 mt-2 w-80 rounded-lg border border-blue-100 bg-white p-4 text-xs shadow-xl">
+                                  <p className="text-xs font-semibold text-blue-600">{t('AI Summary')}</p>
+                                  {renderSummaryContent(summaryEntry, patientSummaryId)}
+                                </div>
+                              )}
+                            </div>
+                            <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${status.chip}`}>
+                              <span className={`mr-2 h-2 w-2 rounded-full ${status.dot}`}></span>
+                              {status.label}
+                            </span>
                           </div>
                         </div>
-                        <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${status.chip}`}>
-                          <span className={`mr-2 h-2 w-2 rounded-full ${status.dot}`}></span>
-                          {status.label}
-                        </span>
-                      </button>
+                      </div>
                     </li>
                   );
                 })

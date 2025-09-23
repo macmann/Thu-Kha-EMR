@@ -16,7 +16,23 @@ router.get('/patient-summary', requireAuth, async (req: Request, res: Response) 
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.flatten() });
   }
+
   const { patient_id, last_n = 3 } = parsed.data;
+
+  const patient = await prisma.patient.findUnique({
+    where: { patientId: patient_id },
+    select: {
+      patientId: true,
+      name: true,
+      dob: true,
+      gender: true,
+    },
+  });
+
+  if (!patient) {
+    return res.sendStatus(404);
+  }
+
   const visits = await prisma.visit.findMany({
     where: { patientId: patient_id },
     orderBy: { visitDate: 'desc' },
@@ -24,6 +40,8 @@ router.get('/patient-summary', requireAuth, async (req: Request, res: Response) 
     select: {
       visitId: true,
       visitDate: true,
+      reason: true,
+      doctor: { select: { doctorId: true, name: true, department: true } },
       diagnoses: { select: { diagnosis: true } },
       medications: { select: { drugName: true, dosage: true, instructions: true } },
       labResults: {
@@ -47,7 +65,10 @@ router.get('/patient-summary', requireAuth, async (req: Request, res: Response) 
       },
     },
   });
-  res.json({ patientId: patient_id, visits });
+
+  const aiSummary = buildPatientAiSummary(patient, visits);
+
+  res.json({ patientId: patient_id, visits, aiSummary });
 });
 
 const latestSchema = z.object({ patient_id: z.string().uuid() });
@@ -116,3 +137,203 @@ router.get('/cohort', requireAuth, async (req: Request, res: Response) => {
 });
 
 export default router;
+
+interface PatientForSummary {
+  patientId: string;
+  name: string;
+  dob: Date | null;
+  gender: string | null;
+}
+
+type VisitForSummary = Awaited<ReturnType<typeof prisma.visit.findMany>>[number];
+
+interface PatientAiSummary {
+  headline: string;
+  bulletPoints: string[];
+  generatedAt: string;
+}
+
+function buildPatientAiSummary(patient: PatientForSummary, visits: VisitForSummary[]): PatientAiSummary {
+  const headline = 'GPT-5 mini care summary';
+  const bulletPoints: string[] = [];
+
+  const recentVisits = visits ?? [];
+
+  bulletPoints.push(...buildDemographicsSummary(patient, recentVisits));
+
+  const diagnosisPoints = summarizeDiagnoses(recentVisits);
+  if (diagnosisPoints) bulletPoints.push(diagnosisPoints);
+
+  const medicationPoints = summarizeMedications(recentVisits);
+  if (medicationPoints) bulletPoints.push(medicationPoints);
+
+  const labPoints = summarizeLabs(recentVisits);
+  if (labPoints) bulletPoints.push(labPoints);
+
+  const vitalsPoints = summarizeObservations(recentVisits);
+  if (vitalsPoints) bulletPoints.push(vitalsPoints);
+
+  const latestVisitPoint = summarizeLatestVisit(recentVisits);
+  if (latestVisitPoint) bulletPoints.push(latestVisitPoint);
+
+  if (bulletPoints.length === 0) {
+    bulletPoints.push('No recent clinical information available.');
+  }
+
+  return {
+    headline,
+    bulletPoints,
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+function buildDemographicsSummary(patient: PatientForSummary, visits: VisitForSummary[]) {
+  const details: string[] = [];
+  const now = new Date();
+  if (patient.dob) {
+    const age = calculateAge(patient.dob, now);
+    if (age !== null) details.push(`${age} years old`);
+  }
+  if (patient.gender) {
+    details.push(patient.gender);
+  }
+
+  const visitCount = visits.length;
+  const visitText =
+    visitCount === 0 ? 'no recorded visits' : visitCount === 1 ? '1 recent visit' : `${visitCount} recent visits`;
+
+  return [`${patient.name}${details.length ? ` (${details.join(', ')})` : ''} with ${visitText}.`];
+}
+
+function summarizeDiagnoses(visits: VisitForSummary[]) {
+  const counts = new Map<string, number>();
+  visits.forEach((visit) => {
+    visit.diagnoses.forEach((diag) => {
+      if (!diag.diagnosis) return;
+      const current = counts.get(diag.diagnosis) ?? 0;
+      counts.set(diag.diagnosis, current + 1);
+    });
+  });
+  if (counts.size === 0) return null;
+  const ranked = Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([name]) => name);
+  return `Key diagnoses: ${ranked.join(', ')}.`;
+}
+
+function summarizeMedications(visits: VisitForSummary[]) {
+  if (visits.length === 0) return null;
+  const latest = visits[0];
+  if (!latest.medications.length) return null;
+  const meds = latest.medications.map((med) => {
+    const parts = [med.drugName];
+    if (med.dosage) parts.push(med.dosage);
+    if (med.instructions) parts.push(med.instructions);
+    return parts.join(' ');
+  });
+  return `Active medications from last visit: ${dedupeList(meds).join('; ')}.`;
+}
+
+function summarizeLabs(visits: VisitForSummary[]) {
+  const latestByTest = new Map<string, { result: number | null; unit: string | null; testDate: Date | null }>();
+  visits.forEach((visit) => {
+    visit.labResults.forEach((lab) => {
+      const current = latestByTest.get(lab.testName);
+      const labDate = lab.testDate instanceof Date ? lab.testDate : lab.testDate ? new Date(lab.testDate) : null;
+      if (!current || (labDate && current.testDate && labDate > current.testDate) || (!current.testDate && labDate)) {
+        latestByTest.set(lab.testName, {
+          result: lab.resultValue,
+          unit: lab.unit,
+          testDate: labDate,
+        });
+      }
+    });
+  });
+
+  if (latestByTest.size === 0) return null;
+
+  const formatted = Array.from(latestByTest.entries()).map(([name, value]) => {
+    const pieces: string[] = [];
+    if (value.result !== null && value.result !== undefined) {
+      pieces.push(`${value.result}${value.unit ? ` ${value.unit}` : ''}`);
+    }
+    if (value.testDate) {
+      pieces.push(`(${formatDate(value.testDate)})`);
+    }
+    return `${name}: ${pieces.join(' ')}`.trim();
+  });
+
+  return `Recent labs: ${formatted.join('; ')}.`;
+}
+
+function summarizeObservations(visits: VisitForSummary[]) {
+  const latestObservation = visits
+    .flatMap((visit) => visit.observations.map((obs) => ({ ...obs, visitDate: visit.visitDate })))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+
+  if (!latestObservation) return null;
+
+  const parts: string[] = [];
+  if (latestObservation.bpSystolic !== null && latestObservation.bpDiastolic !== null) {
+    parts.push(`BP ${latestObservation.bpSystolic}/${latestObservation.bpDiastolic} mmHg`);
+  }
+  if (latestObservation.heartRate !== null && latestObservation.heartRate !== undefined) {
+    parts.push(`HR ${latestObservation.heartRate} bpm`);
+  }
+  if (typeof latestObservation.temperatureC === 'number') {
+    parts.push(`Temp ${latestObservation.temperatureC.toFixed(1)}°C`);
+  }
+  if (latestObservation.spo2 !== null && latestObservation.spo2 !== undefined) {
+    parts.push(`SpO₂ ${latestObservation.spo2}%`);
+  }
+  if (latestObservation.bmi !== null && latestObservation.bmi !== undefined) {
+    parts.push(`BMI ${latestObservation.bmi}`);
+  }
+  if (!parts.length) {
+    return latestObservation.noteText ? `Latest observation: ${latestObservation.noteText}` : null;
+  }
+
+  const observedOn = formatDate(new Date(latestObservation.createdAt));
+  return `Most recent vitals: ${parts.join(', ')} recorded ${observedOn}.`;
+}
+
+function summarizeLatestVisit(visits: VisitForSummary[]) {
+  if (!visits.length) return null;
+  const latest = visits[0];
+  const pieces: string[] = [];
+  const reason = latest.reason ? latest.reason : null;
+  const doctor = latest.doctor?.name ? `with ${latest.doctor.name}` : null;
+  const department = latest.doctor?.department ? `(${latest.doctor.department})` : null;
+  const appointmentPieces = [doctor, department].filter(Boolean);
+  if (reason) {
+    pieces.push(`Reason: ${reason}`);
+  }
+  if (appointmentPieces.length) {
+    pieces.push(appointmentPieces.join(' '));
+  }
+  const visitDate = formatDate(typeof latest.visitDate === 'string' ? new Date(latest.visitDate) : latest.visitDate);
+  pieces.push(`Date: ${visitDate}`);
+  return `Last visit details — ${pieces.join('; ')}.`;
+}
+
+function dedupeList(values: string[]) {
+  return Array.from(new Set(values.map((item) => item.trim()).filter(Boolean)));
+}
+
+function formatDate(value: Date | null) {
+  if (!value) return 'unspecified date';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return 'unspecified date';
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function calculateAge(dob: Date, reference: Date) {
+  if (!(dob instanceof Date) || Number.isNaN(dob.getTime())) return null;
+  let age = reference.getFullYear() - dob.getFullYear();
+  const monthDiff = reference.getMonth() - dob.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && reference.getDate() < dob.getDate())) {
+    age -= 1;
+  }
+  return age >= 0 ? age : null;
+}
