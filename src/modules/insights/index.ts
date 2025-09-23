@@ -6,6 +6,31 @@ import { requireAuth } from '../auth/index.js';
 const prisma = new PrismaClient();
 const router = Router();
 
+const visitSummarySelect = {
+  visitId: true,
+  visitDate: true,
+  reason: true,
+  doctor: { select: { doctorId: true, name: true, department: true } },
+  diagnoses: { select: { diagnosis: true } },
+  medications: { select: { drugName: true, dosage: true, instructions: true } },
+  labResults: {
+    select: { testName: true, resultValue: true, unit: true, testDate: true },
+  },
+  observations: {
+    select: {
+      obsId: true,
+      noteText: true,
+      bpSystolic: true,
+      bpDiastolic: true,
+      heartRate: true,
+      temperatureC: true,
+      spo2: true,
+      bmi: true,
+      createdAt: true,
+    },
+  },
+} satisfies Prisma.VisitSelect;
+
 const summarySchema = z.object({
   patient_id: z.string().uuid(),
   last_n: z.coerce.number().int().positive().max(20).optional(),
@@ -38,30 +63,15 @@ router.get('/patient-summary', requireAuth, async (req: Request, res: Response) 
     orderBy: { visitDate: 'desc' },
     take: last_n,
     select: {
-      visitId: true,
-      visitDate: true,
-      reason: true,
-      doctor: { select: { doctorId: true, name: true, department: true } },
-      diagnoses: { select: { diagnosis: true } },
-      medications: { select: { drugName: true, dosage: true, instructions: true } },
+      ...visitSummarySelect,
       labResults: {
         where: { testName: { in: ['HbA1c', 'LDL'] } },
-        select: { testName: true, resultValue: true, unit: true, testDate: true },
+        select: visitSummarySelect.labResults.select,
       },
       observations: {
         orderBy: { createdAt: 'desc' },
         take: 2,
-        select: {
-          obsId: true,
-          noteText: true,
-          bpSystolic: true,
-          bpDiastolic: true,
-          heartRate: true,
-          temperatureC: true,
-          spo2: true,
-          bmi: true,
-          createdAt: true,
-        },
+        select: visitSummarySelect.observations.select,
       },
     },
   });
@@ -145,7 +155,7 @@ interface PatientForSummary {
   gender: string | null;
 }
 
-type VisitForSummary = Awaited<ReturnType<typeof prisma.visit.findMany>>[number];
+type VisitForSummary = Prisma.VisitGetPayload<{ select: typeof visitSummarySelect }>;
 
 interface PatientAiSummary {
   headline: string;
