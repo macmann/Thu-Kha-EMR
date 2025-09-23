@@ -12,6 +12,7 @@ import RegisterPatient from './pages/RegisterPatient';
 import AppointmentsPage from './pages/AppointmentsPage';
 import AppointmentForm from './pages/AppointmentForm';
 import AppointmentDetail from './pages/AppointmentDetail';
+import Reports from './pages/Reports';
 import './styles/App.css';
 
 function App() {
@@ -95,6 +96,14 @@ function App() {
         element={
           <RouteGuard>
             <Cohort />
+          </RouteGuard>
+        }
+      />
+      <Route
+        path="/reports"
+        element={
+          <RouteGuard>
+            <Reports />
           </RouteGuard>
         }
       />

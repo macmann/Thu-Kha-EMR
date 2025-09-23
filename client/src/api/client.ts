@@ -101,6 +101,20 @@ export interface CohortResult {
   };
 }
 
+export interface ReportSummary {
+  totals: {
+    patients: number;
+    doctors: number;
+    activePatients: number;
+    visitsLast30Days: number;
+    upcomingAppointments: number;
+  };
+  visitsByDepartment: Array<{ department: string; visitCount: number; patientCount: number }>;
+  topDiagnoses: Array<{ diagnosis: string; count: number }>;
+  labSummaries: Array<{ testName: string; tests: number; averageValue: number | null; lastTestDate: string | null }>;
+  monthlyVisitTrends: Array<{ month: string; visitCount: number }>;
+}
+
 export interface LoginUserInfo {
   userId: string;
   role: Role;
@@ -315,6 +329,10 @@ export async function cohort(params: CohortParams): Promise<CohortResult[]> {
   qs.set('value', String(params.value));
   qs.set('months', String(params.months));
   return fetchJSON(`/insights/cohort?${qs.toString()}`);
+}
+
+export async function getReportSummary(): Promise<ReportSummary> {
+  return fetchJSON('/reports/summary');
 }
 
 export interface UserAccount {
