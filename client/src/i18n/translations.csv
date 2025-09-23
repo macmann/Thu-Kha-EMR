@@ -67,6 +67,13 @@ Loading your appointments...,Loading your appointments...,ချိန်းစ�
 Upcoming patients,Upcoming patients,မကြာမီလာမည့် လူနာများ
 {count} in queue,{count} in queue,စာရင်းစဉ်တွင် {count} ယောက်
 No patients waiting. Enjoy a short break!,No patients waiting. Enjoy a short break!,စောင့်နေသော လူနာများ မရှိပါ။ ခဏအနားယူပါ။
+AI Summary,AI Summary,AI အကျဉ်းချုံး
+AI-generated patient overview,AI-generated patient overview,AI ဖန်တီးသည့် လူနာအချက်အလက် အကျဉ်းချုံး
+Loading AI summary...,Loading AI summary...,AI အကျဉ်းချုံးကို ဖန်တီးနေပါသည်...
+Unable to generate AI summary.,Unable to generate AI summary.,AI အကျဉ်းချုံးကို မဖန်တီးနိုင်ပါ။
+Refresh summary,Refresh summary,အကျဉ်းချုံးကို ပြန်လည်ဖန်တီးပါ
+Generated using GPT-5 mini.,Generated using GPT-5 mini.,GPT-5 mini ဖြင့် ဖန်တီးထားသည်။
+No AI summary is available.,No AI summary is available.,AI အကျဉ်းချုံး မရှိသေးပါ။
 Current patient,Current patient,လက်ရှိ လူနာ
 No visit reason recorded.,No visit reason recorded.,လည်ပတ်ရသည့် အကြောင်းရင်း မမှတ်တမ်းတင်ထားပါ။
 Room assignment pending,Room assignment pending,အခန်းခွဲ ထုတ်ပြန်ရန် စောင့်ဆိုင်းဆဲ

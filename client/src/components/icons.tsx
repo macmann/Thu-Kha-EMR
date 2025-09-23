@@ -133,3 +133,20 @@ export function AvatarIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function AISummaryIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} {...props}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M11.48 3.5l.77 2.316a2.25 2.25 0 001.422 1.422l2.316.77-2.316.77a2.25 2.25 0 00-1.422 1.422l-.77 2.316-.77-2.316a2.25 2.25 0 00-1.422-1.422l-2.316-.77 2.316-.77a2.25 2.25 0 001.422-1.422L11.48 3.5z"
+      />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M5.636 13.5l.294.882a1.5 1.5 0 00.948.948l.882.294-.882.294a1.5 1.5 0 00-.948.948l-.294.882-.294-.882a1.5 1.5 0 00-.948-.948l-.882-.294.882-.294a1.5 1.5 0 00.948-.948L5.636 13.5zM16.864 13.5l.294.882a1.5 1.5 0 00.948.948l.882.294-.882.294a1.5 1.5 0 00-.948.948l-.294.882-.294-.882a1.5 1.5 0 00-.948-.948l-.882-.294.882-.294a1.5 1.5 0 00.948-.948l.294-.882z"
+      />
+    </svg>
+  );
+}
+
