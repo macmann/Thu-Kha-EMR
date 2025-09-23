@@ -9,6 +9,7 @@ import {
   SearchIcon,
   SettingsIcon,
 } from './icons';
+import LogoutButton from './LogoutButton';
 import { useAuth } from '../context/AuthProvider';
 import { useSettings } from '../context/SettingsProvider';
 import { useTranslation } from '../hooks/useTranslation';
@@ -59,8 +60,8 @@ export default function DashboardLayout({
   headerChildren,
   children,
 }: DashboardLayoutProps) {
-  const { user } = useAuth();
-  const { appName } = useSettings();
+  const { accessToken, user } = useAuth();
+  const { appName, logo } = useSettings();
   const { t } = useTranslation();
   const roleLabel = user ? t(ROLE_LABELS[user.role] ?? 'Team Member') : t('Team Member');
   const navItems = navigation.filter((item) => {
@@ -69,6 +70,8 @@ export default function DashboardLayout({
     }
     return true;
   });
+  const displayName = appName || t('EMR System');
+  const showSettings = user?.role === 'ITAdmin';
   return (
     <div className="flex min-h-screen bg-gray-50">
       <aside className="hidden w-72 flex-col border-r border-gray-200 bg-white px-6 py-8 shadow-sm md:flex">
@@ -117,22 +120,40 @@ export default function DashboardLayout({
 
       <div className="flex flex-1 flex-col">
         <header className="border-b border-gray-200 bg-white">
-          <div className="flex flex-col gap-4 px-6 py-6 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-6 px-6 py-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <Link to="/" className="flex items-center gap-3 text-gray-900">
+                {logo ? (
+                  <img src={logo} alt={`${displayName} logo`} className="h-10 w-auto rounded" />
+                ) : (
+                  <span className="text-xl font-semibold">{displayName}</span>
+                )}
+                {logo && <span className="text-xl font-semibold">{displayName}</span>}
+              </Link>
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
+                {headerChildren ?? <DefaultHeaderSearch />}
+                <div className="flex flex-wrap items-center justify-end gap-3">
+                  <div className="hidden flex-col text-right text-xs text-gray-500 sm:flex">
+                    <span className="font-medium text-gray-700">{user?.email ?? t('Signed-in user')}</span>
+                    <span>{roleLabel}</span>
+                  </div>
+                  {showSettings && (
+                    <Link to="/settings" className="text-sm font-medium text-blue-600 hover:underline">
+                      {t('Settings')}
+                    </Link>
+                  )}
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white">
+                    <AvatarIcon className="h-6 w-6" />
+                  </div>
+                  {accessToken && (
+                    <LogoutButton className="text-sm font-medium text-red-600 hover:underline" />
+                  )}
+                </div>
+              </div>
+            </div>
             <div>
               <h1 className="text-2xl font-semibold text-gray-900">{title}</h1>
               {subtitle && <p className="mt-1 text-sm text-gray-500">{subtitle}</p>}
-            </div>
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
-              {headerChildren ?? <DefaultHeaderSearch />}
-              <div className="flex items-center gap-3">
-                <div className="hidden flex-col text-right text-xs text-gray-500 sm:flex">
-                  <span className="font-medium text-gray-700">{user?.email ?? t('Signed-in user')}</span>
-                  <span>{roleLabel}</span>
-                </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white">
-                  <AvatarIcon className="h-6 w-6" />
-                </div>
-              </div>
             </div>
           </div>
         </header>
