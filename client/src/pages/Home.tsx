@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { MouseEvent } from 'react';
+import type { KeyboardEvent, MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import { AISummaryIcon, CheckIcon, MessageIcon, RegisterIcon, SearchIcon } from '../components/icons';
@@ -695,6 +695,19 @@ function DoctorQueueDashboard() {
     );
   };
 
+  const handleQueueItemKeyDown = (
+    event: KeyboardEvent<HTMLDivElement>,
+    appointmentId: string,
+  ) => {
+    if (event.target !== event.currentTarget) {
+      return;
+    }
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      setSelectedId(appointmentId);
+    }
+  };
+
   useEffect(() => {
     setSuccess(null);
     setError(null);
@@ -911,16 +924,27 @@ function DoctorQueueDashboard() {
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
-                        <button
-                          type="button"
+                        <div
+                          role="button"
+                          tabIndex={0}
                           onClick={() => setSelectedId(appointment.appointmentId)}
-                          className="flex flex-1 flex-col text-left"
+                          onKeyDown={(event) =>
+                            handleQueueItemKeyDown(event, appointment.appointmentId)
+                          }
+                          className="flex flex-1 cursor-pointer flex-col text-left rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-blue-50"
                         >
-                          <span className="text-sm font-semibold text-gray-900">{appointment.patient.name}</span>
+                          <Link
+                            to={`/patients/${appointment.patientId}`}
+                            onClick={(event) => event.stopPropagation()}
+                            className="text-sm font-semibold text-blue-600 hover:underline focus:outline-none focus-visible:underline focus-visible:text-blue-700"
+                          >
+                            {appointment.patient.name}
+                          </Link>
                           <span className="mt-1 text-xs text-gray-500">
-                            {formatDateDisplay(appointment.date)} · {formatTimeRange(appointment.startTimeMin, appointment.endTimeMin)}
+                            {formatDateDisplay(appointment.date)} ·{' '}
+                            {formatTimeRange(appointment.startTimeMin, appointment.endTimeMin)}
                           </span>
-                        </button>
+                        </div>
                         <div className="flex flex-col items-end gap-2">
                           <div className="flex items-center gap-2">
                             <div className="relative">
