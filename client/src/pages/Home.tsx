@@ -2,10 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { KeyboardEvent, MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
-import { AISummaryIcon, CheckIcon, MessageIcon, RegisterIcon, SearchIcon } from '../components/icons';
+import { AISummaryIcon, CalendarIcon, CheckIcon, PatientsIcon, RegisterIcon, SearchIcon } from '../components/icons';
 import { useAuth } from '../context/AuthProvider';
 import {
   getAppointmentQueue,
+  listAppointments,
   patchStatus,
   type Appointment,
   type AppointmentStatus,
@@ -382,16 +383,157 @@ function formatDateTime(value: string) {
   }).format(date);
 }
 
+function createDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function TeamDashboard({ role }: { role?: string }) {
   const { t } = useTranslation();
-  const taskReminders = [
-    { key: 'review-labs', label: t('Review lab results for A. Jones') },
-    { key: 'follow-up', label: t('Follow up with Dr. Davis') },
-  ];
-  const upcomingAppointments = [
-    { key: 'john-doe', name: 'John Doe', time: '10:00 AM', detail: t('General Checkup') },
-    { key: 'jane-smith', name: 'Jane Smith', time: '11:30 AM', detail: t('Medication Review') },
-  ];
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const todayKey = useMemo(() => createDateKey(new Date()), []);
+  const statusVisuals = getStatusVisuals(t);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError(null);
+
+    listAppointments({ from: todayKey, limit: 25 })
+      .then((response) => {
+        if (!active) return;
+        setAppointments(response.data);
+      })
+      .catch((err) => {
+        if (!active) return;
+        setError(parseErrorMessage(err, t('Unable to load schedule.')));
+        setAppointments([]);
+      })
+      .finally(() => {
+        if (!active) return;
+        setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [todayKey, t]);
+
+  const todaysAppointments = useMemo(
+    () => appointments.filter((appointment) => normalizeDateKey(appointment.date) === todayKey),
+    [appointments, todayKey],
+  );
+
+  const statusTotals = useMemo(() => {
+    const totals = {
+      total: todaysAppointments.length,
+      scheduled: 0,
+      checkedIn: 0,
+      inProgress: 0,
+      completed: 0,
+      cancelled: 0,
+    };
+
+    todaysAppointments.forEach((appointment) => {
+      switch (appointment.status) {
+        case 'Scheduled':
+          totals.scheduled += 1;
+          break;
+        case 'CheckedIn':
+          totals.checkedIn += 1;
+          break;
+        case 'InProgress':
+          totals.inProgress += 1;
+          break;
+        case 'Completed':
+          totals.completed += 1;
+          break;
+        case 'Cancelled':
+          totals.cancelled += 1;
+          break;
+        default:
+          break;
+      }
+    });
+
+    return totals;
+  }, [todaysAppointments]);
+
+  const upcomingCount = statusTotals.scheduled + statusTotals.checkedIn + statusTotals.inProgress;
+  const readyCount = statusTotals.checkedIn + statusTotals.inProgress;
+  const waitingCount = statusTotals.scheduled;
+
+  const overdueCount = useMemo(() => {
+    const now = Date.now();
+    return todaysAppointments.filter((appointment) => {
+      if (appointment.status !== 'Scheduled') {
+        return false;
+      }
+      const start = getAppointmentDateTime(appointment);
+      return start !== null && start.getTime() < now;
+    }).length;
+  }, [todaysAppointments]);
+
+  const tasks = useMemo(() => {
+    const items: Array<{ key: string; label: string }> = [];
+
+    if (waitingCount > 0) {
+      items.push({
+        key: 'check-in',
+        label: t('Check in {count} scheduled patients.', { count: waitingCount }),
+      });
+    }
+
+    if (readyCount > 0) {
+      items.push({
+        key: 'prep-rooms',
+        label: t('Prepare rooms for {count} checked-in patients.', { count: readyCount }),
+      });
+    }
+
+    if (overdueCount > 0) {
+      items.push({
+        key: 'overdue',
+        label: t('Follow up on {count} appointments past their start time.', { count: overdueCount }),
+      });
+    }
+
+    return items;
+  }, [overdueCount, readyCount, waitingCount, t]);
+
+  const upcomingAppointments = useMemo(() => {
+    if (!appointments.length) {
+      return [] as Appointment[];
+    }
+
+    const sorted = [...appointments].sort((a, b) => {
+      const aTime = getAppointmentDateTime(a);
+      const bTime = getAppointmentDateTime(b);
+
+      if (!aTime && !bTime) return 0;
+      if (!aTime) return 1;
+      if (!bTime) return -1;
+      return aTime.getTime() - bTime.getTime();
+    });
+
+    return sorted.slice(0, 5);
+  }, [appointments]);
+
+  const renderCount = (value: number) => {
+    if (loading) {
+      return '…';
+    }
+    if (error) {
+      return '—';
+    }
+    return value.toLocaleString();
+  };
+
+  const hasAppointments = appointments.length > 0;
 
   const headerSearch = (
     <div className="relative w-full md:w-72">
@@ -461,58 +603,115 @@ function TeamDashboard({ role }: { role?: string }) {
         </div>
 
         <div className="flex flex-col justify-between rounded-2xl bg-white p-6 shadow-sm">
-          <div>
-            <div className="text-sm font-medium text-gray-500">{t('Patients Today')}</div>
-            <div className="mt-2 text-4xl font-semibold text-gray-900">25</div>
+          <div className="flex items-start gap-4">
+            <div className="rounded-xl bg-blue-100 p-3 text-blue-600">
+              <CalendarIcon className="h-6 w-6" />
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-500">{t('Appointments Today')}</div>
+              <div className="mt-2 text-4xl font-semibold text-gray-900">{renderCount(statusTotals.total)}</div>
+            </div>
           </div>
-          <p className="mt-4 text-sm text-gray-600">{t('Scheduled visits and walk-ins awaiting triage.')}</p>
+          <p className="mt-4 text-sm text-gray-600">
+            {error
+              ? error
+              : statusTotals.total > 0
+                ? t('{upcoming} upcoming · {completed} completed', {
+                    upcoming: upcomingCount,
+                    completed: statusTotals.completed,
+                  })
+                : t('No appointments scheduled today.')}
+          </p>
         </div>
 
         <div className="flex flex-col justify-between rounded-2xl bg-white p-6 shadow-sm">
           <div className="flex items-start gap-4">
             <div className="rounded-xl bg-blue-100 p-3 text-blue-600">
-              <MessageIcon className="h-6 w-6" />
+              <PatientsIcon className="h-6 w-6" />
             </div>
             <div>
-              <div className="text-sm font-medium text-gray-500">{t('New Messages')}</div>
-              <div className="mt-2 text-4xl font-semibold text-gray-900">3</div>
-              <p className="mt-2 text-sm text-gray-600">{t('Updates from labs and internal teams.')}</p>
+              <div className="text-sm font-medium text-gray-500">{t('Checked-in Patients')}</div>
+              <div className="mt-2 text-4xl font-semibold text-gray-900">{renderCount(readyCount)}</div>
             </div>
           </div>
+          <p className="mt-4 text-sm text-gray-600">
+            {error
+              ? error
+              : readyCount > 0
+                ? t('{count} patients ready for their visit.', { count: readyCount })
+                : waitingCount > 0
+                  ? t('{count} patients waiting to check in.', { count: waitingCount })
+                  : t('No patients have checked in yet.')}
+          </p>
         </div>
 
         <div className="rounded-2xl bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between">
-            <div className="text-lg font-semibold text-gray-900">{t('Upcoming Appointments')}</div>
+            <div>
+              <div className="text-lg font-semibold text-gray-900">{t('Upcoming Appointments')}</div>
+              {loading && hasAppointments && (
+                <p className="text-xs font-medium text-gray-500">{t('Loading appointments...')}</p>
+              )}
+            </div>
             <Link to="/appointments" className="text-xs font-semibold text-blue-600 hover:underline">
               {t('View schedule')}
             </Link>
           </div>
-          <ul className="mt-4 space-y-3">
-            {upcomingAppointments.map((appointment) => (
-              <li key={appointment.key} className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3">
-                <div>
-                  <div className="text-sm font-medium text-gray-900">{appointment.name}</div>
-                  <div className="text-xs text-gray-500">{appointment.detail}</div>
-                </div>
-                <span className="text-sm font-semibold text-blue-600">{appointment.time}</span>
-              </li>
-            ))}
-          </ul>
+          {error ? (
+            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+          ) : loading && !hasAppointments ? (
+            <p className="mt-4 text-sm text-gray-500">{t('Loading appointments...')}</p>
+          ) : upcomingAppointments.length > 0 ? (
+            <ul className="mt-4 space-y-3">
+              {upcomingAppointments.map((appointment) => (
+                <li
+                  key={appointment.appointmentId}
+                  className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3"
+                >
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">{appointment.patient.name}</div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
+                      <span>{formatDateDisplay(appointment.date)}</span>
+                      <span>•</span>
+                      <span>{formatTimeRange(appointment.startTimeMin, appointment.endTimeMin)}</span>
+                    </div>
+                    <div className="mt-1 text-xs text-gray-400">
+                      {appointment.doctor.name} • {appointment.department}
+                    </div>
+                  </div>
+                  <span
+                    className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${statusVisuals[appointment.status].chip}`}
+                  >
+                    {statusVisuals[appointment.status].label}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-4 text-sm text-gray-500">{t('No upcoming appointments.')}</p>
+          )}
         </div>
 
         <div className="rounded-2xl bg-white p-6 shadow-sm">
           <div className="text-lg font-semibold text-gray-900">{t('Task Reminders')}</div>
-          <ul className="mt-4 space-y-3">
-            {taskReminders.map((task) => (
-              <li key={task.key} className="flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-green-600">
-                  <CheckIcon className="h-4 w-4" />
-                </span>
-                <span className="text-sm text-gray-700">{task.label}</span>
-              </li>
-            ))}
-          </ul>
+          {error ? (
+            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+          ) : loading && !hasAppointments ? (
+            <p className="mt-4 text-sm text-gray-500">{t('Loading appointments...')}</p>
+          ) : tasks.length > 0 ? (
+            <ul className="mt-4 space-y-3">
+              {tasks.map((task) => (
+                <li key={task.key} className="flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-green-600">
+                    <CheckIcon className="h-4 w-4" />
+                  </span>
+                  <span className="text-sm text-gray-700">{task.label}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-4 text-sm text-gray-500">{t('No pending tasks for today.')}</p>
+          )}
         </div>
       </div>
     </DashboardLayout>
@@ -1254,4 +1453,15 @@ function formatTime(minutes: number) {
 
 function normalizeDateKey(value: string) {
   return value.includes('T') ? value.split('T')[0] : value;
+}
+
+function getAppointmentDateTime(appointment: Pick<Appointment, 'date' | 'startTimeMin'>) {
+  const base = new Date(appointment.date);
+  if (Number.isNaN(base.getTime())) {
+    return null;
+  }
+  const start = new Date(base);
+  start.setHours(0, 0, 0, 0);
+  start.setMinutes(appointment.startTimeMin);
+  return start;
 }
