@@ -142,3 +142,17 @@ Doctor Coverage,Doctor Coverage,ဆရာဝန် ဝင်ရောက်မ�
 Loading doctor data...,Loading doctor data...,ဆရာဝန် ဒေတာများကို တင်နေပါသည်...
 Unable to load doctor data.,Unable to load doctor data.,ဆရာဝန် ဒေတာကို တင်မရပါ။
 All doctors have user accounts.,All doctors have user accounts.,ဆရာဝန်အားလုံးတွင် အသုံးပြုသူအကောင့်များ ရှိပြီးဖြစ်သည်။
+Appointments Today,Appointments Today,Appointments Today
+Checked-in Patients,Checked-in Patients,Checked-in Patients
+{upcoming} upcoming · {completed} completed,{upcoming} upcoming · {completed} completed,{upcoming} upcoming · {completed} completed
+No appointments scheduled today.,No appointments scheduled today.,No appointments scheduled today.
+Unable to load schedule.,Unable to load schedule.,Unable to load schedule.
+Loading appointments...,Loading appointments...,Loading appointments...
+No upcoming appointments.,No upcoming appointments.,No upcoming appointments.
+Check in {count} scheduled patients.,Check in {count} scheduled patients.,Check in {count} scheduled patients.
+Prepare rooms for {count} checked-in patients.,Prepare rooms for {count} checked-in patients.,Prepare rooms for {count} checked-in patients.
+Follow up on {count} appointments past their start time.,Follow up on {count} appointments past their start time.,Follow up on {count} appointments past their start time.
+{count} patients ready for their visit.,{count} patients ready for their visit.,{count} patients ready for their visit.
+{count} patients waiting to check in.,{count} patients waiting to check in.,{count} patients waiting to check in.
+No patients have checked in yet.,No patients have checked in yet.,No patients have checked in yet.
+No pending tasks for today.,No pending tasks for today.,No pending tasks for today.
