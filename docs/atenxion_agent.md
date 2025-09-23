@@ -14,6 +14,12 @@ curl -H "Authorization: Bearer $TOKEN" \
   "http://localhost:8080/api/insights/cohort?test_name=HbA1c&op=gt&value=8&months=6"
 ```
 
+## Reporting Summary
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:8080/api/reports/summary"
+```
+
 ## Observation Lookup
 ```bash
 curl -H "Authorization: Bearer $TOKEN" \

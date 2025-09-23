@@ -13,6 +13,7 @@ import { docsRouter } from './docs/openapi.js';
 import authRouter from './modules/auth/index.js';
 import appointmentsRouter from './routes/appointments.js';
 import usersRouter from './modules/users/index.js';
+import reportsRouter from './modules/reports/index.js';
 
 export const apiRouter = Router();
 
@@ -31,6 +32,7 @@ apiRouter.use('/audit', auditRouter);
 apiRouter.use('/auth', authRouter);
 apiRouter.use('/appointments', appointmentsRouter);
 apiRouter.use('/users', usersRouter);
+apiRouter.use('/reports', reportsRouter);
 apiRouter.use(docsRouter);
 
 export default apiRouter;

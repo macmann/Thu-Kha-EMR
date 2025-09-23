@@ -272,6 +272,69 @@ const openapi: any = {
         type: 'array',
         items: { $ref: '#/components/schemas/Observation' }
       },
+      ReportTotals: {
+        type: 'object',
+        properties: {
+          patients: { type: 'integer', minimum: 0 },
+          doctors: { type: 'integer', minimum: 0 },
+          activePatients: { type: 'integer', minimum: 0 },
+          visitsLast30Days: { type: 'integer', minimum: 0 },
+          upcomingAppointments: { type: 'integer', minimum: 0 }
+        }
+      },
+      ReportDepartmentBreakdown: {
+        type: 'object',
+        properties: {
+          department: { type: 'string' },
+          visitCount: { type: 'integer', minimum: 0 },
+          patientCount: { type: 'integer', minimum: 0 }
+        }
+      },
+      ReportDiagnosisEntry: {
+        type: 'object',
+        properties: {
+          diagnosis: { type: 'string' },
+          count: { type: 'integer', minimum: 0 }
+        }
+      },
+      ReportLabSummary: {
+        type: 'object',
+        properties: {
+          testName: { type: 'string' },
+          tests: { type: 'integer', minimum: 0 },
+          averageValue: { type: 'number', nullable: true },
+          lastTestDate: { type: 'string', format: 'date-time', nullable: true }
+        }
+      },
+      MonthlyVisitTrend: {
+        type: 'object',
+        properties: {
+          month: { type: 'string', format: 'date-time' },
+          visitCount: { type: 'integer', minimum: 0 }
+        }
+      },
+      ReportSummary: {
+        type: 'object',
+        properties: {
+          totals: { $ref: '#/components/schemas/ReportTotals' },
+          visitsByDepartment: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/ReportDepartmentBreakdown' }
+          },
+          topDiagnoses: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/ReportDiagnosisEntry' }
+          },
+          labSummaries: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/ReportLabSummary' }
+          },
+          monthlyVisitTrends: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/MonthlyVisitTrend' }
+          }
+        }
+      },
       Error: {
         type: 'object',
         required: ['code', 'message'],
@@ -1186,6 +1249,18 @@ addPath('/insights/cohort', 'get', {
     { name: 'months', in: 'query', required: true, schema: { type: 'integer' } }
   ],
   responses: { '200': { description: 'Cohort' } }
+});
+
+addPath('/reports/summary', 'get', {
+  summary: 'Reporting summary',
+  security: [{ bearerAuth: [] }],
+  responses: {
+    '200': {
+      description: 'Aggregated reporting metrics',
+      content: { 'application/json': { schema: { $ref: '#/components/schemas/ReportSummary' } } },
+    },
+    '401': { description: 'Unauthorized' },
+  },
 });
 
 addPath('/audit', 'get', {
