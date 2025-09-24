@@ -113,7 +113,7 @@ export default function PatientSearch() {
             )}
           </div>
 
-          <div className="mt-6 overflow-hidden rounded-xl border border-gray-100">
+          <div className="mt-6 rounded-xl border border-gray-100">
             {isLoading ? (
               <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
                 <SearchIcon className="h-10 w-10 animate-spin text-blue-500" />
@@ -121,46 +121,48 @@ export default function PatientSearch() {
                 <p className="text-xs text-gray-500">{t('Hang tight while we gather the latest records.')}</p>
               </div>
             ) : resultCount > 0 ? (
-              <table className="min-w-full divide-y divide-gray-100 text-sm">
-                <thead className="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  <tr>
-                    <th className="px-6 py-3">{t('Patient')}</th>
-                    <th className="px-6 py-3">{t('Date of Birth')}</th>
-                    <th className="px-6 py-3">{t('Insurance')}</th>
-                    <th className="px-6 py-3 text-right">{t('Actions')}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 bg-white">
-                  {results.map((patient) => {
-                    const coverage = patient.insurance?.trim() || t('Self-pay');
+              <div className="w-full overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-100 text-sm">
+                  <thead className="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    <tr>
+                      <th className="px-6 py-3">{t('Patient')}</th>
+                      <th className="px-6 py-3">{t('Date of Birth')}</th>
+                      <th className="px-6 py-3">{t('Insurance')}</th>
+                      <th className="px-6 py-3 text-right">{t('Actions')}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 bg-white">
+                    {results.map((patient) => {
+                      const coverage = patient.insurance?.trim() || t('Self-pay');
 
-                    return (
-                      <tr key={patient.patientId} className="transition hover:bg-blue-50/40">
-                        <td className="px-6 py-4">
-                          <div className="font-medium text-gray-900">{patient.name}</div>
-                          <div className="text-xs text-gray-500">ID: {patient.patientId}</div>
-                        </td>
-                        <td className="px-6 py-4 text-gray-700">
-                          {new Date(patient.dob).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
-                            {coverage}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <Link
-                            to={`/patients/${patient.patientId}`}
-                            className="inline-flex items-center rounded-full bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-blue-700"
-                          >
-                            {t('View Profile')}
-                          </Link>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                      return (
+                        <tr key={patient.patientId} className="transition hover:bg-blue-50/40">
+                          <td className="px-6 py-4">
+                            <div className="font-medium text-gray-900">{patient.name}</div>
+                            <div className="text-xs text-gray-500">ID: {patient.patientId}</div>
+                          </td>
+                          <td className="px-6 py-4 text-gray-700">
+                            {new Date(patient.dob).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
+                              {coverage}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <Link
+                              to={`/patients/${patient.patientId}`}
+                              className="inline-flex items-center rounded-full bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-blue-700"
+                            >
+                              {t('View Profile')}
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             ) : (
               <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
                 <PatientsIcon className="h-10 w-10 text-gray-300" />

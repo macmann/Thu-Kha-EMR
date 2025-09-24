@@ -18,7 +18,7 @@ export default function LoginCard({
 }: LoginCardProps) {
   const { t } = useTranslation();
   return (
-    <div className="rounded-2xl bg-white p-8 shadow">
+    <div className="rounded-2xl bg-white p-6 shadow sm:p-8">
       <div className="mb-6 flex flex-col items-center">
         {logo ? (
           <img
@@ -84,8 +84,8 @@ export default function LoginCard({
           />
         </div>
 
-        <div className="flex items-center justify-between">
-          <label htmlFor="remember" className="flex items-center">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <label htmlFor="remember" className="flex items-center text-sm text-gray-700">
             <input
               id="remember"
               name="remember"
@@ -93,9 +93,9 @@ export default function LoginCard({
               onChange={onChange}
               className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
-            <span className="ml-2 text-sm text-gray-700">{t('Remember me')}</span>
+            <span className="ml-2">{t('Remember me')}</span>
           </label>
-          <a href="#" className="text-sm text-blue-600 hover:text-blue-500">
+          <a href="#" className="text-sm text-blue-600 hover:text-blue-500 sm:self-end">
             {t('Forgot your password?')}
           </a>
         </div>
