@@ -79,7 +79,9 @@ export default function DashboardLayout({
       return user?.role === 'ITAdmin';
     }
     if (item.key === 'pharmacy') {
-      return user && ['Pharmacist', 'PharmacyTech', 'ITAdmin'].includes(user.role);
+      return (
+        user && ['Pharmacist', 'PharmacyTech', 'InventoryManager', 'ITAdmin'].includes(user.role)
+      );
     }
     return true;
   });

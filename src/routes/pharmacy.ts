@@ -108,7 +108,7 @@ router.post(
 
 router.get(
   '/prescriptions',
-  requireRole('Pharmacist', 'PharmacyTech', 'ITAdmin'),
+  requireRole('Pharmacist', 'PharmacyTech', 'InventoryManager', 'ITAdmin'),
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const raw = typeof req.query.status === 'string' ? req.query.status.split(',') : undefined;

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import { fetchJSON } from '../api/http';
+import { useAuth } from '../context/AuthProvider';
 
 interface QueueItem {
   prescriptionId: string;
@@ -26,10 +27,12 @@ const STATUS_OPTIONS = ['PENDING', 'PARTIAL', 'DISPENSED'] as const;
 type StatusOption = (typeof STATUS_OPTIONS)[number];
 
 export default function PharmacyQueue() {
+  const { user } = useAuth();
   const [status, setStatus] = useState<StatusOption>('PENDING');
   const [data, setData] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const canDispense = user ? ['Pharmacist', 'PharmacyTech'].includes(user.role) : false;
 
   useEffect(() => {
     let cancelled = false;
@@ -125,12 +128,18 @@ export default function PharmacyQueue() {
                   ))}
                 </ul>
 
-                <Link
-                  to={`/pharmacy/dispense/${item.prescriptionId}`}
-                  className="mt-4 inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
-                >
-                  Start Dispense
-                </Link>
+                  {canDispense ? (
+                    <Link
+                      to={`/pharmacy/dispense/${item.prescriptionId}`}
+                      className="mt-4 inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
+                    >
+                      Start Dispense
+                    </Link>
+                  ) : (
+                    <p className="mt-4 text-xs font-medium uppercase tracking-wide text-gray-400">
+                      Dispensing restricted to pharmacy staff
+                    </p>
+                  )}
               </article>
             ))}
           </div>
