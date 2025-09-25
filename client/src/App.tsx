@@ -112,7 +112,7 @@ function App() {
       <Route
         path="/pharmacy/queue"
         element={
-          <RouteGuard allowedRoles={['Pharmacist', 'PharmacyTech', 'ITAdmin']}>
+          <RouteGuard allowedRoles={['Pharmacist', 'PharmacyTech', 'InventoryManager', 'ITAdmin']}>
             <PharmacyQueue />
           </RouteGuard>
         }
