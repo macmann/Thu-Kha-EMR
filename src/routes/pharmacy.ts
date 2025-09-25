@@ -112,7 +112,7 @@ router.get(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const raw = typeof req.query.status === 'string' ? req.query.status.split(',') : undefined;
-      const statuses = (raw ?? ['PENDING']).reduce((acc: PrescriptionStatus[], value) => {
+      const statuses = (raw ?? ['PENDING']).reduce((acc: PrescriptionStatus[], value: string) => {
         const normalized = value.trim().toUpperCase();
         if ((Object.values(PrescriptionStatus) as string[]).includes(normalized)) {
           acc.push(normalized as PrescriptionStatus);
