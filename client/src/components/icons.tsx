@@ -50,6 +50,16 @@ export function ReportsIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function PharmacyIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} {...props}>
+      <rect x={3.75} y={8} width={16.5} height={8} rx={4} ry={4} />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9.75v4.5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 12h4.5" />
+    </svg>
+  );
+}
+
 export function SettingsIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} {...props}>

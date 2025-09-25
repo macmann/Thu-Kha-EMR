@@ -13,6 +13,8 @@ import AppointmentsPage from './pages/AppointmentsPage';
 import AppointmentForm from './pages/AppointmentForm';
 import AppointmentDetail from './pages/AppointmentDetail';
 import Reports from './pages/Reports';
+import PharmacyQueue from './pages/PharmacyQueue';
+import DispenseDetail from './pages/DispenseDetail';
 import './styles/App.css';
 
 function App() {
@@ -104,6 +106,22 @@ function App() {
         element={
           <RouteGuard>
             <Reports />
+          </RouteGuard>
+        }
+      />
+      <Route
+        path="/pharmacy/queue"
+        element={
+          <RouteGuard allowedRoles={['Pharmacist', 'PharmacyTech', 'ITAdmin']}>
+            <PharmacyQueue />
+          </RouteGuard>
+        }
+      />
+      <Route
+        path="/pharmacy/dispense/:prescriptionId"
+        element={
+          <RouteGuard allowedRoles={['Pharmacist', 'PharmacyTech']}>
+            <DispenseDetail />
           </RouteGuard>
         }
       />

@@ -7,6 +7,7 @@ import {
   DashboardIcon,
   MenuIcon,
   PatientsIcon,
+  PharmacyIcon,
   ReportsIcon,
   SearchIcon,
   SettingsIcon,
@@ -16,7 +17,13 @@ import { useAuth } from '../context/AuthProvider';
 import { useSettings } from '../context/SettingsProvider';
 import { useTranslation } from '../hooks/useTranslation';
 
-type NavigationKey = 'dashboard' | 'patients' | 'appointments' | 'reports' | 'settings';
+type NavigationKey =
+  | 'dashboard'
+  | 'patients'
+  | 'appointments'
+  | 'pharmacy'
+  | 'reports'
+  | 'settings';
 
 type NavigationItem = {
   key: NavigationKey;
@@ -29,6 +36,7 @@ const navigation: NavigationItem[] = [
   { key: 'dashboard', name: 'Dashboard', icon: DashboardIcon, to: '/' },
   { key: 'patients', name: 'Patients', icon: PatientsIcon, to: '/patients' },
   { key: 'appointments', name: 'Appointments', icon: CalendarIcon, to: '/appointments' },
+  { key: 'pharmacy', name: 'Pharmacy', icon: PharmacyIcon, to: '/pharmacy/queue' },
   { key: 'reports', name: 'Reports', icon: ReportsIcon, to: '/reports' },
   { key: 'settings', name: 'Settings', icon: SettingsIcon, to: '/settings' },
 ];
@@ -69,6 +77,9 @@ export default function DashboardLayout({
   const navItems = navigation.filter((item) => {
     if (item.key === 'settings') {
       return user?.role === 'ITAdmin';
+    }
+    if (item.key === 'pharmacy') {
+      return user && ['Pharmacist', 'PharmacyTech', 'ITAdmin'].includes(user.role);
     }
     return true;
   });
@@ -247,4 +258,7 @@ const ROLE_LABELS: Record<string, string> = {
   Doctor: 'Doctor',
   AdminAssistant: 'Administrative Assistant',
   ITAdmin: 'IT Administrator',
+  Pharmacist: 'Pharmacist',
+  PharmacyTech: 'Pharmacy Technician',
+  InventoryManager: 'Inventory Manager',
 };
