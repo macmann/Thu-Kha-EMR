@@ -199,7 +199,7 @@ router.patch('/:id', async (req: Request, res: Response) => {
     } else {
       updates.doctorId = null;
     }
-  } else if (role && role !== 'Doctor') {
+  } else if (role) {
     updates.doctorId = null;
   }
 
