@@ -8,7 +8,14 @@ import { requireAuth, requireRole, type AuthRequest } from '../auth/index.js';
 const prisma = new PrismaClient();
 const router = Router();
 
-const roleSchema = z.enum(['Doctor', 'AdminAssistant', 'ITAdmin']);
+const roleSchema = z.enum([
+  'Doctor',
+  'AdminAssistant',
+  'ITAdmin',
+  'Pharmacist',
+  'PharmacyTech',
+  'InventoryManager',
+]);
 const statusSchema = z.enum(['active', 'inactive']);
 
 const createUserSchema = z.object({
@@ -95,6 +102,10 @@ router.post('/', async (req: AuthRequest, res: Response) => {
   const { email, password, role, doctorId } = parsed.data;
   const normalizedEmail = normalizeEmail(email);
 
+  if (role !== 'Doctor' && typeof doctorId === 'string') {
+    return res.status(400).json({ error: 'doctorId can only be set for doctor accounts' });
+  }
+
   const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (existing) {
     return res.status(409).json({ error: 'Email is already in use' });
@@ -154,6 +165,16 @@ router.patch('/:id', async (req: Request, res: Response) => {
   const { id } = params.data;
   const { password, role, status, doctorId } = parsed.data;
 
+  const existingUser = await prisma.user.findUnique({ where: { userId: id }, select: { role: true } });
+  if (!existingUser) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  const targetRole = role ?? existingUser.role;
+  if (targetRole !== 'Doctor' && typeof doctorId === 'string') {
+    return res.status(400).json({ error: 'doctorId can only be set for doctor accounts' });
+  }
+
   if (password) {
     updates.passwordHash = await bcrypt.hash(password, 10);
   }
@@ -178,7 +199,7 @@ router.patch('/:id', async (req: Request, res: Response) => {
     } else {
       updates.doctorId = null;
     }
-  } else if (role === 'AdminAssistant' || role === 'ITAdmin') {
+  } else if (role && role !== 'Doctor') {
     updates.doctorId = null;
   }
 
