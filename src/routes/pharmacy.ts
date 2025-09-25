@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type NextFunction, type Response } from 'express';
 import { PrismaClient, PrescriptionStatus } from '@prisma/client';
 import { z } from 'zod';
 
@@ -43,7 +43,7 @@ router.post(
   '/drugs',
   requireRole('ITAdmin'),
   validate({ body: CreateDrugSchema }),
-  async (req: AuthRequest, res, next) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const body = req.body as z.infer<typeof CreateDrugSchema>;
       const drug = await prisma.drug.create({ data: body });
@@ -58,7 +58,7 @@ router.post(
   '/inventory/receive',
   requireRole('ITAdmin', 'InventoryManager', 'Pharmacist'),
   validate({ body: ReceiveStockSchema }),
-  async (req: AuthRequest, res, next) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const payload = req.body as z.infer<typeof ReceiveStockSchema>;
       const created = await receiveStock(payload.items);
@@ -73,7 +73,7 @@ router.post(
   '/visits/:visitId/prescriptions',
   requireRole('Doctor'),
   validate({ body: CreateRxSchema }),
-  async (req: AuthRequest, res, next) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const visitId = req.params.visitId;
       const payload = req.body as CreateRxInput;
@@ -109,10 +109,10 @@ router.post(
 router.get(
   '/prescriptions',
   requireRole('Pharmacist', 'PharmacyTech', 'ITAdmin'),
-  async (req: AuthRequest, res, next) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const raw = typeof req.query.status === 'string' ? req.query.status.split(',') : undefined;
-      const statuses = (raw ?? ['PENDING']).reduce<PrescriptionStatus[]>((acc, value) => {
+      const statuses = (raw ?? ['PENDING']).reduce((acc: PrescriptionStatus[], value) => {
         const normalized = value.trim().toUpperCase();
         if ((Object.values(PrescriptionStatus) as string[]).includes(normalized)) {
           acc.push(normalized as PrescriptionStatus);
@@ -131,7 +131,7 @@ router.get(
 router.post(
   '/prescriptions/:prescriptionId/dispenses',
   requireRole('Pharmacist', 'PharmacyTech'),
-  async (req: AuthRequest, res, next) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       if (!req.user) {
         return res.status(401).json({ error: 'Unauthorized' });
@@ -148,7 +148,7 @@ router.post(
   '/dispenses/:dispenseId/items',
   requireRole('Pharmacist', 'PharmacyTech'),
   validate({ body: DispenseItemSchema }),
-  async (req: AuthRequest, res, next) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const payload = req.body as DispenseItemInput;
       const item = await addDispenseItem(req.params.dispenseId, payload);
@@ -163,7 +163,7 @@ router.patch(
   '/dispenses/:dispenseId/complete',
   requireRole('Pharmacist'),
   validate({ body: CompleteDispenseSchema }),
-  async (req: AuthRequest, res, next) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const body = req.body as z.infer<typeof CompleteDispenseSchema>;
       const result = await completeDispense(req.params.dispenseId, body.status);
