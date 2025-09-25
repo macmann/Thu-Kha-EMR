@@ -20,6 +20,9 @@ enum Role {
   Doctor
   AdminAssistant
   ITAdmin
+  Pharmacist
+  PharmacyTech
+  InventoryManager
 }
 
 enum AppointmentStatus {
@@ -43,6 +46,7 @@ model Patient {
   appointments Appointment[]
   visits       Visit[]
   observations Observation[]
+  prescriptions Prescription[]
 }
 
 model Doctor {
@@ -57,6 +61,7 @@ model Doctor {
   visits       Visit[]
   observations Observation[]
   user         User?
+  prescriptions Prescription[]
 }
 
 model Appointment {
@@ -120,6 +125,7 @@ model Visit {
   medications  Medication[]
   labResults   LabResult[]
   observations Observation[]
+  prescriptions Prescription[]
 
   @@index([patientId, visitDate(sort: Desc)])
   @@index([doctorId, visitDate(sort: Desc)])
@@ -191,6 +197,7 @@ model User {
 
   doctor   Doctor?  @relation(fields: [doctorId], references: [doctorId])
   sessions Session[]
+  dispenses Dispense[]
 
   @@unique([doctorId])
 }
@@ -215,4 +222,127 @@ model AuthAudit {
   outcome String
   meta    Json?
   ts      DateTime @default(now())
+}
+
+model Drug {
+  drugId       String   @id @default(uuid()) @db.Uuid
+  name         String
+  genericName  String?
+  form         String
+  strength     String
+  routeDefault String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  stocks              StockItem[]
+  prescriptionItems   PrescriptionItem[]
+  dispenseItems       DispenseItem[]
+}
+
+model Prescription {
+  prescriptionId String              @id @default(uuid()) @db.Uuid
+  visitId        String              @db.Uuid
+  doctorId       String              @db.Uuid
+  patientId      String              @db.Uuid
+  status         PrescriptionStatus  @default(PENDING)
+  notes          String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  visit       Visit   @relation(fields: [visitId], references: [visitId], onDelete: Cascade)
+  doctor      Doctor  @relation(fields: [doctorId], references: [doctorId], onDelete: Cascade)
+  patient     Patient @relation(fields: [patientId], references: [patientId], onDelete: Cascade)
+  items       PrescriptionItem[]
+  dispenses   Dispense[]
+
+  @@index([visitId, status])
+  @@index([patientId, status])
+}
+
+model PrescriptionItem {
+  itemId             String             @id @default(uuid()) @db.Uuid
+  prescriptionId     String             @db.Uuid
+  drugId             String             @db.Uuid
+  dose               String
+  route              String
+  frequency          String
+  durationDays       Int
+  quantityPrescribed Int
+  prn                Boolean           @default(false)
+  allowGeneric       Boolean           @default(true)
+  notes              String?
+
+  prescription Prescription @relation(fields: [prescriptionId], references: [prescriptionId], onDelete: Cascade)
+  drug         Drug         @relation(fields: [drugId], references: [drugId])
+  dispenseItems DispenseItem[]
+
+  @@index([prescriptionId])
+}
+
+model Dispense {
+  dispenseId     String          @id @default(uuid()) @db.Uuid
+  prescriptionId String          @db.Uuid
+  pharmacistId   String          @db.Uuid
+  status         DispenseStatus  @default(READY)
+  dispensedAt    DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  prescription Prescription @relation(fields: [prescriptionId], references: [prescriptionId], onDelete: Cascade)
+  pharmacist   User         @relation(fields: [pharmacistId], references: [userId], onDelete: Restrict)
+  items        DispenseItem[]
+
+  @@index([prescriptionId])
+}
+
+model DispenseItem {
+  dispenseItemId     String    @id @default(uuid()) @db.Uuid
+  dispenseId         String    @db.Uuid
+  prescriptionItemId String    @db.Uuid
+  stockItemId        String?   @db.Uuid
+  drugId             String    @db.Uuid
+  quantity           Int
+  unitPrice          Decimal?  @db.Decimal(10, 2)
+
+  dispense          Dispense        @relation(fields: [dispenseId], references: [dispenseId], onDelete: Cascade)
+  prescriptionItem  PrescriptionItem @relation(fields: [prescriptionItemId], references: [itemId], onDelete: Cascade)
+  stockItem         StockItem?      @relation(fields: [stockItemId], references: [stockItemId], onDelete: SetNull)
+  drug              Drug            @relation(fields: [drugId], references: [drugId])
+
+  @@index([dispenseId])
+  @@index([prescriptionItemId])
+}
+
+model StockItem {
+  stockItemId String    @id @default(uuid()) @db.Uuid
+  drugId      String    @db.Uuid
+  batchNo     String?
+  expiryDate  DateTime?
+  location    String
+  qtyOnHand   Int       @default(0)
+  unitCost    Decimal?  @db.Decimal(10, 2)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  drug        Drug      @relation(fields: [drugId], references: [drugId], onDelete: Cascade)
+  dispenseItems DispenseItem[]
+
+  @@index([drugId])
+  @@index([location])
+  @@index([expiryDate])
+}
+
+enum PrescriptionStatus {
+  PENDING
+  PARTIAL
+  DISPENSED
+  CANCELLED
+}
+
+enum DispenseStatus {
+  READY
+  PARTIAL
+  COMPLETED
+  CANCELLED
 }

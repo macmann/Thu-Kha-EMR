@@ -19,13 +19,14 @@
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand",
     "lint": "eslint .",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate": "prisma migrate dev --name pharmacy_mvp",
+    "prisma:seed": "tsx prisma/seed.mts",
     "seed": "prisma db seed",
     "reset:db": "prisma migrate reset --force",
     "studio": "prisma studio"
   },
   "prisma": {
-    "seed": "node prisma/seed.mjs"
+    "seed": "tsx prisma/seed.mts"
   },
   "devDependencies": {
     "@types/jest": "^29",

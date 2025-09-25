@@ -14,6 +14,7 @@ import authRouter from './modules/auth/index.js';
 import appointmentsRouter from './routes/appointments.js';
 import usersRouter from './modules/users/index.js';
 import reportsRouter from './modules/reports/index.js';
+import pharmacyRouter from './routes/pharmacy.js';
 
 export const apiRouter = Router();
 
@@ -33,6 +34,7 @@ apiRouter.use('/auth', authRouter);
 apiRouter.use('/appointments', appointmentsRouter);
 apiRouter.use('/users', usersRouter);
 apiRouter.use('/reports', reportsRouter);
+apiRouter.use(pharmacyRouter);
 apiRouter.use(docsRouter);
 
 export default apiRouter;

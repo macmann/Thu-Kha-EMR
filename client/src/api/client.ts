@@ -1,6 +1,12 @@
 import { fetchJSON } from './http';
 
-export type Role = 'Doctor' | 'AdminAssistant' | 'ITAdmin';
+export type Role =
+  | 'Doctor'
+  | 'AdminAssistant'
+  | 'ITAdmin'
+  | 'Pharmacist'
+  | 'PharmacyTech'
+  | 'InventoryManager';
 
 export interface Patient {
   patientId: string;

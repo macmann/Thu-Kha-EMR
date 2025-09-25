@@ -3,7 +3,13 @@ import type { Request } from 'express';
 import bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
 
-type RoleName = 'Doctor' | 'AdminAssistant' | 'ITAdmin';
+type RoleName =
+  | 'Doctor'
+  | 'AdminAssistant'
+  | 'ITAdmin'
+  | 'Pharmacist'
+  | 'PharmacyTech'
+  | 'InventoryManager';
 
 export interface AuthUser {
   userId: string;

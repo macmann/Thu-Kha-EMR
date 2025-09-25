@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import { PatientsIcon, SearchIcon } from '../components/icons';
+import PrescribeDrawer from '../components/PrescribeDrawer';
+import { useAuth } from '../context/AuthProvider';
 import {
   addObservation,
   getPatient,
@@ -76,6 +78,7 @@ export default function VisitDetail() {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     const visitId = id;
@@ -271,6 +274,12 @@ export default function VisitDetail() {
               </div>
             </div>
           </section>
+
+          {user?.role === 'Doctor' && (
+            <section className="rounded-2xl bg-white p-6 shadow-sm">
+              <PrescribeDrawer visitId={visit.visitId} patientId={patient.patientId} />
+            </section>
+          )}
 
           <section className="rounded-2xl bg-white p-6 shadow-sm">
             <div className="flex items-start justify-between gap-4">
