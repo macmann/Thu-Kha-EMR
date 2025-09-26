@@ -47,6 +47,16 @@ export interface Medication {
   instructions?: string;
 }
 
+export interface InventoryDrug {
+  drugId: string;
+  name: string;
+  genericName?: string | null;
+  strength: string;
+  form: string;
+  routeDefault?: string | null;
+  qtyOnHand: number;
+}
+
 export interface LabResult {
   testName: string;
   resultValue: number | null;
@@ -207,6 +217,17 @@ export async function listPatientVisits(id: string): Promise<Visit[]> {
 
 export async function getVisit(id: string): Promise<VisitDetail> {
   return fetchJSON(`/visits/${id}`);
+}
+
+export async function searchInventoryDrugs(query: string, limit = 10): Promise<InventoryDrug[]> {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+  const params = new URLSearchParams({ q: trimmed });
+  if (limit) {
+    params.set('limit', String(limit));
+  }
+  const response = await fetchJSON(`/pharmacy/inventory/search?${params.toString()}`);
+  return ((response as { data?: InventoryDrug[] }).data) ?? [];
 }
 
 export interface CreateVisitPayload {

@@ -37,6 +37,11 @@ const CompleteDispenseSchema = z.object({
   status: z.enum(['COMPLETED', 'PARTIAL']),
 });
 
+const SearchInventorySchema = z.object({
+  q: z.string().trim().min(1),
+  limit: z.coerce.number().int().positive().max(50).optional(),
+});
+
 router.use(requireAuth);
 
 router.post(
@@ -69,9 +74,58 @@ router.post(
   },
 );
 
+router.get(
+  '/inventory/search',
+  requireRole('Pharmacist', 'PharmacyTech', 'InventoryManager', 'ITAdmin'),
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const parsed = SearchInventorySchema.safeParse(req.query);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.flatten() });
+      }
+
+      const { q, limit = 10 } = parsed.data;
+
+      const drugs = await prisma.drug.findMany({
+        where: {
+          isActive: true,
+          stocks: { some: { qtyOnHand: { gt: 0 } } },
+          OR: [
+            { name: { contains: q, mode: 'insensitive' } },
+            { genericName: { contains: q, mode: 'insensitive' } },
+            { strength: { contains: q, mode: 'insensitive' } },
+          ],
+        },
+        include: {
+          stocks: {
+            where: { qtyOnHand: { gt: 0 } },
+            select: { qtyOnHand: true },
+          },
+        },
+        orderBy: [{ name: 'asc' }],
+        take: limit,
+      });
+
+      const data = drugs.map((drug) => ({
+        drugId: drug.drugId,
+        name: drug.name,
+        genericName: drug.genericName ?? null,
+        strength: drug.strength,
+        form: drug.form,
+        routeDefault: drug.routeDefault ?? null,
+        qtyOnHand: drug.stocks.reduce((total, stock) => total + stock.qtyOnHand, 0),
+      }));
+
+      res.json({ data });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
 router.post(
   '/visits/:visitId/prescriptions',
-  requireRole('Doctor'),
+  requireRole('Doctor', 'Pharmacist'),
   validate({ body: CreateRxSchema }),
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
