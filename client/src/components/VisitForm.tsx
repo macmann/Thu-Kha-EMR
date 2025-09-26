@@ -21,14 +21,29 @@ interface VisitFormProps {
   extraActions?: ReactNode;
 }
 
+type DiagnosisEntry = string;
+
+type MedicationEntry = {
+  drugName: string;
+  dosage: string;
+  frequency: string;
+  duration: string;
+};
+
+type LabEntry = {
+  testName: string;
+  resultValue: string;
+  unit: string;
+};
+
 type VisitFormState = {
   visitDate: string;
   doctorId: string;
   department: string;
   reason: string;
-  diagnoses: string;
-  medications: string;
-  labs: string;
+  diagnoses: DiagnosisEntry[];
+  medications: MedicationEntry[];
+  labs: LabEntry[];
   obsNote: string;
   bpSystolic: string;
   bpDiastolic: string;
@@ -90,36 +105,48 @@ export default function VisitForm({
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const diagnoses = state.diagnoses
-      .split('\n')
-      .map((item) => item.trim())
-      .filter(Boolean);
+    const diagnoses = state.diagnoses.map((item) => item.trim()).filter(Boolean);
 
     const medications = state.medications
-      .split('\n')
-      .map((item) => item.trim())
-      .filter(Boolean)
-      .map((line) => {
-        const [drugName, dosage] = line.split('|').map((part) => part.trim());
+      .map(({ drugName, dosage, frequency, duration }) => {
+        const name = drugName.trim();
+        if (!name) {
+          return null;
+        }
+
+        const durationLabel = duration.trim();
+        const detailParts = [dosage.trim(), frequency.trim()];
+        if (durationLabel) {
+          detailParts.push(`${durationLabel} days`);
+        }
+        const sanitizedParts = detailParts.filter((part) => part.length > 0);
+
         return {
-          drugName,
-          ...(dosage ? { dosage } : {}),
+          drugName: name,
+          ...(sanitizedParts.length ? { dosage: sanitizedParts.join(' | ') } : {}),
         };
-      });
+      })
+      .filter((medication): medication is { drugName: string; dosage?: string } => medication !== null);
 
     const labs = state.labs
-      .split('\n')
-      .map((item) => item.trim())
-      .filter(Boolean)
-      .map((line) => {
-        const [testName, value, unit] = line.split('|').map((part) => part.trim());
-        const resultValue = value && !Number.isNaN(Number(value)) ? Number(value) : undefined;
+      .map(({ testName, resultValue, unit }) => {
+        const name = testName.trim();
+        if (!name) {
+          return null;
+        }
+
+        const numericValue = resultValue.trim();
+        const parsedValue = numericValue ? Number(numericValue) : undefined;
+
         return {
-          testName,
-          ...(resultValue !== undefined ? { resultValue } : {}),
-          ...(unit ? { unit } : {}),
+          testName: name,
+          ...(parsedValue !== undefined && !Number.isNaN(parsedValue)
+            ? { resultValue: parsedValue }
+            : {}),
+          ...(unit.trim() ? { unit: unit.trim() } : {}),
         };
-      });
+      })
+      .filter((lab): lab is { testName: string; resultValue?: number; unit?: string } => lab !== null);
 
     const observationValues = buildObservation(state);
 
@@ -199,33 +226,270 @@ export default function VisitForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">{t('Diagnoses (one per line)')}</label>
-        <textarea
-          value={state.diagnoses}
-          onChange={(event) => setState((current) => ({ ...current, diagnoses: event.target.value }))}
-          className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
-          rows={3}
-        />
+        <div className="flex items-center justify-between">
+          <label className="block text-sm font-medium text-gray-700">{t('Diagnoses')}</label>
+          <button
+            type="button"
+            onClick={() =>
+              setState((current) => ({
+                ...current,
+                diagnoses: [...current.diagnoses, ''],
+              }))
+            }
+            className="inline-flex items-center rounded-md bg-blue-50 px-3 py-1 text-sm font-medium text-blue-600 hover:bg-blue-100"
+          >
+            + {t('Add Diagnosis')}
+          </button>
+        </div>
+        <div className="mt-2 space-y-3">
+          {state.diagnoses.map((diagnosis, index) => (
+            <div key={`diagnosis-${index}`} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+              <div className="flex items-start gap-3">
+                <input
+                  type="text"
+                  value={diagnosis}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setState((current) => {
+                      const diagnoses = [...current.diagnoses];
+                      diagnoses[index] = value;
+                      return { ...current, diagnoses };
+                    });
+                  }}
+                  className="flex-1 rounded-md border-gray-300 shadow-sm"
+                  placeholder={t('Enter diagnosis')}
+                />
+                {state.diagnoses.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setState((current) => {
+                        const diagnoses = current.diagnoses.filter((_, i) => i !== index);
+                        return {
+                          ...current,
+                          diagnoses: diagnoses.length ? diagnoses : [''],
+                        };
+                      })
+                    }
+                    className="text-sm font-medium text-red-600 hover:text-red-700"
+                  >
+                    {t('Remove')}
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">{t('Medications (drug|dosage per line)')}</label>
-        <textarea
-          value={state.medications}
-          onChange={(event) => setState((current) => ({ ...current, medications: event.target.value }))}
-          className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
-          rows={3}
-        />
+        <div className="flex items-center justify-between">
+          <label className="block text-sm font-medium text-gray-700">{t('Medications')}</label>
+          <button
+            type="button"
+            onClick={() =>
+              setState((current) => ({
+                ...current,
+                medications: [...current.medications, createEmptyMedicationEntry()],
+              }))
+            }
+            className="inline-flex items-center rounded-md bg-blue-50 px-3 py-1 text-sm font-medium text-blue-600 hover:bg-blue-100"
+          >
+            + {t('Add Medication')}
+          </button>
+        </div>
+        <div className="mt-2 space-y-3">
+          {state.medications.map((medication, index) => (
+            <div key={`medication-${index}`} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500">{t('Medication Name')}</label>
+                  <input
+                    type="text"
+                    value={medication.drugName}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setState((current) => {
+                        const medications = [...current.medications];
+                        medications[index] = { ...medications[index], drugName: value };
+                        return { ...current, medications };
+                      });
+                    }}
+                    className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
+                    placeholder={t('e.g., Amoxicillin')}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500">{t('Dosage')}</label>
+                  <input
+                    type="text"
+                    value={medication.dosage}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setState((current) => {
+                        const medications = [...current.medications];
+                        medications[index] = { ...medications[index], dosage: value };
+                        return { ...current, medications };
+                      });
+                    }}
+                    className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
+                    placeholder={t('e.g., 500mg')}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500">{t('Frequency (OD/BD)')}</label>
+                  <input
+                    type="text"
+                    value={medication.frequency}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setState((current) => {
+                        const medications = [...current.medications];
+                        medications[index] = { ...medications[index], frequency: value };
+                        return { ...current, medications };
+                      });
+                    }}
+                    className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
+                    placeholder={t('e.g., OD')}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500">{t('Duration (days)')}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={medication.duration}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setState((current) => {
+                        const medications = [...current.medications];
+                        medications[index] = { ...medications[index], duration: value };
+                        return { ...current, medications };
+                      });
+                    }}
+                    className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
+                    placeholder={t('e.g., 5')}
+                  />
+                </div>
+              </div>
+              {state.medications.length > 1 && (
+                <div className="mt-3 text-right">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setState((current) => {
+                        const medications = current.medications.filter((_, i) => i !== index);
+                        return {
+                          ...current,
+                          medications: medications.length ? medications : [createEmptyMedicationEntry()],
+                        };
+                      })
+                    }
+                    className="text-sm font-medium text-red-600 hover:text-red-700"
+                  >
+                    {t('Remove')}
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">{t('Labs (test|value|unit per line)')}</label>
-        <textarea
-          value={state.labs}
-          onChange={(event) => setState((current) => ({ ...current, labs: event.target.value }))}
-          className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
-          rows={3}
-        />
+        <div className="flex items-center justify-between">
+          <label className="block text-sm font-medium text-gray-700">{t('Labs')}</label>
+          <button
+            type="button"
+            onClick={() =>
+              setState((current) => ({
+                ...current,
+                labs: [...current.labs, createEmptyLabEntry()],
+              }))
+            }
+            className="inline-flex items-center rounded-md bg-blue-50 px-3 py-1 text-sm font-medium text-blue-600 hover:bg-blue-100"
+          >
+            + {t('Add Lab Result')}
+          </button>
+        </div>
+        <div className="mt-2 space-y-3">
+          {state.labs.map((lab, index) => (
+            <div key={`lab-${index}`} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+              <div className="grid gap-3 md:grid-cols-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500">{t('Test Name')}</label>
+                  <input
+                    type="text"
+                    value={lab.testName}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setState((current) => {
+                        const labs = [...current.labs];
+                        labs[index] = { ...labs[index], testName: value };
+                        return { ...current, labs };
+                      });
+                    }}
+                    className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
+                    placeholder={t('e.g., Hemoglobin')}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500">{t('Value')}</label>
+                  <input
+                    type="text"
+                    value={lab.resultValue}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setState((current) => {
+                        const labs = [...current.labs];
+                        labs[index] = { ...labs[index], resultValue: value };
+                        return { ...current, labs };
+                      });
+                    }}
+                    className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
+                    placeholder={t('e.g., 13.5')}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500">{t('Unit')}</label>
+                  <input
+                    type="text"
+                    value={lab.unit}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setState((current) => {
+                        const labs = [...current.labs];
+                        labs[index] = { ...labs[index], unit: value };
+                        return { ...current, labs };
+                      });
+                    }}
+                    className="mt-1 w-full rounded-md border-gray-300 shadow-sm"
+                    placeholder={t('e.g., g/dL')}
+                  />
+                </div>
+              </div>
+              {state.labs.length > 1 && (
+                <div className="mt-3 text-right">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setState((current) => {
+                        const labs = current.labs.filter((_, i) => i !== index);
+                        return {
+                          ...current,
+                          labs: labs.length ? labs : [createEmptyLabEntry()],
+                        };
+                      })
+                    }
+                    className="text-sm font-medium text-red-600 hover:text-red-700"
+                  >
+                    {t('Remove')}
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
       <div>
@@ -317,27 +581,27 @@ function toState(values: VisitFormInitialValues): VisitFormState {
     doctorId: values.doctorId,
     department: values.department,
     reason: values.reason ?? '',
-    diagnoses: values.diagnoses.join('\n'),
-    medications: values.medications
-      .map((medication) =>
-        medication.dosage ? `${medication.drugName}|${medication.dosage}` : medication.drugName,
-      )
-      .join('\n'),
-    labs: values.labs
-      .map((lab) => {
-        const parts = [lab.testName];
-        if (lab.resultValue !== undefined) {
-          parts.push(String(lab.resultValue));
-        }
-        if (lab.unit) {
-          if (parts.length === 1) {
-            parts.push('');
-          }
-          parts.push(lab.unit);
-        }
-        return parts.join('|');
-      })
-      .join('\n'),
+    diagnoses: values.diagnoses.length ? [...values.diagnoses] : [''],
+    medications: values.medications.length
+      ? values.medications.map((medication) =>
+          createEmptyMedicationEntry({
+            drugName: medication.drugName,
+            dosage: medication.dosage ?? '',
+          }),
+        )
+      : [createEmptyMedicationEntry()],
+    labs: values.labs.length
+      ? values.labs.map((lab) =>
+          createEmptyLabEntry({
+            testName: lab.testName,
+            resultValue:
+              lab.resultValue !== undefined && lab.resultValue !== null
+                ? String(lab.resultValue)
+                : '',
+            unit: lab.unit ?? '',
+          }),
+        )
+      : [createEmptyLabEntry()],
     obsNote: values.observation?.noteText ?? '',
     bpSystolic: values.observation?.bpSystolic?.toString() ?? '',
     bpDiastolic: values.observation?.bpDiastolic?.toString() ?? '',
@@ -374,5 +638,24 @@ function buildObservation(
     ...(temperatureC ? { temperatureC: Number(temperatureC) } : {}),
     ...(spo2 ? { spo2: Number(spo2) } : {}),
     ...(bmi ? { bmi: Number(bmi) } : {}),
+  };
+}
+
+function createEmptyMedicationEntry(
+  overrides: Partial<MedicationEntry> = {},
+): MedicationEntry {
+  return {
+    drugName: overrides.drugName ?? '',
+    dosage: overrides.dosage ?? '',
+    frequency: overrides.frequency ?? '',
+    duration: overrides.duration ?? '',
+  };
+}
+
+function createEmptyLabEntry(overrides: Partial<LabEntry> = {}): LabEntry {
+  return {
+    testName: overrides.testName ?? '',
+    resultValue: overrides.resultValue ?? '',
+    unit: overrides.unit ?? '',
   };
 }
