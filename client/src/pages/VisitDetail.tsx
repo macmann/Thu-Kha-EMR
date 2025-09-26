@@ -275,9 +275,13 @@ export default function VisitDetail() {
             </div>
           </section>
 
-          {user?.role === 'Doctor' && (
+          {user?.role === 'Pharmacist' && (
             <section className="rounded-2xl bg-white p-6 shadow-sm">
-              <PrescribeDrawer visitId={visit.visitId} patientId={patient.patientId} />
+              <PrescribeDrawer
+                visitId={visit.visitId}
+                patientId={patient.patientId}
+                doctorOrders={visit.medications}
+              />
             </section>
           )}
 
