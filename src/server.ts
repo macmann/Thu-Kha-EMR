@@ -34,7 +34,7 @@ apiRouter.use('/auth', authRouter);
 apiRouter.use('/appointments', appointmentsRouter);
 apiRouter.use('/users', usersRouter);
 apiRouter.use('/reports', reportsRouter);
-apiRouter.use(pharmacyRouter);
+apiRouter.use('/pharmacy', pharmacyRouter);
 apiRouter.use(docsRouter);
 
 export default apiRouter;
