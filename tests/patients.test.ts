@@ -10,10 +10,26 @@ beforeAll(async () => {
   await prisma.user.create({ data: { email: 'doc@example.com', passwordHash: 'x', role: 'Doctor' } });
   const doctor = await prisma.doctor.create({ data: { name: 'Dr. Who', department: 'General' } });
   const patient = await prisma.patient.create({
-    data: { name: 'John Doe', dob: new Date('1980-01-01'), gender: 'M', contact: '5551234', insurance: 'Aetna' },
+    data: {
+      name: 'John Doe',
+      dob: new Date('1980-01-01'),
+      gender: 'M',
+      contact: '5551234',
+      insurance: 'Aetna',
+      drugAllergies: 'Penicillin',
+    },
   });
   patientId = patient.patientId;
-  await prisma.patient.create({ data: { name: 'Jane Smith', dob: new Date('1990-01-01'), gender: 'F', contact: '5555678', insurance: 'Aetna' } });
+  await prisma.patient.create({
+    data: {
+      name: 'Jane Smith',
+      dob: new Date('1990-01-01'),
+      gender: 'F',
+      contact: '5555678',
+      insurance: 'Aetna',
+      drugAllergies: 'Sulfa',
+    },
+  });
   const visit1 = await prisma.visit.create({ data: { patientId: patient.patientId, doctorId: doctor.doctorId, visitDate: new Date('2023-01-01'), department: 'Cardiology', reason: 'checkup' } });
   const visit2 = await prisma.visit.create({ data: { patientId: patient.patientId, doctorId: doctor.doctorId, visitDate: new Date('2023-02-01'), department: 'Endocrinology', reason: 'follow-up' } });
   await prisma.diagnosis.create({ data: { visitId: visit2.visitId, diagnosis: 'Diabetes' } });
@@ -74,8 +90,10 @@ describe('POST /api/patients', () => {
       name: 'Alice Jones',
       dob: '2001-01-01',
       insurance: 'Aetna',
+      drugAllergies: 'Ibuprofen',
     });
     expect(res.status).toBe(201);
     expect(res.body.name).toBe('Alice Jones');
+    expect(res.body.drugAllergies).toBe('Ibuprofen');
   });
 });
