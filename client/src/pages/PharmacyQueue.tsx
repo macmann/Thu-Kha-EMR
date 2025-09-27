@@ -1,35 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
-import { fetchJSON } from '../api/http';
+import {
+  listPharmacyQueue,
+  type PharmacyQueueItem,
+  type PharmacyQueueStatus,
+} from '../api/pharmacy';
 import { useAuth } from '../context/AuthProvider';
 
-interface QueueItem {
-  prescriptionId: string;
-  status: string;
-  notes?: string | null;
-  createdAt: string;
-  patient?: { patientId: string; name: string };
-  doctor?: { doctorId: string; name: string };
-  items: Array<{
-    itemId: string;
-    drugId: string;
-    dose: string;
-    route: string;
-    frequency: string;
-    durationDays: number;
-    quantityPrescribed: number;
-  }>;
-}
-
-const STATUS_OPTIONS = ['PENDING', 'PARTIAL', 'DISPENSED'] as const;
-
-type StatusOption = (typeof STATUS_OPTIONS)[number];
+const STATUS_OPTIONS: PharmacyQueueStatus[] = ['PENDING', 'PARTIAL', 'DISPENSED'];
 
 export default function PharmacyQueue() {
   const { user } = useAuth();
-  const [status, setStatus] = useState<StatusOption>('PENDING');
-  const [data, setData] = useState<QueueItem[]>([]);
+  const [status, setStatus] = useState<PharmacyQueueStatus>('PENDING');
+  const [data, setData] = useState<PharmacyQueueItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const canDispense = user ? ['Pharmacist', 'PharmacyTech'].includes(user.role) : false;
@@ -41,10 +25,8 @@ export default function PharmacyQueue() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetchJSON(`/pharmacy/prescriptions?status=${status}`);
-        if (!cancelled) {
-          setData((response as { data?: QueueItem[] }).data ?? []);
-        }
+        const queue = await listPharmacyQueue(status);
+        if (!cancelled) setData(queue);
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Unable to load queue');
@@ -88,7 +70,7 @@ export default function PharmacyQueue() {
             ) : null}
             <select
               value={status}
-              onChange={(event) => setStatus(event.target.value as StatusOption)}
+              onChange={(event) => setStatus(event.target.value as PharmacyQueueStatus)}
               className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
             >
               {STATUS_OPTIONS.map((option) => (

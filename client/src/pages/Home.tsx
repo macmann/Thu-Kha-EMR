@@ -2,7 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { KeyboardEvent, MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
-import { AISummaryIcon, CalendarIcon, CheckIcon, PatientsIcon, RegisterIcon, SearchIcon } from '../components/icons';
+import {
+  AISummaryIcon,
+  CalendarIcon,
+  CheckIcon,
+  PatientsIcon,
+  PharmacyIcon,
+  RegisterIcon,
+  SearchIcon,
+} from '../components/icons';
 import { useAuth } from '../context/AuthProvider';
 import {
   getAppointmentQueue,
@@ -22,6 +30,12 @@ import {
   type UserAccount,
   type VisitDetail,
 } from '../api/client';
+import {
+  listLowStockInventory,
+  listPharmacyQueue,
+  type LowStockInventoryItem,
+  type PharmacyQueueItem,
+} from '../api/pharmacy';
 import { getPatientInsightSummary, type PatientAiSummary } from '../api/insights';
 import VisitForm from '../components/VisitForm';
 import {
@@ -43,6 +57,14 @@ export default function Home() {
 
   if (user?.role === 'ITAdmin') {
     return <ITAdminDashboard />;
+  }
+
+  if (user?.role === 'Pharmacist' || user?.role === 'PharmacyTech') {
+    return <PharmacistDashboard />;
+  }
+
+  if (user?.role === 'InventoryManager') {
+    return <InventoryDashboard />;
   }
 
   return <TeamDashboard role={user?.role} />;
@@ -391,6 +413,432 @@ function createDateKey(date: Date) {
   const month = `${date.getMonth() + 1}`.padStart(2, '0');
   const day = `${date.getDate()}`.padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function PharmacistDashboard() {
+  const { t } = useTranslation();
+  const [queue, setQueue] = useState<PharmacyQueueItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadQueue = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await listPharmacyQueue(['PENDING', 'PARTIAL']);
+      setQueue(data);
+    } catch (err) {
+      setError(parseErrorMessage(err, t('Unable to load pharmacy queue.')));
+      setQueue([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
+
+  useEffect(() => {
+    loadQueue();
+  }, [loadQueue]);
+
+  const pendingCount = useMemo(
+    () => queue.filter((item) => item.status === 'PENDING').length,
+    [queue],
+  );
+  const partialCount = useMemo(
+    () => queue.filter((item) => item.status === 'PARTIAL').length,
+    [queue],
+  );
+  const totalActive = pendingCount + partialCount;
+
+  const subtitle = useMemo(() => {
+    if (loading && !queue.length) {
+      return t('Loading pharmacy queue...');
+    }
+    if (error) {
+      return error;
+    }
+    if (!totalActive) {
+      return t('No prescriptions waiting right now.');
+    }
+    return t('{count} prescriptions need attention.', { count: totalActive });
+  }, [error, loading, queue.length, t, totalActive]);
+
+  const tasks = useMemo(() => {
+    const items: Array<{ key: string; label: string }> = [];
+    if (pendingCount > 0) {
+      items.push({
+        key: 'pending',
+        label: t('Verify {count} new prescriptions.', { count: pendingCount }),
+      });
+    }
+    if (partialCount > 0) {
+      items.push({
+        key: 'partial',
+        label: t('Complete {count} partial fills.', { count: partialCount }),
+      });
+    }
+    if (!items.length) {
+      items.push({ key: 'clear', label: t('Queue is clear—monitor for new orders.') });
+    }
+    return items;
+  }, [partialCount, pendingCount, t]);
+
+  const nextInQueue = useMemo(() => queue.slice(0, 3), [queue]);
+
+  const renderCount = (value: number) => {
+    if (loading && !queue.length) {
+      return '…';
+    }
+    if (error) {
+      return '—';
+    }
+    return value.toLocaleString();
+  };
+
+  return (
+    <DashboardLayout
+      title={t('Pharmacy Dashboard')}
+      subtitle={subtitle}
+      activeItem="dashboard"
+    >
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div className="flex flex-col justify-between rounded-2xl bg-white p-6 shadow-sm">
+          <div className="flex items-start gap-4">
+            <div className="rounded-xl bg-blue-100 p-3 text-blue-600">
+              <PharmacyIcon className="h-6 w-6" />
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-500">{t('New prescriptions')}</div>
+              <div className="mt-2 text-4xl font-semibold text-gray-900">{renderCount(pendingCount)}</div>
+            </div>
+          </div>
+          <p className="mt-4 text-sm text-gray-600">
+            {pendingCount > 0
+              ? t('Review and verify orders before dispensing.')
+              : t('No new prescriptions waiting.')}
+          </p>
+        </div>
+
+        <div className="flex flex-col justify-between rounded-2xl bg-white p-6 shadow-sm">
+          <div className="flex items-start gap-4">
+            <div className="rounded-xl bg-blue-100 p-3 text-blue-600">
+              <CheckIcon className="h-6 w-6" />
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-500">{t('Partial fills')}</div>
+              <div className="mt-2 text-4xl font-semibold text-gray-900">{renderCount(partialCount)}</div>
+            </div>
+          </div>
+          <p className="mt-4 text-sm text-gray-600">
+            {partialCount > 0
+              ? t('Complete dispensing and document pick up details.')
+              : t('No partial fills outstanding.')}
+          </p>
+        </div>
+
+        <div className="flex flex-col rounded-2xl bg-white p-6 shadow-sm">
+          <div className="flex items-start gap-4">
+            <div className="rounded-xl bg-blue-100 p-3 text-blue-600">
+              <CheckIcon className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">{t("Today's focus")}</h2>
+              <p className="mt-1 text-sm text-gray-600">
+                {t('Keep the queue moving smoothly with these actions.')}
+              </p>
+            </div>
+          </div>
+          <ul className="mt-4 space-y-3">
+            {tasks.map((task) => (
+              <li key={task.key} className="flex items-start gap-2 text-sm text-gray-700">
+                <CheckIcon className="mt-0.5 h-4 w-4 text-blue-500" />
+                <span>{task.label}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">{t('Next in dispensing queue')}</h2>
+            {loading && queue.length > 0 ? (
+              <p className="text-xs font-medium text-gray-500">{t('Refreshing queue...')}</p>
+            ) : null}
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={loadQueue}
+              className="text-xs font-semibold text-blue-600 hover:underline"
+            >
+              {t('Refresh queue')}
+            </button>
+            <Link to="/pharmacy/queue" className="text-xs font-semibold text-blue-600 hover:underline">
+              {t('Open queue')}
+            </Link>
+          </div>
+        </div>
+
+        {error ? (
+          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+        ) : loading && !queue.length ? (
+          <p className="mt-4 text-sm text-gray-500">{t('Loading prescriptions...')}</p>
+        ) : nextInQueue.length > 0 ? (
+          <ul className="mt-4 space-y-3">
+            {nextInQueue.map((item) => {
+              const lineLabel =
+                item.items.length === 1
+                  ? t('1 medication ordered')
+                  : t('{count} medications ordered', { count: item.items.length });
+              const timeDisplay = (() => {
+                const timestamp = new Date(item.createdAt);
+                if (Number.isNaN(timestamp.getTime())) return '—';
+                return timestamp.toLocaleTimeString(undefined, {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                });
+              })();
+              return (
+                <li
+                  key={item.prescriptionId}
+                  className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3"
+                >
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">
+                        {item.patient?.name ?? t('Patient')}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {item.doctor?.name
+                          ? t('Ordered by {name}', { name: item.doctor.name })
+                          : t('Ordering provider pending')}
+                      </div>
+                    </div>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+                      {item.status}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
+                    <span>{lineLabel}</span>
+                    <span>•</span>
+                    <span>{t('Entered {time}', { time: timeDisplay })}</span>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="mt-4 text-sm text-gray-600">{t('Nothing waiting in the queue right now.')}</p>
+        )}
+      </div>
+    </DashboardLayout>
+  );
+}
+
+function InventoryDashboard() {
+  const { t } = useTranslation();
+  const LOW_STOCK_THRESHOLD = 20;
+  const [items, setItems] = useState<LowStockInventoryItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadInventory = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await listLowStockInventory({ threshold: LOW_STOCK_THRESHOLD, limit: 6 });
+      setItems(data);
+    } catch (err) {
+      setError(parseErrorMessage(err, t('Unable to load inventory status.')));
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [LOW_STOCK_THRESHOLD, t]);
+
+  useEffect(() => {
+    loadInventory();
+  }, [loadInventory]);
+
+  const zeroCount = useMemo(
+    () => items.filter((item) => item.totalOnHand === 0).length,
+    [items],
+  );
+  const criticalThreshold = Math.max(0, Math.floor(LOW_STOCK_THRESHOLD / 2));
+  const criticalCount = useMemo(
+    () => items.filter((item) => item.totalOnHand <= criticalThreshold).length,
+    [criticalThreshold, items],
+  );
+
+  const subtitle = useMemo(() => {
+    if (loading && !items.length) {
+      return t('Checking stock levels...');
+    }
+    if (error) {
+      return error;
+    }
+    if (!items.length) {
+      return t('All monitored medications are above the safety threshold.');
+    }
+    return t('{count} medications need replenishment.', { count: items.length });
+  }, [error, items.length, loading, t]);
+
+  const renderCount = (value: number) => {
+    if (loading && !items.length) {
+      return '…';
+    }
+    if (error) {
+      return '—';
+    }
+    return value.toLocaleString();
+  };
+
+  return (
+    <DashboardLayout
+      title={t('Inventory Dashboard')}
+      subtitle={subtitle}
+      activeItem="dashboard"
+    >
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div className="flex flex-col justify-between rounded-2xl bg-white p-6 shadow-sm">
+          <div className="flex items-start gap-4">
+            <div className="rounded-xl bg-blue-100 p-3 text-blue-600">
+              <PharmacyIcon className="h-6 w-6" />
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-500">{t('Low stock items')}</div>
+              <div className="mt-2 text-4xl font-semibold text-gray-900">{renderCount(items.length)}</div>
+            </div>
+          </div>
+          <p className="mt-4 text-sm text-gray-600">
+            {items.length > 0
+              ? t('Prioritize replenishment for medications below the safety threshold.')
+              : t('No items currently flagged as low stock.')}
+          </p>
+        </div>
+
+        <div className="flex flex-col justify-between rounded-2xl bg-white p-6 shadow-sm">
+          <div className="flex items-start gap-4">
+            <div className="rounded-xl bg-blue-100 p-3 text-blue-600">
+              <CheckIcon className="h-6 w-6" />
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-500">{t('Critical levels')}</div>
+              <div className="mt-2 text-4xl font-semibold text-gray-900">{renderCount(criticalCount)}</div>
+            </div>
+          </div>
+          <p className="mt-4 text-sm text-gray-600">
+            {criticalCount > 0
+              ? t('Escalate orders for medications nearing stock-out.')
+              : t('No medications near stock-out today.')}
+          </p>
+        </div>
+
+        <div className="flex flex-col rounded-2xl bg-white p-6 shadow-sm">
+          <div className="flex items-start gap-4">
+            <div className="rounded-xl bg-blue-100 p-3 text-blue-600">
+              <PharmacyIcon className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">{t('Inventory workspace')}</h2>
+              <p className="mt-1 text-sm text-gray-600">
+                {t('Adjust counts, receive stock, and audit recent updates.')}
+              </p>
+            </div>
+          </div>
+          <div className="mt-6">
+            <Link
+              to="/pharmacy/inventory"
+              className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-700"
+            >
+              {t('Open inventory tools')}
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">{t('Lowest stock medications')}</h2>
+            {loading && items.length > 0 ? (
+              <p className="text-xs font-medium text-gray-500">{t('Refreshing inventory...')}</p>
+            ) : null}
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={loadInventory}
+              className="text-xs font-semibold text-blue-600 hover:underline"
+            >
+              {t('Refresh list')}
+            </button>
+            <Link to="/pharmacy/inventory" className="text-xs font-semibold text-blue-600 hover:underline">
+              {t('Manage inventory')}
+            </Link>
+          </div>
+        </div>
+
+        {error ? (
+          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+        ) : loading && !items.length ? (
+          <p className="mt-4 text-sm text-gray-500">{t('Loading inventory...')}</p>
+        ) : items.length > 0 ? (
+          <ul className="mt-4 space-y-3">
+            {items.map((item) => {
+              const isOut = item.totalOnHand === 0;
+              const containerClass = isOut
+                ? 'border-red-200 bg-red-50'
+                : 'border-amber-200 bg-amber-50';
+              const valueClass = isOut ? 'text-red-700' : 'text-amber-700';
+
+              return (
+                <li
+                  key={item.drugId}
+                  className={`rounded-xl border px-4 py-4 ${containerClass}`}
+                >
+                  <div className="flex flex-wrap items-baseline justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">{item.name}</div>
+                      <div className="text-xs text-gray-600">{item.strength} • {item.form}</div>
+                      {item.genericName ? (
+                        <div className="text-xs text-gray-500">
+                          {t('Generic: {name}', { name: item.genericName })}
+                        </div>
+                      ) : null}
+                    </div>
+                    <div className={`text-right ${valueClass}`}>
+                      <div className="text-xl font-semibold">{item.totalOnHand.toLocaleString()}</div>
+                      <div className="text-xs font-medium">
+                        {isOut ? t('Out of stock') : t('Units on hand')}
+                      </div>
+                    </div>
+                  </div>
+                  {item.locations.length ? (
+                    <ul className="mt-3 space-y-1 text-xs text-gray-600">
+                      {item.locations.map((location) => (
+                        <li key={location.location} className="flex items-center justify-between">
+                          <span>{location.location}</span>
+                          <span className="font-semibold text-gray-700">
+                            {location.qtyOnHand.toLocaleString()}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-3 text-xs text-gray-500">{t('No active stock locations recorded.')}</p>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="mt-4 text-sm text-gray-600">{t('Inventory levels look healthy today.')}</p>
+        )}
+      </div>
+    </DashboardLayout>
+  );
 }
 
 function TeamDashboard({ role }: { role?: string }) {
