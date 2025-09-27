@@ -54,7 +54,7 @@ router.use(requireAuth);
 
 router.post(
   '/drugs',
-  requireRole('ITAdmin'),
+  requireRole('ITAdmin', 'InventoryManager'),
   validate({ body: CreateDrugSchema }),
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {

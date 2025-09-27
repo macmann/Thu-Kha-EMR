@@ -15,12 +15,14 @@ let patientId: string;
 let visitId: string;
 let doctorUserId: string;
 let pharmacistUserId: string;
+let inventoryManagerUserId: string;
 let primaryDrugId: string;
 let primaryStockId: string;
 let primaryInitialQty: number;
 let secondaryDrugId: string;
 let secondaryStockId: string;
 let secondaryInitialQty: number;
+let inventoryCreatedDrugId: string | null = null;
 
 beforeAll(async () => {
   const doctor = await prisma.doctor.create({ data: { name: 'Dr Pharma', department: 'Pharmacy' } });
@@ -56,6 +58,15 @@ beforeAll(async () => {
     },
   });
   pharmacistUserId = pharmacistUser.userId;
+
+  const inventoryManagerUser = await prisma.user.create({
+    data: {
+      email: 'inventory@example.com',
+      passwordHash: 'x',
+      role: 'InventoryManager',
+    },
+  });
+  inventoryManagerUserId = inventoryManagerUser.userId;
 
   const drug = await prisma.drug.create({
     data: {
@@ -111,10 +122,43 @@ afterAll(async () => {
   await prisma.patient.deleteMany({ where: { patientId } });
   await prisma.doctor.deleteMany({ where: { doctorId } });
   await prisma.user.deleteMany({ where: { userId: { in: [doctorUserId, pharmacistUserId] } } });
+  await prisma.user.deleteMany({ where: { userId: inventoryManagerUserId } });
+  if (inventoryCreatedDrugId) {
+    await prisma.drug.deleteMany({ where: { drugId: inventoryCreatedDrugId } });
+  }
   await prisma.$disconnect();
 });
 
 describe('Pharmacy MVP', () => {
+  it('allows inventory managers to create new drug records', async () => {
+    const inventoryAuth = makeAuthHeader(
+      inventoryManagerUserId,
+      'InventoryManager',
+      'inventory@example.com',
+    );
+
+    const createRes = await request(app)
+      .post('/api/drugs')
+      .set('Authorization', inventoryAuth)
+      .send({
+        name: 'Inventory Managed Drug',
+        genericName: 'inventory-drug',
+        form: 'tab',
+        strength: '25 mg',
+      });
+
+    expect(createRes.status).toBe(201);
+    expect(createRes.body).toEqual(
+      expect.objectContaining({
+        name: 'Inventory Managed Drug',
+        genericName: 'inventory-drug',
+        form: 'tab',
+        strength: '25 mg',
+      }),
+    );
+    inventoryCreatedDrugId = createRes.body.drugId as string;
+  });
+
   it('creates prescription and completes full dispense', async () => {
     const doctorAuth = makeAuthHeader(doctorUserId, 'Doctor', 'pharma-doctor@example.com');
     const pharmacistAuth = makeAuthHeader(pharmacistUserId, 'Pharmacist', 'rx@example.com');
