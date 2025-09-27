@@ -138,7 +138,7 @@ export default function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <aside className="hidden w-72 flex-col border-r border-gray-200 bg-white px-6 py-8 shadow-sm md:flex">
+      <aside className="hidden w-72 flex-col border-r border-gray-200 bg-white px-6 py-8 shadow-sm md:flex lg:w-80">
         <div className="text-lg font-semibold text-blue-600">{displayName}</div>
         <nav className="mt-8 space-y-1">
           <NavigationLinks />
@@ -162,7 +162,7 @@ export default function DashboardLayout({
             aria-label={t('Close navigation')}
             onClick={() => setIsMobileNavOpen(false)}
           />
-          <div className="relative ml-auto flex h-full w-72 max-w-full flex-col bg-white px-6 py-6 shadow-xl">
+          <div className="relative ml-auto flex h-full w-full max-w-xs flex-col bg-white px-6 py-6 shadow-xl">
             <div className="flex items-center justify-between gap-3">
               <span className="text-lg font-semibold text-blue-600">{displayName}</span>
               <button
@@ -198,8 +198,8 @@ export default function DashboardLayout({
       )}
 
       <div className="flex flex-1 flex-col">
-        <header className="border-b border-gray-200 bg-white">
-          <div className="flex flex-col gap-6 px-4 py-4 sm:px-6 sm:py-6">
+        <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+          <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center justify-between gap-3 md:justify-start">
                 <Link to="/" className="flex items-center gap-3 text-gray-900">
@@ -248,7 +248,9 @@ export default function DashboardLayout({
           </div>
         </header>
 
-        <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8">{children}</main>
+        <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+          <div className="mx-auto w-full max-w-7xl">{children}</div>
+        </main>
       </div>
     </div>
   );

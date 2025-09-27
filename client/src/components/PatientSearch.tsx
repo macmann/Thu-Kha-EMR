@@ -99,7 +99,7 @@ export default function PatientSearch() {
       activeItem="patients"
       headerChildren={headerContent}
     >
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[2fr_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
         <section className="rounded-2xl bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
