@@ -124,6 +124,47 @@ export async function adjustStock(adjustments: AdjustStockInput) {
   );
 }
 
+export async function listLowStockInventory(limit = 5, threshold = 10) {
+  const drugs = await prisma.drug.findMany({
+    where: { isActive: true },
+    include: {
+      stocks: {
+        select: { location: true, qtyOnHand: true },
+      },
+    },
+  });
+
+  const summaries = drugs
+    .map((drug) => {
+      const totalsByLocation = new Map<string, number>();
+      for (const stock of drug.stocks) {
+        const current = totalsByLocation.get(stock.location) ?? 0;
+        totalsByLocation.set(stock.location, current + stock.qtyOnHand);
+      }
+
+      const locations = Array.from(totalsByLocation.entries())
+        .map(([location, qtyOnHand]) => ({ location, qtyOnHand }))
+        .sort((a, b) => a.qtyOnHand - b.qtyOnHand);
+
+      const totalOnHand = locations.reduce((sum, entry) => sum + entry.qtyOnHand, 0);
+
+      return {
+        drugId: drug.drugId,
+        name: drug.name,
+        genericName: drug.genericName ?? null,
+        strength: drug.strength,
+        form: drug.form,
+        totalOnHand,
+        locations,
+      };
+    })
+    .filter((item) => item.totalOnHand <= threshold)
+    .sort((a, b) => a.totalOnHand - b.totalOnHand)
+    .slice(0, limit);
+
+  return summaries;
+}
+
 export async function getPharmacyQueue(
   status: PrescriptionStatus[] = [PrescriptionStatus.PENDING],
 ) {

@@ -18,6 +18,7 @@ import {
   completeDispense,
   createPrescription,
   getPharmacyQueue,
+  listLowStockInventory,
   listStockItems,
   receiveStock,
   startDispense,
@@ -48,6 +49,11 @@ const SearchInventorySchema = z.object({
 
 const ListStockSchema = z.object({
   drugId: z.string().uuid(),
+});
+
+const LowStockQuerySchema = z.object({
+  limit: z.coerce.number().int().positive().max(50).optional(),
+  threshold: z.coerce.number().int().nonnegative().optional(),
 });
 
 router.use(requireAuth);
@@ -162,6 +168,25 @@ router.get(
         qtyOnHand: drug.stocks.reduce((total, stock) => total + stock.qtyOnHand, 0),
       }));
 
+      res.json({ data });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+router.get(
+  '/inventory/low-stock',
+  requireRole('InventoryManager', 'ITAdmin', 'Pharmacist'),
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const parsed = LowStockQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.flatten() });
+      }
+
+      const { limit = 5, threshold = 10 } = parsed.data;
+      const data = await listLowStockInventory(limit, threshold);
       res.json({ data });
     } catch (error) {
       next(error);
