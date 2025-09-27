@@ -154,7 +154,10 @@ export default function PharmacyInventory() {
       payload.batchNo = receiveForm.batchNo.trim();
     }
     if (receiveForm.expiryDate) {
-      payload.expiryDate = receiveForm.expiryDate;
+      const expiry = new Date(`${receiveForm.expiryDate}T00:00:00Z`);
+      if (!Number.isNaN(expiry.getTime())) {
+        payload.expiryDate = expiry.toISOString();
+      }
     }
     if (receiveForm.unitCost) {
       const cost = Number.parseFloat(receiveForm.unitCost);
