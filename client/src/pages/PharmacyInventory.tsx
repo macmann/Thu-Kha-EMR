@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import {
   AdjustStockItemPayload,
@@ -267,15 +268,23 @@ export default function PharmacyInventory() {
                 Search for a drug to receive new stock or adjust current quantities.
               </p>
             </div>
-            {selectedDrug ? (
-              <button
-                type="button"
-                onClick={resetSelection}
-                className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100"
+            <div className="flex flex-wrap items-center gap-3">
+              <Link
+                to="/pharmacy/drugs/new"
+                className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
               >
-                Clear selection
-              </button>
-            ) : null}
+                Add new medication
+              </Link>
+              {selectedDrug ? (
+                <button
+                  type="button"
+                  onClick={resetSelection}
+                  className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100"
+                >
+                  Clear selection
+                </button>
+              ) : null}
+            </div>
           </header>
 
           <div className="relative mt-6 max-w-xl">

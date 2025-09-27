@@ -16,6 +16,7 @@ import Reports from './pages/Reports';
 import PharmacyQueue from './pages/PharmacyQueue';
 import DispenseDetail from './pages/DispenseDetail';
 import PharmacyInventory from './pages/PharmacyInventory';
+import AddDrug from './pages/AddDrug';
 import './styles/App.css';
 
 function App() {
@@ -123,6 +124,14 @@ function App() {
         element={
           <RouteGuard allowedRoles={['InventoryManager', 'ITAdmin']}>
             <PharmacyInventory />
+          </RouteGuard>
+        }
+      />
+      <Route
+        path="/pharmacy/drugs/new"
+        element={
+          <RouteGuard allowedRoles={['InventoryManager', 'ITAdmin']}>
+            <AddDrug />
           </RouteGuard>
         }
       />
