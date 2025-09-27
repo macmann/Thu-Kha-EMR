@@ -47,7 +47,7 @@ export default function DispenseDetail() {
       setError(null);
 
       try {
-        const listResponse = await fetchJSON('/prescriptions?status=PENDING,PARTIAL');
+        const listResponse = await fetchJSON('/pharmacy/prescriptions?status=PENDING,PARTIAL');
         const items = (listResponse as { data?: PrescriptionDetail[] }).data ?? [];
         const found = items.find((item) => item.prescriptionId === prescriptionId);
         if (!found) {
@@ -59,7 +59,7 @@ export default function DispenseDetail() {
           setPrescription(found);
         }
 
-        const dispenseResponse = await fetchJSON(`/prescriptions/${prescriptionId}/dispenses`, {
+        const dispenseResponse = await fetchJSON(`/pharmacy/prescriptions/${prescriptionId}/dispenses`, {
           method: 'POST',
         });
         if (!cancelled) {
@@ -85,7 +85,7 @@ export default function DispenseDetail() {
   async function handleAllocate(item: PrescriptionItem) {
     if (!dispense) return;
     try {
-      await fetchJSON(`/dispenses/${dispense.dispenseId}/items`, {
+      await fetchJSON(`/pharmacy/dispenses/${dispense.dispenseId}/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -104,7 +104,7 @@ export default function DispenseDetail() {
   async function handleComplete(nextStatus: 'COMPLETED' | 'PARTIAL') {
     if (!dispense) return;
     try {
-      await fetchJSON(`/dispenses/${dispense.dispenseId}/complete`, {
+      await fetchJSON(`/pharmacy/dispenses/${dispense.dispenseId}/complete`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: nextStatus }),
