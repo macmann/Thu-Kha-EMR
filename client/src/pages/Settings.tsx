@@ -404,7 +404,7 @@ export default function Settings() {
       headerChildren={headerStatus}
     >
       <div className="space-y-6">
-        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           <div className="flex flex-col rounded-2xl bg-white p-5 shadow-sm">
             <div className="flex items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
@@ -484,7 +484,7 @@ export default function Settings() {
           </div>
         </section>
 
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[2fr_1.1fr]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1.1fr]">
           <section className="space-y-6">
             <div className="rounded-2xl bg-white p-6 shadow-sm">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">

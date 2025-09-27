@@ -61,7 +61,7 @@ export default function RegisterPatient() {
       activeItem="patients"
       headerChildren={headerActions}
     >
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[3fr_2fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[3fr_2fr]">
         <form onSubmit={handleSubmit} className="space-y-6">
           <section className="rounded-2xl bg-white p-6 shadow-sm">
             <div className="flex items-start justify-between gap-4">

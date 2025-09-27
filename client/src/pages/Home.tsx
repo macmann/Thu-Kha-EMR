@@ -191,7 +191,7 @@ function ITAdminDashboard() {
       activeItem="dashboard"
     >
       <div className="space-y-6">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           <StatsCard
             title={t('Staff Accounts')}
             value={userStats.total}
@@ -223,7 +223,7 @@ function ITAdminDashboard() {
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
           <div className="rounded-2xl bg-white p-6 shadow-sm xl:col-span-2">
             <div className="flex items-center justify-between">
               <div>
@@ -560,7 +560,7 @@ function TeamDashboard({ role }: { role?: string }) {
       }
       headerChildren={headerSearch}
     >
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         <div className="flex flex-col rounded-2xl bg-white p-6 shadow-sm">
           <div className="flex items-start gap-4">
             <div className="rounded-xl bg-blue-100 p-3 text-blue-600">

@@ -683,7 +683,7 @@ export default function AppointmentDetail() {
           {error}
         </div>
       ) : appointment ? (
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[3fr_2fr]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[3fr_2fr]">
           <div className="space-y-6">
             <section className="rounded-2xl bg-white p-6 shadow-sm">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">

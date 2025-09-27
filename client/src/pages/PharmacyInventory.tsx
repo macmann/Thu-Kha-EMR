@@ -452,7 +452,7 @@ export default function PharmacyInventory() {
                 </div>
               ) : (
                 <form className="mt-4 space-y-4" onSubmit={handleAdjust}>
-                  <div className="overflow-hidden rounded-xl border border-gray-200">
+                  <div className="overflow-x-auto rounded-xl border border-gray-200">
                     <table className="min-w-full divide-y divide-gray-200 text-sm">
                       <thead className="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                         <tr>
