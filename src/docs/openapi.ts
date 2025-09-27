@@ -557,6 +557,12 @@ addPath('/auth/login', 'post', {
   }
 });
 
+addPath('/auth/password/change', 'post', {
+  summary: 'Change password',
+  security: [],
+  responses: { '200': { description: 'OK' } }
+});
+
 addPath('/auth/token/refresh', 'post', {
   summary: 'Refresh access token',
   security: [],

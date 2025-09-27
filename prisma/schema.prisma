@@ -198,8 +198,23 @@ model User {
   doctor   Doctor?  @relation(fields: [doctorId], references: [doctorId])
   sessions Session[]
   dispenses Dispense[]
+  passwordResetTokens PasswordResetToken[]
 
   @@unique([doctorId])
+}
+
+model PasswordResetToken {
+  tokenId    String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  tokenHash  String
+  expiresAt  DateTime @db.Timestamptz(6)
+  usedAt     DateTime? @db.Timestamptz(6)
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Session {
