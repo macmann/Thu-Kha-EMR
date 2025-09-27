@@ -102,7 +102,8 @@ const openapi: any = {
           dob: { type: 'string', format: 'date' },
           gender: { type: 'string', enum: ['M', 'F'] },
           contact: { type: 'string', nullable: true },
-          insurance: { type: 'string', nullable: true }
+          insurance: { type: 'string', nullable: true },
+          drugAllergies: { type: 'string', nullable: true }
         }
       },
       Doctor: {
@@ -660,6 +661,7 @@ addPath('/patients', 'post', {
             name: { type: 'string' },
             dob: { type: 'string', format: 'date' },
             insurance: { type: 'string' },
+            drugAllergies: { type: 'string' }
           },
         },
       },

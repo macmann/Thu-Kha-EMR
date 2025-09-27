@@ -53,6 +53,7 @@ const createPatientSchema = z.object({
   name: z.string().min(1),
   dob: z.coerce.date(),
   insurance: z.string().min(1),
+  drugAllergies: z.string().min(1).optional(),
 });
 
 router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
@@ -60,9 +61,10 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.flatten() });
   }
+  const { drugAllergies, ...patientData } = parsed.data;
   const patient = await prisma.patient.create({
-    data: { ...parsed.data, gender: 'M' },
-    select: { patientId: true, name: true, dob: true, insurance: true },
+    data: { ...patientData, gender: 'M', drugAllergies: drugAllergies ?? null },
+    select: { patientId: true, name: true, dob: true, insurance: true, drugAllergies: true },
   });
   await logDataChange(req.user!.userId, 'patient', patient.patientId, undefined, patient);
   res.status(201).json(patient);
@@ -78,6 +80,7 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
     gender: true,
     contact: true,
     insurance: true,
+    drugAllergies: true,
   };
   if (include) {
     select.visits = {
