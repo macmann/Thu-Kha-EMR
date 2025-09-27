@@ -1,5 +1,6 @@
 import { PrismaClient, PrescriptionStatus, type DispenseStatus } from '@prisma/client';
 import type {
+  AdjustStockInput,
   CreateRxInput,
   DispenseItemInput,
   ReceiveStockInput,
@@ -85,11 +86,10 @@ export async function createPrescription(
 }
 
 export async function receiveStock(items: ReceiveStockInput) {
-  return prisma.$transaction(async (tx) => {
-    const created = [] as Array<{ stockItemId: string }>;
-    for (const item of items) {
-      created.push(
-        await tx.stockItem.create({
+  return prisma.$transaction((tx) =>
+    Promise.all(
+      items.map((item) =>
+        tx.stockItem.create({
           data: {
             drugId: item.drugId,
             batchNo: item.batchNo ?? null,
@@ -99,10 +99,29 @@ export async function receiveStock(items: ReceiveStockInput) {
             unitCost: item.unitCost ?? null,
           },
         }),
-      );
-    }
-    return created;
+      ),
+    ),
+  );
+}
+
+export async function listStockItems(drugId: string) {
+  return prisma.stockItem.findMany({
+    where: { drugId },
+    orderBy: [{ expiryDate: 'asc' }, { createdAt: 'asc' }],
   });
+}
+
+export async function adjustStock(adjustments: AdjustStockInput) {
+  return prisma.$transaction((tx) =>
+    Promise.all(
+      adjustments.map((adjustment) =>
+        tx.stockItem.update({
+          where: { stockItemId: adjustment.stockItemId },
+          data: { qtyOnHand: adjustment.qtyOnHand },
+        }),
+      ),
+    ),
+  );
 }
 
 export async function getPharmacyQueue(

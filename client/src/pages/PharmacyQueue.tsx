@@ -33,6 +33,7 @@ export default function PharmacyQueue() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const canDispense = user ? ['Pharmacist', 'PharmacyTech'].includes(user.role) : false;
+  const canManageInventory = user ? ['InventoryManager', 'ITAdmin'].includes(user.role) : false;
 
   useEffect(() => {
     let cancelled = false;
@@ -76,17 +77,27 @@ export default function PharmacyQueue() {
             <h1 className="text-xl font-semibold text-gray-900">Dispensing Queue</h1>
             <p className="text-sm text-gray-600">Monitor incoming e-prescriptions and jump into dispensing.</p>
           </div>
-          <select
-            value={status}
-            onChange={(event) => setStatus(event.target.value as StatusOption)}
-            className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          >
-            {STATUS_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
+          <div className="flex flex-wrap items-center gap-3">
+            {canManageInventory ? (
+              <Link
+                to="/pharmacy/inventory"
+                className="rounded-full border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-600 transition hover:bg-blue-50"
+              >
+                Manage inventory
+              </Link>
+            ) : null}
+            <select
+              value={status}
+              onChange={(event) => setStatus(event.target.value as StatusOption)}
+              className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              {STATUS_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {loading ? (
