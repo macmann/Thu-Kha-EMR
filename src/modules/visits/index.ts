@@ -1,8 +1,11 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { requireAuth, requireRole, type AuthRequest } from '../auth/index.js';
 import { logDataChange } from '../audit/index.js';
+import { validate } from '../../middleware/validate.js';
+import { CreateRxSchema, type CreateRxInput } from '../../validation/pharmacy.js';
+import { createPrescription } from '../../services/pharmacyService.js';
 
 const prisma = new PrismaClient();
 const router = Router();
@@ -133,5 +136,43 @@ router.get('/visits/:id', requireAuth, async (req: Request, res: Response) => {
   if (!visit) return res.sendStatus(404);
   res.json(visit);
 });
+
+router.post(
+  '/visits/:visitId/prescriptions',
+  requireAuth,
+  requireRole('Doctor', 'Pharmacist'),
+  validate({ body: CreateRxSchema }),
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const visitId = req.params.visitId;
+      const payload = req.body as CreateRxInput;
+
+      const visit = await prisma.visit.findUnique({
+        where: { visitId },
+        select: { visitId: true, patientId: true, doctorId: true },
+      });
+
+      if (!visit) {
+        return res.status(404).json({ error: 'Visit not found' });
+      }
+
+      if (req.user?.doctorId && req.user.doctorId !== visit.doctorId) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
+      const patientId = payload.patientId ?? visit.patientId;
+      const { prescription, allergyHits } = await createPrescription(
+        visitId,
+        visit.doctorId,
+        patientId,
+        payload,
+      );
+
+      res.status(201).json({ prescription, allergyHits });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 export default router;
