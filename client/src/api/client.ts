@@ -104,6 +104,37 @@ export interface AdjustStockItemPayload {
   reason?: string;
 }
 
+export interface InvoiceScanLineItem {
+  brandName?: string | null;
+  genericName?: string | null;
+  form?: string | null;
+  strength?: string | null;
+  packageDescription?: string | null;
+  quantity?: number | null;
+  unitCost?: number | null;
+  batchNumber?: string | null;
+  expiryDate?: string | null;
+  notes?: string | null;
+  suggestedLocation?: string | null;
+}
+
+export interface InvoiceScanMetadata {
+  vendor?: string | null;
+  invoiceNumber?: string | null;
+  invoiceDate?: string | null;
+  currency?: string | null;
+  subtotal?: number | null;
+  total?: number | null;
+  destination?: string | null;
+}
+
+export interface InvoiceScanResult {
+  metadata: InvoiceScanMetadata;
+  lineItems: InvoiceScanLineItem[];
+  warnings: string[];
+  rawText?: string | null;
+}
+
 export interface LabResult {
   testName: string;
   resultValue: number | null;
@@ -313,6 +344,20 @@ export async function adjustStockLevels(adjustments: AdjustStockItemPayload[]) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ adjustments }),
   });
+}
+
+export async function scanInvoiceForInventory(file: File): Promise<InvoiceScanResult> {
+  const formData = new FormData();
+  formData.append('invoice', file);
+  const response = await fetchJSON('/pharmacy/inventory/invoice/scan', {
+    method: 'POST',
+    body: formData,
+  });
+  return ((response as { data?: InvoiceScanResult }).data) ?? {
+    metadata: {},
+    lineItems: [],
+    warnings: ['Invoice scan returned no results.'],
+  };
 }
 
 export interface CreateVisitPayload {

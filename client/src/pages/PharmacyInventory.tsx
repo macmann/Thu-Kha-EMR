@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import {
@@ -6,10 +6,13 @@ import {
   InventoryDrug,
   ReceiveStockItemPayload,
   StockItem,
+  InvoiceScanResult,
+  InvoiceScanLineItem,
   adjustStockLevels,
   listStockItems,
   receiveStockItems,
   searchInventoryDrugs,
+  scanInvoiceForInventory,
 } from '../api/client';
 
 interface ReceiveFormState {
@@ -44,6 +47,10 @@ export default function PharmacyInventory() {
   const [receiveForm, setReceiveForm] = useState<ReceiveFormState>(EMPTY_RECEIVE_FORM);
   const [receiveStatus, setReceiveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [receiveError, setReceiveError] = useState<string | null>(null);
+  const [invoiceResult, setInvoiceResult] = useState<InvoiceScanResult | null>(null);
+  const [scanStatus, setScanStatus] = useState<'idle' | 'scanning' | 'success' | 'error'>('idle');
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [scanNotice, setScanNotice] = useState<string | null>(null);
 
   const [stockItems, setStockItems] = useState<StockItem[]>([]);
   const [stockLoading, setStockLoading] = useState(false);
@@ -173,6 +180,7 @@ export default function PharmacyInventory() {
       await receiveStockItems([payload]);
       setReceiveStatus('success');
       setReceiveForm(EMPTY_RECEIVE_FORM);
+      setScanNotice('Select another line item or upload a new invoice to continue.');
       // refresh stock list
       const data = await listStockItems(drugId);
       setStockItems(data);
@@ -239,6 +247,90 @@ export default function PharmacyInventory() {
     } catch (error) {
       setAdjustStatus('error');
       setAdjustError(error instanceof Error ? error.message : 'Unable to adjust stock');
+    }
+  }
+
+  async function handleInvoiceUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setScanStatus('scanning');
+    setScanError(null);
+    setScanNotice(null);
+    try {
+      const result = await scanInvoiceForInventory(file);
+      setInvoiceResult(result);
+      setScanStatus('success');
+      if (result.metadata?.destination) {
+        setReceiveForm((prev) => ({
+          ...prev,
+          location: prev.location || result.metadata?.destination || '',
+        }));
+      }
+      if (result.lineItems.length) {
+        setScanNotice('Select an invoice line to apply its details to the stock form.');
+      } else {
+        setScanNotice('No medication lines were detected. Enter the stock details manually.');
+      }
+    } catch (error) {
+      setInvoiceResult(null);
+      setScanStatus('error');
+      setScanError(error instanceof Error ? error.message : 'Unable to scan the invoice. Try again.');
+    } finally {
+      event.target.value = '';
+    }
+  }
+
+  function applyInvoiceLine(line: InvoiceScanLineItem) {
+    let appliedForm: ReceiveFormState | null = null;
+    setReceiveForm((prev) => {
+      const updated: ReceiveFormState = {
+        ...prev,
+        qtyOnHand: line.quantity != null ? String(line.quantity) : prev.qtyOnHand,
+        unitCost: line.unitCost != null ? String(line.unitCost) : prev.unitCost,
+        batchNo: line.batchNumber ?? prev.batchNo,
+        expiryDate: line.expiryDate ?? prev.expiryDate,
+        location: line.suggestedLocation ?? prev.location,
+      };
+      appliedForm = updated;
+      return updated;
+    });
+
+    if (!selectedDrug) {
+      const searchCandidate = [line.brandName, line.genericName].filter(Boolean).join(' ');
+      if (searchCandidate) {
+        setSearchTerm(searchCandidate);
+      }
+    }
+
+    const resolved = appliedForm ?? receiveForm;
+    const missing: string[] = [];
+    if (!selectedDrug) {
+      missing.push('select a medication');
+    }
+    if (!resolved.qtyOnHand.trim()) {
+      missing.push('quantity');
+    }
+    if (!resolved.location.trim()) {
+      missing.push('location');
+    }
+
+    setScanNotice(
+      missing.length
+        ? `Complete the following before recording stock: ${missing.join(', ')}.`
+        : 'Verify the prefilled details and record the stock.',
+    );
+  }
+
+  const invoiceLines = invoiceResult?.lineItems ?? [];
+  const invoiceMetadata = invoiceResult?.metadata;
+  const scanWarnings = invoiceResult?.warnings ?? [];
+
+  function formatCurrency(amount: number) {
+    const currency = invoiceMetadata?.currency ?? 'USD';
+    try {
+      return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(amount);
+    } catch {
+      return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(amount);
     }
   }
 
@@ -334,6 +426,123 @@ export default function PharmacyInventory() {
               <p className="mt-1 text-sm text-gray-600">
                 Capture new inventory lots as they arrive in the pharmacy.
               </p>
+
+              <div className="mt-4 rounded-2xl border border-dashed border-blue-200 bg-blue-50/40 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-blue-900">Scan invoice for stock</h3>
+                    <p className="mt-1 text-xs text-blue-900/80">
+                      Upload an invoice to prefill quantities, batch numbers, and pricing automatically.
+                    </p>
+                  </div>
+                  <label className="inline-flex cursor-pointer items-center justify-center rounded-full border border-blue-500 bg-white px-4 py-2 text-xs font-semibold text-blue-700 shadow-sm transition hover:bg-blue-50">
+                    <input
+                      type="file"
+                      accept="image/*,application/pdf"
+                      className="sr-only"
+                      onChange={handleInvoiceUpload}
+                    />
+                    {scanStatus === 'scanning' ? 'Scanning…' : 'Upload invoice'}
+                  </label>
+                </div>
+
+                {scanStatus === 'scanning' ? (
+                  <p className="mt-3 text-xs font-medium text-blue-900">Scanning invoice with AI…</p>
+                ) : null}
+                {scanError ? (
+                  <div className="mt-3 rounded-xl border border-red-200 bg-white px-3 py-2 text-xs text-red-600 shadow-sm">
+                    {scanError}
+                  </div>
+                ) : null}
+
+                {invoiceResult ? (
+                  <div className="mt-4 space-y-3">
+                    {invoiceMetadata &&
+                    (invoiceMetadata.vendor || invoiceMetadata.invoiceNumber || invoiceMetadata.invoiceDate) ? (
+                      <div className="rounded-xl border border-blue-100 bg-white px-3 py-2 text-xs text-blue-900 shadow-sm">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {invoiceMetadata.vendor ? <span className="font-semibold">{invoiceMetadata.vendor}</span> : null}
+                          {invoiceMetadata.invoiceNumber ? (
+                            <span className="text-blue-900/70">Invoice #{invoiceMetadata.invoiceNumber}</span>
+                          ) : null}
+                          {invoiceMetadata.invoiceDate ? (
+                            <span className="text-blue-900/70">Dated {invoiceMetadata.invoiceDate}</span>
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {scanWarnings.length ? (
+                      <div className="rounded-xl border border-yellow-200 bg-yellow-50 px-3 py-2 text-xs text-yellow-800 shadow-sm">
+                        <p className="font-semibold">Review required</p>
+                        <ul className="mt-1 list-disc space-y-1 pl-4">
+                          {scanWarnings.map((warning, index) => (
+                            <li key={index}>{warning}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+
+                    {invoiceLines.length ? (
+                      <div className="space-y-2">
+                        {invoiceLines.map((line, index) => {
+                          const label = line.brandName || line.genericName || `Line ${index + 1}`;
+                          const secondary = [line.strength, line.form].filter(Boolean).join(' • ');
+                          const details = [
+                            line.packageDescription,
+                            line.quantity != null ? `${line.quantity} units` : null,
+                            line.unitCost != null
+                              ? `Unit cost ${formatCurrency(line.unitCost)}`
+                              : null,
+                          ].filter(Boolean);
+                          return (
+                            <div
+                              key={`${label}-${index}`}
+                              className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-blue-100 bg-white px-4 py-3 text-left shadow-sm"
+                            >
+                              <div>
+                                <p className="text-sm font-semibold text-gray-900">{label}</p>
+                                {secondary ? <p className="text-xs text-gray-600">{secondary}</p> : null}
+                                {details.length ? <p className="mt-1 text-xs text-gray-500">{details.join(' • ')}</p> : null}
+                                {line.batchNumber || line.expiryDate ? (
+                                  <p className="mt-1 text-xs text-gray-500">
+                                    {[
+                                      line.batchNumber ? `Batch ${line.batchNumber}` : null,
+                                      line.expiryDate ? `Expiry ${line.expiryDate}` : null,
+                                    ]
+                                      .filter(Boolean)
+                                      .join(' • ')}
+                                  </p>
+                                ) : null}
+                                {line.suggestedLocation ? (
+                                  <p className="mt-1 text-xs text-gray-500">Suggested location: {line.suggestedLocation}</p>
+                                ) : null}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => applyInvoiceLine(line)}
+                                className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700"
+                              >
+                                Use details
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : scanStatus === 'success' ? (
+                      <p className="text-xs text-blue-900/80">
+                        No medication lines were detected. Enter the stock details manually.
+                      </p>
+                    ) : null}
+
+                    {scanNotice ? (
+                      <div className="rounded-xl border border-blue-200 bg-white px-3 py-2 text-xs text-blue-900 shadow-sm">
+                        {scanNotice}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
 
               <form className="mt-4 space-y-4" onSubmit={handleReceive}>
                 <div>

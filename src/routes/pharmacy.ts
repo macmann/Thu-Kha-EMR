@@ -1,4 +1,5 @@
 import { Router, type NextFunction, type Response } from 'express';
+import multer from 'multer';
 import { PrismaClient, PrescriptionStatus, type Prisma } from '@prisma/client';
 import { z } from 'zod';
 
@@ -23,9 +24,14 @@ import {
   receiveStock,
   startDispense,
 } from '../services/pharmacyService.js';
+import { InvoiceScanError, scanInvoice as analyzeInvoice } from '../services/invoiceScanner.js';
 
 const prisma = new PrismaClient();
 const router = Router();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 6 * 1024 * 1024 },
+});
 
 const CreateDrugSchema = z.object({
   drugId: z.string().uuid().optional(),
@@ -83,6 +89,29 @@ router.post(
       const created = await receiveStock(payload.items);
       res.status(201).json({ items: created });
     } catch (error) {
+      next(error);
+    }
+  },
+);
+
+router.post(
+  '/inventory/invoice/scan',
+  requireRole('ITAdmin', 'InventoryManager', 'Pharmacist', 'PharmacyTech'),
+  upload.single('invoice'),
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ error: 'Invoice file is required.' });
+      }
+      const result = await analyzeInvoice(file.buffer, file.mimetype);
+      res.json({ data: result });
+    } catch (error) {
+      if (error instanceof InvoiceScanError) {
+        return res
+          .status(error.statusCode ?? 502)
+          .json({ error: error.message, details: error.details ?? null });
+      }
       next(error);
     }
   },
