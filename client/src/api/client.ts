@@ -57,6 +57,25 @@ export interface InventoryDrug {
   qtyOnHand: number;
 }
 
+export interface Drug {
+  drugId: string;
+  name: string;
+  genericName?: string | null;
+  strength: string;
+  form: string;
+  routeDefault?: string | null;
+  isActive: boolean;
+}
+
+export interface CreateDrugPayload {
+  name: string;
+  genericName?: string;
+  strength: string;
+  form: string;
+  routeDefault?: string;
+  isActive?: boolean;
+}
+
 export interface StockItem {
   stockItemId: string;
   drugId: string;
@@ -262,6 +281,14 @@ export async function searchInventoryDrugs(
   }
   const response = await fetchJSON(`/pharmacy/inventory/search?${params.toString()}`);
   return ((response as { data?: InventoryDrug[] }).data) ?? [];
+}
+
+export async function createDrug(payload: CreateDrugPayload): Promise<Drug> {
+  return fetchJSON('/pharmacy/drugs', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function receiveStockItems(items: ReceiveStockItemPayload[]) {
