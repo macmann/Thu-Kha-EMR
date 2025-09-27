@@ -57,6 +57,33 @@ export interface InventoryDrug {
   qtyOnHand: number;
 }
 
+export interface StockItem {
+  stockItemId: string;
+  drugId: string;
+  batchNo?: string | null;
+  expiryDate?: string | null;
+  location: string;
+  qtyOnHand: number;
+  unitCost?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReceiveStockItemPayload {
+  drugId: string;
+  batchNo?: string;
+  expiryDate?: string;
+  location: string;
+  qtyOnHand: number;
+  unitCost?: number;
+}
+
+export interface AdjustStockItemPayload {
+  stockItemId: string;
+  qtyOnHand: number;
+  reason?: string;
+}
+
 export interface LabResult {
   testName: string;
   resultValue: number | null;
@@ -219,15 +246,44 @@ export async function getVisit(id: string): Promise<VisitDetail> {
   return fetchJSON(`/visits/${id}`);
 }
 
-export async function searchInventoryDrugs(query: string, limit = 10): Promise<InventoryDrug[]> {
+export async function searchInventoryDrugs(
+  query: string,
+  limit = 10,
+  options?: { includeAll?: boolean },
+): Promise<InventoryDrug[]> {
   const trimmed = query.trim();
   if (!trimmed) return [];
   const params = new URLSearchParams({ q: trimmed });
   if (limit) {
     params.set('limit', String(limit));
   }
+  if (options?.includeAll) {
+    params.set('includeAll', 'true');
+  }
   const response = await fetchJSON(`/pharmacy/inventory/search?${params.toString()}`);
   return ((response as { data?: InventoryDrug[] }).data) ?? [];
+}
+
+export async function receiveStockItems(items: ReceiveStockItemPayload[]) {
+  return fetchJSON('/pharmacy/inventory/receive', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items }),
+  });
+}
+
+export async function listStockItems(drugId: string): Promise<StockItem[]> {
+  const params = new URLSearchParams({ drugId });
+  const response = await fetchJSON(`/pharmacy/inventory/stock?${params.toString()}`);
+  return ((response as { data?: StockItem[] }).data) ?? [];
+}
+
+export async function adjustStockLevels(adjustments: AdjustStockItemPayload[]) {
+  return fetchJSON('/pharmacy/inventory/adjust', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ adjustments }),
+  });
 }
 
 export interface CreateVisitPayload {

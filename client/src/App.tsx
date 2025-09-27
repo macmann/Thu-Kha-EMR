@@ -15,6 +15,7 @@ import AppointmentDetail from './pages/AppointmentDetail';
 import Reports from './pages/Reports';
 import PharmacyQueue from './pages/PharmacyQueue';
 import DispenseDetail from './pages/DispenseDetail';
+import PharmacyInventory from './pages/PharmacyInventory';
 import './styles/App.css';
 
 function App() {
@@ -114,6 +115,14 @@ function App() {
         element={
           <RouteGuard allowedRoles={['Pharmacist', 'PharmacyTech', 'InventoryManager', 'ITAdmin']}>
             <PharmacyQueue />
+          </RouteGuard>
+        }
+      />
+      <Route
+        path="/pharmacy/inventory"
+        element={
+          <RouteGuard allowedRoles={['InventoryManager', 'ITAdmin']}>
+            <PharmacyInventory />
           </RouteGuard>
         }
       />

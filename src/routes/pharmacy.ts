@@ -1,10 +1,11 @@
 import { Router, type NextFunction, type Response } from 'express';
-import { PrismaClient, PrescriptionStatus } from '@prisma/client';
+import { PrismaClient, PrescriptionStatus, type Prisma } from '@prisma/client';
 import { z } from 'zod';
 
 import { requireAuth, requireRole, type AuthRequest } from '../modules/auth/index.js';
 import { validate } from '../middleware/validate.js';
 import {
+  AdjustStockSchema,
   CreateRxSchema,
   DispenseItemSchema,
   ReceiveStockSchema,
@@ -13,9 +14,11 @@ import {
 } from '../validation/pharmacy.js';
 import {
   addDispenseItem,
+  adjustStock,
   completeDispense,
   createPrescription,
   getPharmacyQueue,
+  listStockItems,
   receiveStock,
   startDispense,
 } from '../services/pharmacyService.js';
@@ -40,6 +43,11 @@ const CompleteDispenseSchema = z.object({
 const SearchInventorySchema = z.object({
   q: z.string().trim().min(1),
   limit: z.coerce.number().int().positive().max(50).optional(),
+  includeAll: z.coerce.boolean().optional(),
+});
+
+const ListStockSchema = z.object({
+  drugId: z.string().uuid(),
 });
 
 router.use(requireAuth);
@@ -75,6 +83,39 @@ router.post(
 );
 
 router.get(
+  '/inventory/stock',
+  requireRole('Pharmacist', 'PharmacyTech', 'InventoryManager', 'ITAdmin'),
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const parsed = ListStockSchema.safeParse(req.query);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.flatten() });
+      }
+
+      const items = await listStockItems(parsed.data.drugId);
+      res.json({ data: items });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+router.post(
+  '/inventory/adjust',
+  requireRole('ITAdmin', 'InventoryManager'),
+  validate({ body: AdjustStockSchema }),
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const payload = req.body as z.infer<typeof AdjustStockSchema>;
+      const updated = await adjustStock(payload.adjustments);
+      res.status(200).json({ items: updated });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+router.get(
   '/inventory/search',
   requireRole('Pharmacist', 'PharmacyTech', 'InventoryManager', 'ITAdmin'),
   async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -84,21 +125,26 @@ router.get(
         return res.status(400).json({ error: parsed.error.flatten() });
       }
 
-      const { q, limit = 10 } = parsed.data;
+      const { q, limit = 10, includeAll = false } = parsed.data;
+
+      const where: Prisma.DrugWhereInput = {
+        isActive: true,
+        OR: [
+          { name: { contains: q, mode: 'insensitive' } },
+          { genericName: { contains: q, mode: 'insensitive' } },
+          { strength: { contains: q, mode: 'insensitive' } },
+        ],
+      };
+
+      if (!includeAll) {
+        where.stocks = { some: { qtyOnHand: { gt: 0 } } };
+      }
 
       const drugs = await prisma.drug.findMany({
-        where: {
-          isActive: true,
-          stocks: { some: { qtyOnHand: { gt: 0 } } },
-          OR: [
-            { name: { contains: q, mode: 'insensitive' } },
-            { genericName: { contains: q, mode: 'insensitive' } },
-            { strength: { contains: q, mode: 'insensitive' } },
-          ],
-        },
+        where,
         include: {
           stocks: {
-            where: { qtyOnHand: { gt: 0 } },
+            ...(includeAll ? {} : { where: { qtyOnHand: { gt: 0 } } }),
             select: { qtyOnHand: true },
           },
         },

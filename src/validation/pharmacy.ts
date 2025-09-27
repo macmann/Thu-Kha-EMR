@@ -33,6 +33,18 @@ export const ReceiveStockSchema = z.object({
     .min(1),
 });
 
+export const AdjustStockSchema = z.object({
+  adjustments: z
+    .array(
+      z.object({
+        stockItemId: z.string().uuid(),
+        qtyOnHand: z.number().int().nonnegative(),
+        reason: z.string().min(3).max(200).optional(),
+      }),
+    )
+    .min(1),
+});
+
 export const DispenseItemSchema = z.object({
   prescriptionItemId: z.string().uuid(),
   stockItemId: z.string().uuid().nullable().optional(),
@@ -44,4 +56,5 @@ export const DispenseItemSchema = z.object({
 export type RxItemInput = z.infer<typeof RxItemSchema>;
 export type CreateRxInput = z.infer<typeof CreateRxSchema>;
 export type ReceiveStockInput = z.infer<typeof ReceiveStockSchema>['items'];
+export type AdjustStockInput = z.infer<typeof AdjustStockSchema>['adjustments'];
 export type DispenseItemInput = z.infer<typeof DispenseItemSchema>;
