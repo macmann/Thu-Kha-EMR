@@ -413,6 +413,7 @@ export default function PatientDetail() {
 
   const contact = patient?.contact?.trim() || t('Not provided');
   const coverage = patient?.insurance?.trim() || t('Self-pay');
+  const allergies = patient?.drugAllergies?.trim() || t('No known allergies');
   const gender = formatGenderValue(patient?.gender);
   const age = patient ? calculateAge(patient.dob) : null;
   const lastVisit = patient?.visits?.[0] ?? null;
@@ -465,6 +466,7 @@ export default function PatientDetail() {
                 { label: t('Date of Birth'), value: formatDateValue(patient.dob) },
                 { label: t('Age'), value: age !== null ? t('{count} yrs', { count: age }) : '—' },
                 { label: t('Insurance'), value: coverage },
+                { label: t('Drug allergies'), value: allergies },
                 { label: t('Gender'), value: gender },
               ].map((stat) => (
                 <div

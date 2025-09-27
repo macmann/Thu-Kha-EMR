@@ -157,6 +157,7 @@ export default function VisitDetail() {
   const gender = formatGender(patient?.gender);
   const contact = patient?.contact?.trim() || 'Not provided';
   const age = patient ? calculateAge(patient.dob) : null;
+  const allergies = patient?.drugAllergies?.trim() || 'No known allergies';
 
   const vitalsSource = visit?.observations.find(
     (observation) =>
@@ -265,6 +266,10 @@ export default function VisitDetail() {
                   <div className="flex items-center justify-between gap-4">
                     <dt className="text-gray-500">Insurance</dt>
                     <dd className="font-semibold text-gray-900">{coverage}</dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <dt className="text-gray-500">Drug allergies</dt>
+                    <dd className="text-right font-semibold text-gray-900">{allergies}</dd>
                   </div>
                   <div className="flex items-center justify-between gap-4">
                     <dt className="text-gray-500">Contact</dt>

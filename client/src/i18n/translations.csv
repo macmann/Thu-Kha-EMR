@@ -156,3 +156,7 @@ Follow up on {count} appointments past their start time.,Follow up on {count} ap
 {count} patients waiting to check in.,{count} patients waiting to check in.,{count} patients waiting to check in.
 No patients have checked in yet.,No patients have checked in yet.,No patients have checked in yet.
 No pending tasks for today.,No pending tasks for today.,No pending tasks for today.
+Drug allergies,Drug allergies,ဆေးအလွန်မတုံ့ပြန်မှုများ
+No known allergies,No known allergies,မသိရှိရသေးသော အလွန်မတုံ့ပြန်မှုများ
+Document medications to avoid during care.,Document medications to avoid during care.,ကုသမှုတွင် မသုံးသင့်သော ဆေးဝါးများကို မှတ်တမ်းတင်ပါ။
+e.g. Penicillin, Ibuprofen,e.g. Penicillin, Ibuprofen,ဥပမာ- ပီနစ်ဆီလင်း၊ အိုင်ဘူပရိုဖင်

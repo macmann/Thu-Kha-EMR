@@ -15,6 +15,7 @@ export interface Patient {
   insurance: string | null;
   gender?: string | null;
   contact?: string | null;
+  drugAllergies?: string | null;
 }
 
 export interface Doctor {
@@ -201,6 +202,7 @@ export interface CreatePatientPayload {
   name: string;
   dob: string;
   insurance: string;
+  drugAllergies?: string;
 }
 
 export async function createPatient(payload: CreatePatientPayload): Promise<Patient> {

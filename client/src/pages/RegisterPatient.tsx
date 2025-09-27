@@ -9,6 +9,7 @@ export default function RegisterPatient() {
   const [name, setName] = useState('');
   const [dob, setDob] = useState('');
   const [insurance, setInsurance] = useState('');
+  const [drugAllergies, setDrugAllergies] = useState('');
   const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -32,7 +33,7 @@ export default function RegisterPatient() {
     e.preventDefault();
     setSaving(true);
     try {
-      const patient = await createPatient({ name, dob, insurance });
+      const patient = await createPatient({ name, dob, insurance, drugAllergies: drugAllergies.trim() || undefined });
       navigate(`/patients/${patient.patientId}`);
     } catch (err) {
       console.error(err);
@@ -122,6 +123,21 @@ export default function RegisterPatient() {
                 />
                 <p className="mt-1 text-xs text-gray-500">{t('Include private or public coverage information.')}</p>
               </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700" htmlFor="patient-allergies">
+                  {t('Drug allergies')}
+                </label>
+                <textarea
+                  id="patient-allergies"
+                  value={drugAllergies}
+                  onChange={(e) => setDrugAllergies(e.target.value)}
+                  rows={3}
+                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                  placeholder={t('e.g. Penicillin, Ibuprofen')}
+                />
+                <p className="mt-1 text-xs text-gray-500">{t('Document medications to avoid during care.')}</p>
+              </div>
             </div>
           </section>
 
@@ -172,6 +188,10 @@ export default function RegisterPatient() {
               <div className="flex items-start justify-between gap-3">
                 <dt className="font-medium text-gray-600">{t('Insurance')}</dt>
                 <dd className="text-right text-gray-900">{insurance || t('Not captured yet')}</dd>
+              </div>
+              <div className="flex items-start justify-between gap-3">
+                <dt className="font-medium text-gray-600">{t('Drug allergies')}</dt>
+                <dd className="text-right text-gray-900">{drugAllergies || t('No known allergies')}</dd>
               </div>
             </dl>
           </div>
