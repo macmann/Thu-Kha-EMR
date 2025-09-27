@@ -41,7 +41,7 @@ export default function PharmacyQueue() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetchJSON(`/prescriptions?status=${status}`);
+        const response = await fetchJSON(`/pharmacy/prescriptions?status=${status}`);
         if (!cancelled) {
           setData((response as { data?: QueueItem[] }).data ?? []);
         }
