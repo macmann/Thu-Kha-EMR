@@ -25,6 +25,7 @@ import {
   startDispense,
 } from '../services/pharmacyService.js';
 import { InvoiceScanError, scanInvoice as analyzeInvoice } from '../services/invoiceScanner.js';
+import { postPharmacyCharges } from '../services/billingService.js';
 
 const prisma = new PrismaClient();
 const router = Router();
@@ -321,7 +322,12 @@ router.patch(
     try {
       const body = req.body as z.infer<typeof CompleteDispenseSchema>;
       const result = await completeDispense(req.params.dispenseId, body.status);
-      res.json(result);
+      let invoiceId: string | null = null;
+      if (body.status === 'COMPLETED') {
+        const invoice = await postPharmacyCharges(result.prescriptionId);
+        invoiceId = invoice?.invoiceId ?? null;
+      }
+      res.json({ ...result, invoiceId });
     } catch (error) {
       next(error);
     }

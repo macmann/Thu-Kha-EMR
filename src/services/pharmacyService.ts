@@ -261,6 +261,6 @@ export async function completeDispense(
       data: { status: finalStatus },
     });
 
-    return { ok: true, prescriptionStatus: finalStatus };
+    return { ok: true, prescriptionStatus: finalStatus, prescriptionId: dispense.prescriptionId };
   });
 }

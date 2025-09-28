@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -61,6 +61,33 @@ async function seedPharmacyReference() {
 async function main() {
   // Run legacy seed first to ensure baseline data remains available.
   await import('./seed.mjs');
+  await prisma.serviceCatalog.upsert({
+    where: { code: 'CONSULT_OPD' },
+    update: { name: 'OPD Consultation', defaultPrice: new Prisma.Decimal(8000) },
+    create: {
+      code: 'CONSULT_OPD',
+      name: 'OPD Consultation',
+      defaultPrice: new Prisma.Decimal(8000),
+    },
+  });
+  await prisma.serviceCatalog.upsert({
+    where: { code: 'PROC_DRESSING' },
+    update: { name: 'Dressing', defaultPrice: new Prisma.Decimal(5000) },
+    create: {
+      code: 'PROC_DRESSING',
+      name: 'Dressing',
+      defaultPrice: new Prisma.Decimal(5000),
+    },
+  });
+  await prisma.serviceCatalog.upsert({
+    where: { code: 'PROC_INJ' },
+    update: { name: 'Injection', defaultPrice: new Prisma.Decimal(3000) },
+    create: {
+      code: 'PROC_INJ',
+      name: 'Injection',
+      defaultPrice: new Prisma.Decimal(3000),
+    },
+  });
   await seedPharmacyReference();
 }
 

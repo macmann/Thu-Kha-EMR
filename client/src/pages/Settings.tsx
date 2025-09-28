@@ -24,6 +24,7 @@ type UserDraft = {
 const ROLE_LABELS: Record<Role, string> = {
   Doctor: 'Doctor',
   AdminAssistant: 'Administrative Assistant',
+  Cashier: 'Cashier',
   ITAdmin: 'IT Administrator',
   Pharmacist: 'Pharmacist',
   PharmacyTech: 'Pharmacy Technician',
@@ -33,6 +34,7 @@ const ROLE_LABELS: Record<Role, string> = {
 const ROLE_OPTIONS: Array<{ value: Role; label: string }> = [
   { value: 'Doctor', label: ROLE_LABELS.Doctor },
   { value: 'AdminAssistant', label: ROLE_LABELS.AdminAssistant },
+  { value: 'Cashier', label: ROLE_LABELS.Cashier },
   { value: 'ITAdmin', label: ROLE_LABELS.ITAdmin },
   { value: 'Pharmacist', label: ROLE_LABELS.Pharmacist },
   { value: 'PharmacyTech', label: ROLE_LABELS.PharmacyTech },

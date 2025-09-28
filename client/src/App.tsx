@@ -17,6 +17,9 @@ import PharmacyQueue from './pages/PharmacyQueue';
 import DispenseDetail from './pages/DispenseDetail';
 import PharmacyInventory from './pages/PharmacyInventory';
 import AddDrug from './pages/AddDrug';
+import VisitBilling from './pages/VisitBilling';
+import PosList from './pages/PosList';
+import SettingsServices from './pages/SettingsServices';
 import './styles/App.css';
 
 function App() {
@@ -136,6 +139,22 @@ function App() {
         }
       />
       <Route
+        path="/billing/visit/:visitId"
+        element={
+          <RouteGuard allowedRoles={['Cashier', 'ITAdmin', 'Doctor', 'Pharmacist']}>
+            <VisitBilling />
+          </RouteGuard>
+        }
+      />
+      <Route
+        path="/billing/pos"
+        element={
+          <RouteGuard allowedRoles={['Cashier', 'ITAdmin']}>
+            <PosList />
+          </RouteGuard>
+        }
+      />
+      <Route
         path="/pharmacy/dispense/:prescriptionId"
         element={
           <RouteGuard allowedRoles={['Pharmacist', 'PharmacyTech']}>
@@ -148,6 +167,14 @@ function App() {
         element={
           <RouteGuard allowedRoles={['ITAdmin']}>
             <Settings />
+          </RouteGuard>
+        }
+      />
+      <Route
+        path="/settings/services"
+        element={
+          <RouteGuard allowedRoles={['ITAdmin']}>
+            <SettingsServices />
           </RouteGuard>
         }
       />
