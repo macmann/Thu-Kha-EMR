@@ -219,6 +219,38 @@ function buildSchema() {
   } as const;
 }
 
+function isSupportedImage(buffer: Buffer, mimeType?: string | null) {
+  if (mimeType && mimeType.toLowerCase().startsWith('image/')) {
+    return true;
+  }
+
+  if (buffer.length >= 4) {
+    const signature = buffer.subarray(0, 4);
+    // PNG
+    if (signature.equals(Buffer.from([0x89, 0x50, 0x4e, 0x47]))) {
+      return true;
+    }
+    // JPEG (0xFFD8FF)
+    if (signature[0] === 0xff && signature[1] === 0xd8 && signature[2] === 0xff) {
+      return true;
+    }
+    // GIF87a / GIF89a both start with GIF8
+    if (signature.equals(Buffer.from('GIF8', 'ascii'))) {
+      return true;
+    }
+    // WEBP starts with RIFF....WEBP
+    if (buffer.length >= 12) {
+      const riffHeader = buffer.subarray(0, 4).toString('ascii');
+      const webpHeader = buffer.subarray(8, 12).toString('ascii');
+      if (riffHeader === 'RIFF' && webpHeader === 'WEBP') {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 export async function scanInvoice(buffer: Buffer, mimeType?: string | null): Promise<InvoiceScanResult> {
   if (!buffer.length) {
     throw new InvoiceScanError('Invoice file is empty.', { statusCode: 400 });
@@ -244,6 +276,11 @@ export async function scanInvoice(buffer: Buffer, mimeType?: string | null): Pro
         'Please keep numbers as digits and use ISO 8601 dates (YYYY-MM-DD).\n\n' +
         `Invoice text:\n${sanitizedText}`;
     } else {
+      if (!isSupportedImage(buffer, mimeType)) {
+        throw new InvoiceScanError('Unsupported invoice format. Upload a PDF or image file instead.', {
+          statusCode: 415,
+        });
+      }
       const base64 = buffer.toString('base64');
       const imageUrl = `data:${mimeType || 'application/octet-stream'};base64,${base64}`;
       userContent = [
