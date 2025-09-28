@@ -5,7 +5,9 @@ Atenxion EMR is a reference implementation of an electronic medical record syste
 
 ## Local Development
 1. Install dependencies with `npm install`.
-2. Start both the API and web dev servers:
+2. Copy `.env.example` to `.env` and fill in the required values. To enable invoice scanning, set
+   `OPENAI_API_KEY` to a valid OpenAI API key (optionally override `OPENAI_INVOICE_MODEL`).
+3. Start both the API and web dev servers:
    ```bash
    npm run dev
    ```
