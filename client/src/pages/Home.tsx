@@ -337,6 +337,7 @@ function ITAdminDashboard() {
 
 const ACCOUNT_ROLE_LABELS: Record<UserAccount['role'], string> = {
   Doctor: 'Doctor',
+  Cashier: 'Cashier',
   AdminAssistant: 'Administrative Assistant',
   ITAdmin: 'IT Administrator',
   Pharmacist: 'Pharmacist',

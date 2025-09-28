@@ -218,7 +218,9 @@ export async function scanInvoice(buffer: Buffer, mimeType?: string | null): Pro
             },
             {
               type: 'image_url',
-              image_url: imageUrl,
+              image_url: {
+                url: imageUrl,
+              },
             },
           ],
         },
