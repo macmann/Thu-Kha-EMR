@@ -11,6 +11,7 @@ const router = Router();
 const roleSchema = z.enum([
   'Doctor',
   'AdminAssistant',
+  'Cashier',
   'ITAdmin',
   'Pharmacist',
   'PharmacyTech',
