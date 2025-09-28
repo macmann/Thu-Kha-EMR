@@ -400,6 +400,33 @@ export async function scanInvoice(buffer: Buffer, mimeType?: string | null): Pro
     if (error instanceof InvoiceScanError) {
       throw error;
     }
+
+    const status =
+      typeof error === 'object' && error !== null
+        ? (error as { status?: number; statusCode?: number }).status ??
+          (error as { status?: number; statusCode?: number }).statusCode ??
+          null
+        : null;
+
+    if (status === 401 || status === 403) {
+      const providerMessage =
+        typeof error === 'object' && error !== null
+          ? (error as { error?: { message?: string } }).error?.message ??
+            (typeof (error as { message?: unknown }).message === 'string'
+              ? (error as { message?: string }).message
+              : undefined)
+          : undefined;
+
+      throw new InvoiceScanError(
+        'Invoice scanning is not authorized. Verify the OpenAI API credentials and try again.',
+        {
+          statusCode: 503,
+          cause: error,
+          details: providerMessage ? { providerMessage } : undefined,
+        },
+      );
+    }
+
     throw new InvoiceScanError('Unable to analyze the invoice automatically. Please enter details manually.', {
       statusCode: 502,
       cause: error,
