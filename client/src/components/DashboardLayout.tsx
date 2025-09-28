@@ -37,7 +37,7 @@ const navigation: NavigationItem[] = [
   { key: 'dashboard', name: 'Dashboard', icon: DashboardIcon, to: '/' },
   { key: 'patients', name: 'Patients', icon: PatientsIcon, to: '/patients' },
   { key: 'appointments', name: 'Appointments', icon: CalendarIcon, to: '/appointments' },
-  { key: 'billing', name: 'Billing', icon: ReportsIcon, to: '/billing/pos' },
+  { key: 'billing', name: 'Billing', icon: ReportsIcon, to: '/billing/workspace' },
   { key: 'pharmacy', name: 'Pharmacy', icon: PharmacyIcon, to: '/pharmacy/queue' },
   { key: 'reports', name: 'Reports', icon: ReportsIcon, to: '/reports' },
   { key: 'settings', name: 'Settings', icon: SettingsIcon, to: '/settings' },
@@ -81,7 +81,7 @@ export default function DashboardLayout({
       return user?.role === 'ITAdmin';
     }
     if (item.key === 'billing') {
-      return user && ['Cashier', 'ITAdmin'].includes(user.role);
+      return user && ['Cashier', 'ITAdmin', 'Doctor', 'Pharmacist'].includes(user.role);
     }
     if (item.key === 'pharmacy') {
       return (

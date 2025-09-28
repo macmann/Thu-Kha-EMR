@@ -19,6 +19,7 @@ import PharmacyInventory from './pages/PharmacyInventory';
 import AddDrug from './pages/AddDrug';
 import VisitBilling from './pages/VisitBilling';
 import PosList from './pages/PosList';
+import BillingWorkspace from './pages/BillingWorkspace';
 import SettingsServices from './pages/SettingsServices';
 import './styles/App.css';
 
@@ -135,6 +136,14 @@ function App() {
         element={
           <RouteGuard allowedRoles={['InventoryManager', 'ITAdmin']}>
             <AddDrug />
+          </RouteGuard>
+        }
+      />
+      <Route
+        path="/billing/workspace"
+        element={
+          <RouteGuard allowedRoles={['Cashier', 'ITAdmin', 'Doctor', 'Pharmacist']}>
+            <BillingWorkspace />
           </RouteGuard>
         }
       />
