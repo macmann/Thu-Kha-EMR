@@ -39,6 +39,8 @@ type PaymentDraft = {
   note: string;
 };
 
+type ItemSourceType = 'SERVICE' | 'PHARMACY' | 'LAB';
+
 const PAYMENT_METHODS = [
   { value: 'CASH', label: 'Cash' },
   { value: 'CARD', label: 'Card' },
@@ -63,6 +65,16 @@ export default function VisitBilling() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [adjustmentDraft, setAdjustmentDraft] = useState({ discount: '', tax: '' });
+  const [itemDraft, setItemDraft] = useState({
+    sourceType: 'SERVICE' as ItemSourceType,
+    description: '',
+    quantity: '1',
+    unitPrice: '',
+    discount: '0',
+    tax: '0',
+  });
+  const [isAddingItem, setIsAddingItem] = useState(false);
+  const [itemError, setItemError] = useState<string | null>(null);
   const [isPaymentOpen, setPaymentOpen] = useState(false);
   const [paymentDraft, setPaymentDraft] = useState<PaymentDraft>({
     amount: '',
@@ -162,6 +174,73 @@ export default function VisitBilling() {
     }
   }
 
+  async function handleAddItem(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!invoice) return;
+
+    const description = itemDraft.description.trim();
+    const quantity = Number.parseInt(itemDraft.quantity, 10);
+    const unitPrice = itemDraft.unitPrice.trim();
+    const discount = itemDraft.discount.trim();
+    const tax = itemDraft.tax.trim();
+
+    if (!description) {
+      setItemError('Description is required.');
+      return;
+    }
+
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      setItemError('Quantity must be a positive whole number.');
+      return;
+    }
+
+    if (!unitPrice) {
+      setItemError('Unit price is required.');
+      return;
+    }
+
+    setItemError(null);
+    setIsAddingItem(true);
+
+    try {
+      const payload: Record<string, unknown> = {
+        sourceType: itemDraft.sourceType,
+        description,
+        quantity,
+        unitPrice,
+      };
+
+      if (discount && discount !== '0') {
+        payload.discountAmt = discount;
+      }
+
+      if (tax && tax !== '0') {
+        payload.taxAmt = tax;
+      }
+
+      await fetchJSON(`/billing/invoices/${invoice.invoiceId}/items`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ add: [payload] }),
+      });
+
+      setItemDraft({
+        sourceType: itemDraft.sourceType,
+        description: '',
+        quantity: '1',
+        unitPrice: '',
+        discount: '0',
+        tax: '0',
+      });
+      await refreshInvoice();
+    } catch (err) {
+      console.error(err);
+      setItemError('Unable to add invoice item right now.');
+    } finally {
+      setIsAddingItem(false);
+    }
+  }
+
   async function handlePostPayment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!invoice) return;
@@ -239,6 +318,113 @@ export default function VisitBilling() {
             <div className="border-b border-gray-200 px-4 py-3">
               <h2 className="text-lg font-semibold text-gray-900">Invoice Items</h2>
             </div>
+            <form className="grid gap-4 border-b border-gray-200 px-4 py-4 md:grid-cols-6" onSubmit={handleAddItem}>
+              <label className="flex flex-col gap-1 text-sm md:col-span-2">
+                <span className="font-medium text-gray-700">Item Source</span>
+                <select
+                  value={itemDraft.sourceType}
+                  onChange={(event) =>
+                    setItemDraft((state) => ({
+                      ...state,
+                      sourceType: event.target.value as ItemSourceType,
+                    }))
+                  }
+                  className="rounded border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                >
+                  <option value="SERVICE">Service</option>
+                  <option value="PHARMACY">Pharmacy</option>
+                  <option value="LAB">Lab</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-sm md:col-span-2">
+                <span className="font-medium text-gray-700">Description</span>
+                <input
+                  type="text"
+                  value={itemDraft.description}
+                  onChange={(event) =>
+                    setItemDraft((state) => ({ ...state, description: event.target.value }))
+                  }
+                  className="rounded border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  placeholder="e.g. Consultation fee"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium text-gray-700">Quantity</span>
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={itemDraft.quantity}
+                  onChange={(event) =>
+                    setItemDraft((state) => ({ ...state, quantity: event.target.value }))
+                  }
+                  className="rounded border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium text-gray-700">Unit Price (MMK)</span>
+                <input
+                  type="text"
+                  value={itemDraft.unitPrice}
+                  onChange={(event) =>
+                    setItemDraft((state) => ({ ...state, unitPrice: event.target.value }))
+                  }
+                  className="rounded border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  placeholder="0.00"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium text-gray-700">Discount</span>
+                <input
+                  type="text"
+                  value={itemDraft.discount}
+                  onChange={(event) =>
+                    setItemDraft((state) => ({ ...state, discount: event.target.value }))
+                  }
+                  className="rounded border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  placeholder="0.00"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium text-gray-700">Tax</span>
+                <input
+                  type="text"
+                  value={itemDraft.tax}
+                  onChange={(event) => setItemDraft((state) => ({ ...state, tax: event.target.value }))}
+                  className="rounded border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  placeholder="0.00"
+                />
+              </label>
+              {itemError && (
+                <div className="md:col-span-4 text-sm text-red-600">{itemError}</div>
+              )}
+              <div className="md:col-span-2 flex items-end justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setItemDraft((state) => ({
+                      ...state,
+                      description: '',
+                      quantity: '1',
+                      unitPrice: '',
+                      discount: '0',
+                      tax: '0',
+                    }));
+                    setItemError(null);
+                  }}
+                  className="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                >
+                  Clear
+                </button>
+                <button
+                  type="submit"
+                  disabled={isAddingItem}
+                  className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {isAddingItem ? 'Adding…' : 'Add item'}
+                </button>
+              </div>
+            </form>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 text-sm">
                 <thead className="bg-gray-50">
