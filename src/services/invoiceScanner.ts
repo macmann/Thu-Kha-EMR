@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import type { ChatCompletionContentPart, ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
 export interface InvoiceScanLineItem {
   brandName?: string | null;
@@ -47,7 +48,42 @@ export class InvoiceScanError extends Error {
 }
 
 const DEFAULT_MODEL = 'gpt-4o-mini';
+const MAX_PDF_TEXT_LENGTH = 20_000;
 let cachedClient: OpenAI | null = null;
+
+async function extractPdfText(buffer: Buffer) {
+  const pdfModule = await import('pdf-parse');
+  const parser = (pdfModule.default ?? pdfModule) as unknown;
+  if (typeof parser !== 'function') {
+    throw new InvoiceScanError('Invoice PDF support is not available. Please enter details manually.', {
+      statusCode: 501,
+    });
+  }
+  const result = await (parser as (data: Buffer) => Promise<{ text?: string | null }>)(buffer);
+  return result.text ?? '';
+}
+
+function sanitizePdfText(raw: string) {
+  const cleaned = raw.replace(/\u0000/g, ' ').replace(/\r/g, '');
+  const trimmed = cleaned.trim();
+  if (trimmed.length <= MAX_PDF_TEXT_LENGTH) {
+    return trimmed;
+  }
+  return `${trimmed.slice(0, MAX_PDF_TEXT_LENGTH)}\n... (truncated)`;
+}
+
+function isPdf(buffer: Buffer, mimeType?: string | null) {
+  if (mimeType && mimeType.toLowerCase().includes('pdf')) {
+    return true;
+  }
+  if (buffer.length >= 4) {
+    const signature = buffer.subarray(0, 4).toString('ascii');
+    if (signature === '%PDF') {
+      return true;
+    }
+  }
+  return false;
+}
 
 function getClient() {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -190,41 +226,62 @@ export async function scanInvoice(buffer: Buffer, mimeType?: string | null): Pro
 
   const client = getClient();
   const model = process.env.OPENAI_INVOICE_MODEL || DEFAULT_MODEL;
-  const base64 = buffer.toString('base64');
-  const imageUrl = `data:${mimeType || 'application/octet-stream'};base64,${base64}`;
-
   try {
+    const pdf = isPdf(buffer, mimeType);
+
+    let userContent: string | ChatCompletionContentPart[];
+
+    if (pdf) {
+      const rawText = await extractPdfText(buffer);
+      const sanitizedText = sanitizePdfText(rawText);
+      if (!sanitizedText) {
+        throw new InvoiceScanError('No readable text was found in the invoice PDF. Please enter details manually.', {
+          statusCode: 422,
+        });
+      }
+      userContent =
+        'Read this invoice and summarize each medication line. ' +
+        'Please keep numbers as digits and use ISO 8601 dates (YYYY-MM-DD).\n\n' +
+        `Invoice text:\n${sanitizedText}`;
+    } else {
+      const base64 = buffer.toString('base64');
+      const imageUrl = `data:${mimeType || 'application/octet-stream'};base64,${base64}`;
+      userContent = [
+        {
+          type: 'text',
+          text:
+            'Read this invoice and summarize each medication line. ' +
+            'Please keep numbers as digits and use ISO 8601 dates (YYYY-MM-DD).',
+        },
+        {
+          type: 'image_url',
+          image_url: {
+            url: imageUrl,
+          },
+        },
+      ];
+    }
+
+    const messages: ChatCompletionMessageParam[] = [
+      {
+        role: 'system',
+        content:
+          'You are an assistant that extracts structured pharmacy inventory data from supplier invoices. ' +
+          'Return JSON that matches the provided schema. ' +
+          'Capture medication names, strengths, forms, quantities, batch or lot numbers, expiration dates, and unit costs when available. ' +
+          'If values are not provided, use null.',
+      },
+      {
+        role: 'user',
+        content: userContent,
+      },
+    ];
+
     const response = await client.chat.completions.create({
       model,
       temperature: 0,
       response_format: { type: 'json_schema', json_schema: buildSchema() },
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are an assistant that extracts structured pharmacy inventory data from supplier invoices. ' +
-            'Return JSON that matches the provided schema. ' +
-            'Capture medication names, strengths, forms, quantities, batch or lot numbers, expiration dates, and unit costs when available. ' +
-            'If values are not provided, use null.',
-        },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text:
-                'Read this invoice and summarize each medication line. ' +
-                'Please keep numbers as digits and use ISO 8601 dates (YYYY-MM-DD).',
-            },
-            {
-              type: 'image_url',
-              image_url: {
-                url: imageUrl,
-              },
-            },
-          ],
-        },
-      ],
+      messages,
     });
 
     const message = response.choices?.[0]?.message?.content;
