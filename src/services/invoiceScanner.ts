@@ -321,22 +321,48 @@ export async function scanInvoice(buffer: Buffer, mimeType?: string | null): Pro
       messages,
     });
 
-    const message = response.choices?.[0]?.message?.content;
+    const message = response.choices?.[0]?.message;
     if (!message) {
       throw new InvoiceScanError('OpenAI returned an empty response for the invoice.', {
         statusCode: 502,
       });
     }
 
-    const textContent = Array.isArray(message)
-      ? message
-          .map((part) => ('text' in part ? part.text : typeof part === 'string' ? part : ''))
-          .join('')
-      : message;
+    const structuredMessage = message as typeof message & { parsed?: unknown };
 
-    const parsed = ensureJsonObject(textContent);
-    const rawWarnings = Array.isArray(parsed.warnings) ? parsed.warnings : [];
-    const metadata = parsed.metadata ?? {};
+    let parsed: unknown;
+
+    if (structuredMessage.parsed) {
+      parsed = structuredMessage.parsed;
+    } else {
+      const content = structuredMessage.content;
+      if (!content) {
+        throw new InvoiceScanError('OpenAI returned an empty response for the invoice.', {
+          statusCode: 502,
+        });
+      }
+
+      const textContent = Array.isArray(content)
+        ? content
+            .map((part) => ('text' in part ? part.text : typeof part === 'string' ? part : ''))
+            .join('')
+        : content;
+
+      parsed = ensureJsonObject(textContent);
+    }
+
+    if (!parsed || typeof parsed !== 'object') {
+      throw new InvoiceScanError('OpenAI returned an invalid invoice response.', {
+        statusCode: 502,
+      });
+    }
+
+    const parsedRecord = parsed as Record<string, unknown>;
+
+    const rawWarnings = Array.isArray(parsedRecord.warnings)
+      ? (parsedRecord.warnings as unknown[])
+      : [];
+    const metadata = (parsedRecord.metadata ?? {}) as Record<string, unknown>;
     const normalizedMetadata: InvoiceScanMetadata = {
       vendor: normalizeString(metadata.vendor),
       invoiceNumber: normalizeString(metadata.invoiceNumber),
@@ -347,7 +373,9 @@ export async function scanInvoice(buffer: Buffer, mimeType?: string | null): Pro
       destination: normalizeString(metadata.destination),
     };
 
-    const lineItemsSource = Array.isArray(parsed.lineItems) ? parsed.lineItems : [];
+    const lineItemsSource = Array.isArray(parsedRecord.lineItems)
+      ? (parsedRecord.lineItems as Record<string, unknown>[])
+      : [];
     const lineItems: InvoiceScanLineItem[] = lineItemsSource.map((item: Record<string, unknown>) => ({
       brandName: normalizeString(item.brandName),
       genericName: normalizeString(item.genericName),
@@ -366,7 +394,7 @@ export async function scanInvoice(buffer: Buffer, mimeType?: string | null): Pro
       metadata: normalizedMetadata,
       lineItems,
       warnings: rawWarnings.map((warning: unknown) => normalizeString(warning) || 'Unspecified issue detected during parsing.'),
-      rawText: normalizeString(parsed.rawText),
+      rawText: normalizeString(parsedRecord.rawText),
     };
   } catch (error) {
     if (error instanceof InvoiceScanError) {
