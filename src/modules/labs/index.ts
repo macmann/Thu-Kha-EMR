@@ -26,7 +26,7 @@ router.post('/visits/:id/labs', requireAuth, requireRole('Doctor'), async (req: 
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.flatten() });
   }
-  const lab = await prisma.labResult.create({ data: { visitId: id, ...parsed.data } });
+  const lab = await prisma.visitLabResult.create({ data: { visitId: id, ...parsed.data } });
   await logDataChange(req.user!.userId, 'lab', lab.labId, undefined, lab);
   res.status(201).json(lab);
 });
@@ -66,7 +66,7 @@ router.get('/', requireAuth, requireRole('Doctor'), async (req: Request, res: Re
       ...(to && { lte: to }),
     };
   }
-  const labs = await prisma.labResult.findMany({
+  const labs = await prisma.visitLabResult.findMany({
     where,
     orderBy: { testDate: 'desc' },
     take: limit,

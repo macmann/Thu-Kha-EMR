@@ -126,9 +126,9 @@ router.get('/cohort', requireAuth, async (req: Request, res: Response) => {
   const from = new Date();
   from.setMonth(from.getMonth() - months);
   const results = await prisma.$queryRaw<Array<{ patientId: string; name: string; value: number; date: Date; visitId: string }>>(
-    Prisma.sql`SELECT DISTINCT ON (p."patientId")
+      Prisma.sql`SELECT DISTINCT ON (p."patientId")
         p."patientId", p.name, l."resultValue" AS value, l."testDate" AS date, l."visitId"
-      FROM "LabResult" l
+      FROM "VisitLabResult" l
       JOIN "Visit" v ON l."visitId" = v."visitId"
       JOIN "Patient" p ON v."patientId" = p."patientId"
       WHERE l."testName" = ${test_name}

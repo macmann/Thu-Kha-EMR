@@ -21,6 +21,9 @@ import VisitBilling from './pages/VisitBilling';
 import PosList from './pages/PosList';
 import BillingWorkspace from './pages/BillingWorkspace';
 import SettingsServices from './pages/SettingsServices';
+import ProblemList from './pages/ProblemList';
+import LabOrdersPage from './pages/LabOrders';
+import LabOrderDetailPage from './pages/LabOrderDetail';
 import './styles/App.css';
 
 function App() {
@@ -40,6 +43,14 @@ function App() {
         element={
           <RouteGuard>
             <PatientDetail />
+          </RouteGuard>
+        }
+      />
+      <Route
+        path="/patients/:patientId/problems"
+        element={
+          <RouteGuard allowedRoles={['Doctor', 'Nurse', 'ITAdmin']}>
+            <ProblemList />
           </RouteGuard>
         }
       />
@@ -112,6 +123,22 @@ function App() {
         element={
           <RouteGuard>
             <Reports />
+          </RouteGuard>
+        }
+      />
+      <Route
+        path="/lab-orders"
+        element={
+          <RouteGuard allowedRoles={['Doctor', 'LabTech', 'ITAdmin']}>
+            <LabOrdersPage />
+          </RouteGuard>
+        }
+      />
+      <Route
+        path="/lab-orders/:labOrderId"
+        element={
+          <RouteGuard allowedRoles={['Doctor', 'LabTech', 'ITAdmin']}>
+            <LabOrderDetailPage />
           </RouteGuard>
         }
       />

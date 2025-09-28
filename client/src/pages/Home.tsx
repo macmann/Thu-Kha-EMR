@@ -343,6 +343,8 @@ const ACCOUNT_ROLE_LABELS: Record<UserAccount['role'], string> = {
   Pharmacist: 'Pharmacist',
   PharmacyTech: 'Pharmacy Technician',
   InventoryManager: 'Inventory Manager',
+  Nurse: 'Nurse',
+  LabTech: 'Laboratory Technician',
 };
 
 const STATUS_LABELS: Record<UserAccount['status'], 'Active' | 'Inactive'> = {
