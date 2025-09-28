@@ -1,5 +1,5 @@
 import { Router, type NextFunction, type Response } from 'express';
-import { InvoiceStatus, PrismaClient } from '@prisma/client';
+import { InvoiceStatus, PrismaClient, type Prisma } from '@prisma/client';
 import { z } from 'zod';
 
 import { requireAuth, requireRole, type AuthRequest } from '../modules/auth/index.js';
@@ -92,7 +92,7 @@ router.get(
         return res.status(400).json({ error: parsed.error.flatten() });
       }
       const { visitId, status } = parsed.data;
-      const where: Parameters<typeof prisma.invoice.findMany>[0]['where'] = {};
+      const where: Prisma.InvoiceWhereInput = {};
       if (visitId) {
         where.visitId = visitId;
       }
