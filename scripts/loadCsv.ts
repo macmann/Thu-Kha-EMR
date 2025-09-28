@@ -153,9 +153,9 @@ async function main() {
     if (!visitId) continue;
     const testName = row.test_name;
     const testDate = row.test_date ? new Date(row.test_date) : null;
-    const existing = await prisma.labResult.findFirst({ where: { visitId, testName, testDate } });
+    const existing = await prisma.visitLabResult.findFirst({ where: { visitId, testName, testDate } });
     if (existing) {
-      await prisma.labResult.update({
+      await prisma.visitLabResult.update({
         where: { labId: existing.labId },
         data: {
           resultValue: row.result_value ? parseFloat(row.result_value) : null,
@@ -166,7 +166,7 @@ async function main() {
       });
       updated.labs += 1;
     } else {
-      await prisma.labResult.create({
+      await prisma.visitLabResult.create({
         data: {
           visitId,
           testName,
