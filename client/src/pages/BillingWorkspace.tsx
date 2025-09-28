@@ -2,7 +2,15 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import { fetchJSON } from '../api/http';
-import { getPatient, getVisit, type Patient, type VisitDetail } from '../api/client';
+import {
+  getPatient,
+  getVisit,
+  listPatientVisits,
+  searchPatients,
+  type Patient,
+  type Visit,
+  type VisitDetail,
+} from '../api/client';
 import { useAuth } from '../context/AuthProvider';
 
 interface InvoiceSummary {
@@ -93,10 +101,24 @@ export default function BillingWorkspace() {
   const [voidLoading, setVoidLoading] = useState(false);
   const [pharmacyPrescriptionId, setPharmacyPrescriptionId] = useState('');
   const [pharmacyStatus, setPharmacyStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [patientQuery, setPatientQuery] = useState('');
+  const [debouncedPatientQuery, setDebouncedPatientQuery] = useState('');
+  const [patientSearchLoading, setPatientSearchLoading] = useState(false);
+  const [patientSearchError, setPatientSearchError] = useState<string | null>(null);
+  const [patientMatches, setPatientMatches] = useState<Patient[]>([]);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [patientVisitsLoading, setPatientVisitsLoading] = useState(false);
+  const [patientVisitsError, setPatientVisitsError] = useState<string | null>(null);
+  const [patientVisits, setPatientVisits] = useState<Visit[]>([]);
   const canCollectPayments = user ? ['Cashier', 'ITAdmin'].includes(user.role) : false;
   const canTriggerVoid = canCollectPayments;
   const canCreateInvoices = user ? ['Cashier', 'ITAdmin', 'Doctor'].includes(user.role) : false;
   const canRepostPharmacy = user ? ['Pharmacist', 'ITAdmin'].includes(user.role) : false;
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => setDebouncedPatientQuery(patientQuery.trim()), 300);
+    return () => window.clearTimeout(handle);
+  }, [patientQuery]);
 
   useEffect(() => {
     let active = true;
@@ -129,18 +151,50 @@ export default function BillingWorkspace() {
     };
   }, [invoiceStatusFilter]);
 
+  useEffect(() => {
+    let active = true;
+    async function searchByPatient() {
+      const query = debouncedPatientQuery;
+      if (!query) {
+        setPatientMatches([]);
+        setPatientSearchError(null);
+        setPatientSearchLoading(false);
+        return;
+      }
+      setPatientSearchLoading(true);
+      setPatientSearchError(null);
+      try {
+        const results = await searchPatients(query);
+        if (!active) return;
+        setPatientMatches(results);
+      } catch (error) {
+        console.error(error);
+        if (active) {
+          setPatientMatches([]);
+          setPatientSearchError('Unable to search patients right now.');
+        }
+      } finally {
+        if (active) {
+          setPatientSearchLoading(false);
+        }
+      }
+    }
+    searchByPatient();
+    return () => {
+      active = false;
+    };
+  }, [debouncedPatientQuery]);
+
   const lookupCurrency = useMemo(() => visitInvoice?.currency ?? 'MMK', [visitInvoice]);
 
-  async function handleVisitLookup(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!visitIdInput.trim()) return;
+  async function performVisitLookup(visitId: string) {
     setLookupLoading(true);
     setLookupError(null);
     setVisitDetails(null);
     setVisitPatient(null);
     setVisitInvoice(null);
     try {
-      const visit = await getVisit(visitIdInput.trim());
+      const visit = await getVisit(visitId);
       setVisitDetails(visit);
       const patientRecord = await getPatient(visit.patientId);
       setVisitPatient(patientRecord as Patient);
@@ -153,6 +207,12 @@ export default function BillingWorkspace() {
     } finally {
       setLookupLoading(false);
     }
+  }
+
+  async function handleVisitLookup(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!visitIdInput.trim()) return;
+    await performVisitLookup(visitIdInput.trim());
   }
 
   async function handleCreateInvoice() {
@@ -285,6 +345,29 @@ export default function BillingWorkspace() {
     }
   }
 
+  async function handleSelectPatient(patient: Patient) {
+    setSelectedPatient(patient);
+    setPatientQuery(patient.name);
+    setPatientMatches([]);
+    setPatientVisits([]);
+    setPatientVisitsError(null);
+    setPatientVisitsLoading(true);
+    try {
+      const visits = await listPatientVisits(patient.patientId);
+      setPatientVisits(visits);
+    } catch (error) {
+      console.error(error);
+      setPatientVisitsError('Unable to load visits for that patient.');
+    } finally {
+      setPatientVisitsLoading(false);
+    }
+  }
+
+  async function handleSelectVisit(visit: Visit) {
+    setVisitIdInput(visit.visitId);
+    await performVisitLookup(visit.visitId);
+  }
+
   return (
     <DashboardLayout
       title="Billing workspace"
@@ -341,6 +424,104 @@ export default function BillingWorkspace() {
                 </button>
               </div>
             </form>
+            <div className="rounded-lg border border-dashed border-gray-200 p-4">
+              <h3 className="text-sm font-semibold text-gray-900">Search by patient name</h3>
+              <p className="mt-1 text-xs text-gray-500">
+                Find a visit even if you do not have the visit ID handy. Start typing a patient name to see recent visits.
+              </p>
+              <div className="mt-3 space-y-3">
+                <input
+                  value={patientQuery}
+                  onChange={(event) => {
+                    setPatientQuery(event.target.value);
+                    if (event.target.value !== selectedPatient?.name) {
+                      setSelectedPatient(null);
+                      setPatientVisits([]);
+                      setPatientVisitsError(null);
+                    }
+                  }}
+                  placeholder="e.g. Jane Doe"
+                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                />
+                {patientSearchError && (
+                  <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                    {patientSearchError}
+                  </div>
+                )}
+                {patientSearchLoading ? <div className="text-xs text-gray-500">Searching patients…</div> : null}
+                {!patientSearchLoading && patientMatches.length > 0 && (
+                  <ul className="space-y-2">
+                    {patientMatches.slice(0, 5).map((patient) => (
+                      <li key={patient.patientId}>
+                        <button
+                          type="button"
+                          onClick={() => handleSelectPatient(patient)}
+                          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-left text-sm text-gray-700 transition hover:border-blue-400 hover:bg-blue-50"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="font-medium text-gray-900">{patient.name}</span>
+                            <span className="text-xs text-gray-500">{new Date(patient.dob).toLocaleDateString()}</span>
+                          </div>
+                          <div className="mt-1 text-xs text-gray-500">Patient ID: {patient.patientId}</div>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {selectedPatient && (
+                  <div className="rounded-lg border border-gray-200 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h4 className="text-sm font-semibold text-gray-900">Recent visits for {selectedPatient.name}</h4>
+                        <p className="text-xs text-gray-500">Select a visit to load billing details.</p>
+                      </div>
+                      <button
+                        type="button"
+                        className="text-xs font-medium text-blue-600 hover:underline"
+                        onClick={() => {
+                          setSelectedPatient(null);
+                          setPatientVisits([]);
+                          setPatientVisitsError(null);
+                        }}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      {patientVisitsLoading ? (
+                        <div className="text-xs text-gray-500">Loading visits…</div>
+                      ) : patientVisitsError ? (
+                        <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                          {patientVisitsError}
+                        </div>
+                      ) : patientVisits.length > 0 ? (
+                        patientVisits.slice(0, 5).map((visit) => (
+                          <button
+                            key={visit.visitId}
+                            type="button"
+                            onClick={() => handleSelectVisit(visit)}
+                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-left text-sm text-gray-700 transition hover:border-blue-400 hover:bg-blue-50"
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <div className="font-medium text-gray-900">{new Date(visit.visitDate).toLocaleString()}</div>
+                                <div className="text-xs text-gray-500">{visit.doctor?.name ?? '—'} • {visit.department}</div>
+                              </div>
+                              <span className="text-xs font-semibold text-blue-600">Load visit</span>
+                            </div>
+                            {visit.reason && (
+                              <div className="mt-1 text-xs text-gray-500">Reason: {visit.reason}</div>
+                            )}
+                          </button>
+                        ))
+                      ) : (
+                        <div className="text-xs text-gray-500">No recent visits found for this patient.</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
             <div className="flex flex-wrap gap-2 md:hidden">
               <Link
                 to="/billing/pos"
