@@ -3,6 +3,7 @@ import { fetchJSON } from './http';
 export type Role =
   | 'Doctor'
   | 'AdminAssistant'
+  | 'Cashier'
   | 'ITAdmin'
   | 'Pharmacist'
   | 'PharmacyTech'

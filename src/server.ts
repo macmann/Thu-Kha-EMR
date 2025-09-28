@@ -15,6 +15,7 @@ import appointmentsRouter from './routes/appointments.js';
 import usersRouter from './modules/users/index.js';
 import reportsRouter from './modules/reports/index.js';
 import pharmacyRouter from './routes/pharmacy.js';
+import billingRouter from './routes/billing.js';
 
 export const apiRouter = Router();
 
@@ -35,6 +36,7 @@ apiRouter.use('/appointments', appointmentsRouter);
 apiRouter.use('/users', usersRouter);
 apiRouter.use('/reports', reportsRouter);
 apiRouter.use('/pharmacy', pharmacyRouter);
+apiRouter.use(billingRouter);
 apiRouter.use(docsRouter);
 
 export default apiRouter;

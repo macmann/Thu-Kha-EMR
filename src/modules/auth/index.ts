@@ -7,6 +7,7 @@ import { PrismaClient } from '@prisma/client';
 type RoleName =
   | 'Doctor'
   | 'AdminAssistant'
+  | 'Cashier'
   | 'ITAdmin'
   | 'Pharmacist'
   | 'PharmacyTech'
