@@ -7,7 +7,9 @@ export type Role =
   | 'ITAdmin'
   | 'Pharmacist'
   | 'PharmacyTech'
-  | 'InventoryManager';
+  | 'InventoryManager'
+  | 'Nurse'
+  | 'LabTech';
 
 export interface Patient {
   patientId: string;
@@ -136,7 +138,7 @@ export interface InvoiceScanResult {
   rawText?: string | null;
 }
 
-export interface LabResult {
+export interface VisitLabResult {
   testName: string;
   resultValue: number | null;
   unit: string | null;
@@ -171,7 +173,7 @@ export interface VisitSummary {
   doctor: Doctor;
   diagnoses: Diagnosis[];
   medications: Medication[];
-  labResults: LabResult[];
+  labResults: VisitLabResult[];
   observations: Observation[];
 }
 
@@ -182,7 +184,7 @@ export interface PatientSummary extends Patient {
 export interface VisitDetail extends Visit {
   diagnoses: Diagnosis[];
   medications: Medication[];
-  labResults: LabResult[];
+  labResults: VisitLabResult[];
   observations: Observation[];
 }
 
@@ -420,7 +422,7 @@ export interface AddLabResultPayload {
 export async function addLabResult(
   visitId: string,
   payload: AddLabResultPayload,
-): Promise<LabResult> {
+): Promise<VisitLabResult> {
   return fetchJSON(`/visits/${visitId}/labs`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

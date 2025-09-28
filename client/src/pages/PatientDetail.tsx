@@ -3,6 +3,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import { PatientsIcon, SearchIcon } from '../components/icons';
+import VitalsCard from '../components/VitalsCard';
+import { useAuth } from '../context/AuthProvider';
 import {
   getPatient,
   listPatientVisits,
@@ -28,6 +30,7 @@ export default function PatientDetail() {
   const location = useLocation();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { user } = useAuth();
   const initialTab =
     new URLSearchParams(location.search).get('tab') === 'visits'
       ? 'visits'
@@ -165,6 +168,8 @@ export default function PatientDetail() {
     );
   }
 
+  const canViewProblems = user && ['Doctor', 'Nurse', 'ITAdmin'].includes(user.role);
+
   const headerActions = (
     <div className="flex flex-col gap-2 md:flex-row md:items-center">
       <Link
@@ -173,6 +178,14 @@ export default function PatientDetail() {
       >
         {t('Patient Directory')}
       </Link>
+      {id && canViewProblems && (
+        <Link
+          to={`/patients/${id}/problems`}
+          className="inline-flex items-center justify-center rounded-full border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50"
+        >
+          {t('Problem list')}
+        </Link>
+      )}
       {id && (
         <Link
           to={`/patients/${id}/visits/new`}
@@ -193,33 +206,34 @@ export default function PatientDetail() {
         : t('Patient details unavailable.');
 
   function renderSummary(p: PatientSummary) {
-    if (!p.visits || p.visits.length === 0) {
-      return (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-6 py-12 text-center">
-          <PatientsIcon className="h-12 w-12 text-gray-300" />
-          <p className="text-sm font-medium text-gray-600">{t('No visits recorded yet.')}</p>
-          {id && (
-            <Link
-              to={`/patients/${id}/visits/new`}
-              className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
-            >
-              {t('Add the first visit')}
-            </Link>
-          )}
-        </div>
-      );
-    }
+    const latestVisitId = p.visits && p.visits.length > 0 ? p.visits[0].visitId : '';
 
     return (
       <div className="space-y-6">
-        {p.visits.map((visit) => {
-          const diagnoses = visit.diagnoses ?? [];
-          const medications = visit.medications ?? [];
-          const labs = visit.labResults ?? [];
-          const observations = visit.observations ?? [];
+        <VitalsCard patientId={p.patientId} defaultVisitId={latestVisitId} />
 
-          return (
-            <article key={visit.visitId} className="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-sm">
+        {!p.visits || p.visits.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-6 py-12 text-center">
+            <PatientsIcon className="h-12 w-12 text-gray-300" />
+            <p className="text-sm font-medium text-gray-600">{t('No visits recorded yet.')}</p>
+            {id && (
+              <Link
+                to={`/patients/${id}/visits/new`}
+                className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
+              >
+                {t('Add the first visit')}
+              </Link>
+            )}
+          </div>
+        ) : (
+          p.visits.map((visit) => {
+            const diagnoses = visit.diagnoses ?? [];
+            const medications = visit.medications ?? [];
+            const labs = visit.labResults ?? [];
+            const observations = visit.observations ?? [];
+
+            return (
+              <article key={visit.visitId} className="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-sm">
               <div className="flex flex-wrap justify-between gap-4">
                 <div>
                   <div className="text-sm font-medium text-blue-600">{formatDateValue(visit.visitDate)}</div>

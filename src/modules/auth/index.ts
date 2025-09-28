@@ -11,7 +11,9 @@ type RoleName =
   | 'ITAdmin'
   | 'Pharmacist'
   | 'PharmacyTech'
-  | 'InventoryManager';
+  | 'InventoryManager'
+  | 'Nurse'
+  | 'LabTech';
 
 export interface AuthUser {
   userId: string;

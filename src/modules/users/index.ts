@@ -16,6 +16,8 @@ const roleSchema = z.enum([
   'Pharmacist',
   'PharmacyTech',
   'InventoryManager',
+  'Nurse',
+  'LabTech',
 ]);
 const statusSchema = z.enum(['active', 'inactive']);
 

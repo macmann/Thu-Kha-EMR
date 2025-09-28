@@ -23,6 +23,7 @@ type NavigationKey =
   | 'appointments'
   | 'billing'
   | 'pharmacy'
+  | 'lab'
   | 'reports'
   | 'settings';
 
@@ -39,6 +40,7 @@ const navigation: NavigationItem[] = [
   { key: 'appointments', name: 'Appointments', icon: CalendarIcon, to: '/appointments' },
   { key: 'billing', name: 'Billing', icon: ReportsIcon, to: '/billing/workspace' },
   { key: 'pharmacy', name: 'Pharmacy', icon: PharmacyIcon, to: '/pharmacy/queue' },
+  { key: 'lab', name: 'Lab Orders', icon: ReportsIcon, to: '/lab-orders' },
   { key: 'reports', name: 'Reports', icon: ReportsIcon, to: '/reports' },
   { key: 'settings', name: 'Settings', icon: SettingsIcon, to: '/settings' },
 ];
@@ -87,6 +89,9 @@ export default function DashboardLayout({
       return (
         user && ['Pharmacist', 'PharmacyTech', 'InventoryManager', 'ITAdmin'].includes(user.role)
       );
+    }
+    if (item.key === 'lab') {
+      return user && ['Doctor', 'LabTech', 'ITAdmin'].includes(user.role);
     }
     return true;
   });
@@ -271,4 +276,6 @@ const ROLE_LABELS: Record<string, string> = {
   Pharmacist: 'Pharmacist',
   PharmacyTech: 'Pharmacy Technician',
   InventoryManager: 'Inventory Manager',
+  Nurse: 'Nurse',
+  LabTech: 'Laboratory Technician',
 };

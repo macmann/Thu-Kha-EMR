@@ -74,7 +74,7 @@ router.get('/summary', requireAuth, async (_req: Request, res: Response) => {
       orderBy: { _count: { diagnosis: 'desc' } },
       take: 10,
     }),
-    prisma.labResult.groupBy({
+    prisma.visitLabResult.groupBy({
       by: ['testName'],
       where: { testDate: { not: null } },
       _count: { labId: true },

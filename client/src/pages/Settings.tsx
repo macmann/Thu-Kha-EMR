@@ -29,6 +29,8 @@ const ROLE_LABELS: Record<Role, string> = {
   Pharmacist: 'Pharmacist',
   PharmacyTech: 'Pharmacy Technician',
   InventoryManager: 'Inventory Manager',
+  Nurse: 'Nurse',
+  LabTech: 'Laboratory Technician',
 };
 
 const ROLE_OPTIONS: Array<{ value: Role; label: string }> = [
@@ -39,6 +41,8 @@ const ROLE_OPTIONS: Array<{ value: Role; label: string }> = [
   { value: 'Pharmacist', label: ROLE_LABELS.Pharmacist },
   { value: 'PharmacyTech', label: ROLE_LABELS.PharmacyTech },
   { value: 'InventoryManager', label: ROLE_LABELS.InventoryManager },
+  { value: 'Nurse', label: ROLE_LABELS.Nurse },
+  { value: 'LabTech', label: ROLE_LABELS.LabTech },
 ];
 
 const DAY_OPTIONS = [

@@ -24,6 +24,8 @@ enum Role {
   Pharmacist
   PharmacyTech
   InventoryManager
+  Nurse
+  LabTech
 }
 
 enum AppointmentStatus {
@@ -126,7 +128,7 @@ model Visit {
   doctor       Doctor      @relation(fields: [doctorId], references: [doctorId])
   diagnoses    Diagnosis[]
   medications  Medication[]
-  labResults   LabResult[]
+  labResults   VisitLabResult[]
   observations Observation[]
   prescriptions Prescription[]
   invoices     Invoice[]
@@ -155,7 +157,7 @@ model Medication {
   visit Visit @relation(fields: [visitId], references: [visitId])
 }
 
-model LabResult {
+model VisitLabResult {
   labId           String   @id @default(uuid()) @db.Uuid
   visitId         String   @db.Uuid
   testName        String
@@ -474,4 +476,120 @@ enum ItemSourceType {
   SERVICE
   PHARMACY
   LAB
+}
+
+model Vitals {
+  vitalsId   String   @id @default(uuid()) @db.Uuid
+  visitId    String   @db.Uuid
+  patientId  String   @db.Uuid
+  recordedBy String   @db.Uuid
+  recordedAt DateTime @default(now())
+  systolic   Int?
+  diastolic  Int?
+  heartRate  Int?
+  temperature Decimal? @db.Decimal(4, 1)
+  spo2       Int?
+  heightCm   Decimal? @db.Decimal(5, 2)
+  weightKg   Decimal? @db.Decimal(5, 2)
+  bmi        Decimal? @db.Decimal(5, 2)
+  notes      String?
+
+  @@index([visitId])
+  @@index([patientId, recordedAt])
+}
+
+model Problem {
+  problemId    String   @id @default(uuid()) @db.Uuid
+  patientId    String   @db.Uuid
+  codeSystem   String?
+  code         String?
+  display      String
+  onsetDate    DateTime?
+  status       ProblemStatus @default(ACTIVE)
+  resolvedDate DateTime?
+  createdBy    String   @db.Uuid
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([patientId, status])
+}
+
+enum ProblemStatus {
+  ACTIVE
+  RESOLVED
+}
+
+model LabOrder {
+  labOrderId String   @id @default(uuid()) @db.Uuid
+  visitId    String   @db.Uuid
+  patientId  String   @db.Uuid
+  doctorId   String   @db.Uuid
+  status     LabOrderStatus @default(ORDERED)
+  priority   String?
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  items      LabOrderItem[]
+  results    LabResult[]
+
+  @@index([visitId, status])
+  @@index([patientId, status])
+}
+
+enum LabOrderStatus {
+  ORDERED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model LabOrderItem {
+  labOrderItemId String   @id @default(uuid()) @db.Uuid
+  labOrderId     String   @db.Uuid
+  testCode       String
+  testName       String
+  status         LabItemStatus @default(ORDERED)
+  specimen       String?
+  notes          String?
+  LabOrder       LabOrder @relation(fields: [labOrderId], references: [labOrderId], onDelete: Cascade)
+  results        LabResult[]
+
+  @@index([labOrderId, status])
+}
+
+enum LabItemStatus {
+  ORDERED
+  RESULTED
+  CANCELLED
+}
+
+model LabResult {
+  labResultId    String   @id @default(uuid()) @db.Uuid
+  labOrderId     String   @db.Uuid
+  labOrderItemId String   @db.Uuid
+  patientId      String   @db.Uuid
+  resultValue    String?
+  resultValueNum Decimal? @db.Decimal(10, 3)
+  unit           String?
+  referenceLow   Decimal? @db.Decimal(10, 3)
+  referenceHigh  Decimal? @db.Decimal(10, 3)
+  abnormalFlag   String?
+  resultedBy     String
+  resultedAt     DateTime @default(now())
+  notes          String?
+  LabOrder       LabOrder @relation(fields: [labOrderId], references: [labOrderId], onDelete: Cascade)
+  LabOrderItem   LabOrderItem @relation(fields: [labOrderItemId], references: [labOrderItemId], onDelete: Cascade)
+
+  @@index([labOrderId])
+  @@index([labOrderItemId])
+  @@index([patientId, resultedAt])
+}
+
+model LabCatalog {
+  testCode String @id
+  testName String
+  unit     String?
+  refLow   Decimal? @db.Decimal(10, 3)
+  refHigh  Decimal? @db.Decimal(10, 3)
+  panel    Boolean  @default(false)
 }
