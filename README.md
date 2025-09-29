@@ -1,17 +1,49 @@
 # Atenxion EMR
 
 ## Project Overview
-Atenxion EMR is a reference implementation of an electronic medical record system. It aligns with the BRD by providing patient lookup, visit tracking and clinical insights via a JSON API protected by JWT and rate limiting.
+Atenxion EMR is a reference implementation of an electronic medical record platform. It aligns with the BRD by offering patient lookup, visit tracking, clinical insights, and revenue-cycle tooling behind a JSON API protected by JWT authentication and rate limiting.
 
-## Local Development
-1. Install dependencies with `npm install`.
-2. Copy `.env.example` to `.env` and fill in the required values. To enable invoice scanning, set
-   `OPENAI_API_KEY` to a valid OpenAI API key (optionally override `OPENAI_INVOICE_MODEL`).
-3. Start both the API and web dev servers:
+## Features
+- **Authentication & access control** – JWT authentication with role-based authorization, password rotation flows, and rate-limited sensitive endpoints keep data access controlled for every staff persona. 
+- **Patient management** – Fuzzy name search, patient registration, and detailed summaries bundle recent visits, diagnoses, medications, labs, vitals, and masked contact details for quick chart reviews.
+- **Appointment scheduling** – Availability rules, blackout periods, overlap checks, and lifecycle transitions (including automatic visit creation when completing appointments) power reliable outpatient scheduling.
+- **Clinical documentation & insights** – Visit encounters capture diagnoses, prescriptions, labs, and structured observations, while analytics endpoints surface patient-level summaries, lab-based cohorts, and latest visits.
+- **Pharmacy & inventory operations** – Electronic prescribing with allergy checking, dispensing workflows, FEFO stock allocation, low-stock dashboards, invoice OCR (via OpenAI), and inventory adjustments cover the dispensary loop end-to-end.
+- **Billing & revenue cycle** – Invoice creation, itemized adjustments, payment posting, automated totals, receipt generation, and pharmacy charge capture streamline point-of-sale and claims processes.
+- **Reporting & dashboards** – Operational reports deliver patient and provider totals, department-level visit stats, top diagnoses, lab utilization, and rolling visit trends for leadership visibility.
+- **Developer tooling** – TypeScript services, Prisma data models, and an OpenAPI contract make it straightforward to extend the API or integrate external agents.
+
+## Installation & Setup
+
+### Prerequisites
+- Node.js 20+ and npm
+- A PostgreSQL database (Neon, local Postgres, or compatible)
+- `openssl` (or similar) to generate a `JWT_SECRET`
+- Optional: an OpenAI API key for automated invoice scanning (`OPENAI_API_KEY`)
+
+### Steps
+1. **Clone and install dependencies**
+   ```bash
+   git clone <repo-url>
+   cd EMR
+   npm install
+   ```
+2. **Configure environment variables**
+   ```bash
+   cp .env.example .env
+   ```
+   Fill in database credentials (`DATABASE_URL`, `DIRECT_URL`), `JWT_SECRET`, rate-limit settings, and optional `OPENAI_API_KEY`/`OPENAI_INVOICE_MODEL` values.
+3. **Provision the database** – Ensure the target PostgreSQL instance is running and reachable from your development machine.
+4. **Apply migrations and seed demo data**
+   ```bash
+   npm run prisma:migrate
+   npm run seed:csv
+   ```
+5. **Start the development servers**
    ```bash
    npm run dev
    ```
-   The API runs on `http://localhost:8080` and the web client on `http://localhost:5173`.
+   The API is available at `http://localhost:8080` and the Vite-powered web client at `http://localhost:5173`.
 
 ## Neon PostgreSQL Setup
 Provision a PostgreSQL instance on [Neon](https://neon.tech) and set the `DATABASE_URL` and `DIRECT_URL` in `.env` (include `sslmode=require` for both). Enable the required extensions:
@@ -22,7 +54,7 @@ CREATE EXTENSION IF NOT EXISTS btree_gin;
 ```
 
 ## Migrations & Seeding
-Apply migrations and load demo data:
+Run the database migrations and load the demo CSV data any time you need to refresh your environment:
 ```bash
 npm run prisma:migrate
 npm run seed:csv
