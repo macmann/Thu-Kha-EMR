@@ -12,10 +12,6 @@ import {
   type LabResultEntry,
 } from '../api/clinical';
 
-interface Params {
-  labOrderId: string;
-}
-
 type ResultFormState = {
   resultValue: string;
   resultValueNum: string;
@@ -29,7 +25,7 @@ type ResultForms = Record<string, ResultFormState>;
 
 export default function LabOrderDetailPage() {
   const { t } = useTranslation();
-  const { labOrderId } = useParams<Params>();
+  const { labOrderId } = useParams<'labOrderId'>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const canEnterResults = useMemo(() => user && ['LabTech', 'ITAdmin'].includes(user.role), [user]);
@@ -49,11 +45,11 @@ export default function LabOrderDetailPage() {
   useEffect(() => {
     if (!labOrderId) return;
     let cancelled = false;
-    async function load() {
+    async function load(id: string) {
       setLoading(true);
       setError(null);
       try {
-        const data = await getLabOrderDetail(labOrderId);
+        const data = await getLabOrderDetail(id);
         if (!cancelled) {
           setOrder(data);
           if (data) {
@@ -85,7 +81,7 @@ export default function LabOrderDetailPage() {
         }
       }
     }
-    load();
+    load(labOrderId);
     return () => {
       cancelled = true;
     };
