@@ -1,7 +1,7 @@
-# Atenxion EMR
+# Thu Kha (သုခ) EMR  
 
 ## Project Overview
-Atenxion EMR is a reference implementation of an electronic medical record platform. It aligns with the BRD by offering patient lookup, visit tracking, clinical insights, and revenue-cycle tooling behind a JSON API protected by JWT authentication and rate limiting.
+Thu Kha (သုခ) EMR is a reference implementation of an electronic medical record platform. It aligns with the BRD by offering patient lookup, visit tracking, clinical insights, and revenue-cycle tooling behind a JSON API protected by JWT authentication and rate limiting.
 
 ## Features
 - **Authentication & access control** – JWT authentication with role-based authorization, password rotation flows, and rate-limited sensitive endpoints keep data access controlled for every staff persona. 
