@@ -11,10 +11,6 @@ import {
   type ProblemStatus,
 } from '../api/clinical';
 
-interface Params {
-  patientId: string;
-}
-
 type ProblemFormState = {
   display: string;
   codeSystem: string;
@@ -24,7 +20,7 @@ type ProblemFormState = {
 
 export default function ProblemList() {
   const { t } = useTranslation();
-  const { patientId } = useParams<Params>();
+  const { patientId } = useParams<'patientId'>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const canEdit = useMemo(() => user && ['Doctor', 'ITAdmin'].includes(user.role), [user]);
@@ -51,11 +47,11 @@ export default function ProblemList() {
   useEffect(() => {
     if (!patientId) return;
     let cancelled = false;
-    async function load() {
+    async function load(id: string) {
       setLoading(true);
       setError(null);
       try {
-        const data = await listProblems(patientId, statusFilter === 'ALL' ? undefined : statusFilter);
+        const data = await listProblems(id, statusFilter === 'ALL' ? undefined : statusFilter);
         if (!cancelled) {
           setProblems(data);
         }
@@ -70,7 +66,7 @@ export default function ProblemList() {
         }
       }
     }
-    load();
+    load(patientId);
     return () => {
       cancelled = true;
     };
