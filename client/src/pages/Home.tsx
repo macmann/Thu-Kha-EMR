@@ -12,6 +12,7 @@ import {
   SearchIcon,
 } from '../components/icons';
 import { useAuth } from '../context/AuthProvider';
+import { useSettings } from '../context/SettingsProvider';
 import {
   getAppointmentQueue,
   listAppointments,
@@ -846,11 +847,33 @@ function InventoryDashboard() {
 
 function TeamDashboard({ role }: { role?: string }) {
   const { t } = useTranslation();
+  const { appName, logo } = useSettings();
+  const { user } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const todayKey = useMemo(() => createDateKey(new Date()), []);
   const statusVisuals = getStatusVisuals(t);
+
+  const brandName = appName || t('EMR System');
+  const brandInitials = useMemo(() => {
+    if (!appName) {
+      return 'EM';
+    }
+    const letters = appName
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('');
+    return letters ? letters.slice(0, 2) : 'EM';
+  }, [appName]);
+  const welcomeName = useMemo(() => {
+    if (user?.email) {
+      const [name] = user.email.split('@');
+      return name || user.email;
+    }
+    return t('Team member');
+  }, [t, user?.email]);
 
   useEffect(() => {
     let active = true;
@@ -1000,6 +1023,11 @@ function TeamDashboard({ role }: { role?: string }) {
     </div>
   );
 
+  const quickActionClass =
+    'inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-blue-700 shadow-lg transition hover:bg-white hover:text-blue-600';
+  const cardClass =
+    'group relative overflow-hidden rounded-2xl border border-slate-100 bg-white/90 p-6 shadow-lg ring-1 ring-black/5 transition-all hover:-translate-y-1 hover:shadow-2xl';
+
   return (
     <DashboardLayout
       title={t('Team Dashboard')}
@@ -1011,161 +1039,271 @@ function TeamDashboard({ role }: { role?: string }) {
       }
       headerChildren={headerSearch}
     >
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <div className="flex flex-col rounded-2xl bg-white p-6 shadow-sm">
-          <div className="flex items-start gap-4">
-            <div className="rounded-xl bg-blue-100 p-3 text-blue-600">
-              <RegisterIcon className="h-6 w-6" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">{t('Register New Patient')}</h2>
-              <p className="mt-1 text-sm text-gray-600">
-                {t('Capture demographics and intake information for walk-in patients.')}
-              </p>
-            </div>
-          </div>
-          <div className="mt-6">
-            <Link
-              to="/register"
-              className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-700"
-            >
-              {t('Register Patient')}
-            </Link>
-          </div>
-        </div>
-
-        <div className="flex flex-col rounded-2xl bg-white p-6 shadow-sm">
-          <div className="flex items-start gap-4">
-            <div className="rounded-xl bg-blue-100 p-3 text-blue-600">
-              <SearchIcon className="h-6 w-6" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">{t('Search Patient Records')}</h2>
-              <p className="mt-1 text-sm text-gray-600">
-                {t('Look up patients to confirm coverage, history, and contact details.')}
-              </p>
-            </div>
-          </div>
-          <div className="mt-6">
-            <Link
-              to="/patients"
-              className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-700"
-            >
-              {t('Search Patient')}
-            </Link>
-          </div>
-        </div>
-
-        <div className="flex flex-col justify-between rounded-2xl bg-white p-6 shadow-sm">
-          <div className="flex items-start gap-4">
-            <div className="rounded-xl bg-blue-100 p-3 text-blue-600">
-              <CalendarIcon className="h-6 w-6" />
-            </div>
-            <div>
-              <div className="text-sm font-medium text-gray-500">{t('Appointments Today')}</div>
-              <div className="mt-2 text-4xl font-semibold text-gray-900">{renderCount(statusTotals.total)}</div>
-            </div>
-          </div>
-          <p className="mt-4 text-sm text-gray-600">
-            {error
-              ? error
-              : statusTotals.total > 0
-                ? t('{upcoming} upcoming · {completed} completed', {
-                    upcoming: upcomingCount,
-                    completed: statusTotals.completed,
-                  })
-                : t('No appointments scheduled today.')}
-          </p>
-        </div>
-
-        <div className="flex flex-col justify-between rounded-2xl bg-white p-6 shadow-sm">
-          <div className="flex items-start gap-4">
-            <div className="rounded-xl bg-blue-100 p-3 text-blue-600">
-              <PatientsIcon className="h-6 w-6" />
-            </div>
-            <div>
-              <div className="text-sm font-medium text-gray-500">{t('Checked-in Patients')}</div>
-              <div className="mt-2 text-4xl font-semibold text-gray-900">{renderCount(readyCount)}</div>
-            </div>
-          </div>
-          <p className="mt-4 text-sm text-gray-600">
-            {error
-              ? error
-              : readyCount > 0
-                ? t('{count} patients ready for their visit.', { count: readyCount })
-                : waitingCount > 0
-                  ? t('{count} patients waiting to check in.', { count: waitingCount })
-                  : t('No patients have checked in yet.')}
-          </p>
-        </div>
-
-        <div className="rounded-2xl bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-lg font-semibold text-gray-900">{t('Upcoming Appointments')}</div>
-              {loading && hasAppointments && (
-                <p className="text-xs font-medium text-gray-500">{t('Loading appointments...')}</p>
-              )}
-            </div>
-            <Link to="/appointments" className="text-xs font-semibold text-blue-600 hover:underline">
-              {t('View schedule')}
-            </Link>
-          </div>
-          {error ? (
-            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-          ) : loading && !hasAppointments ? (
-            <p className="mt-4 text-sm text-gray-500">{t('Loading appointments...')}</p>
-          ) : upcomingAppointments.length > 0 ? (
-            <ul className="mt-4 space-y-3">
-              {upcomingAppointments.map((appointment) => (
-                <li
-                  key={appointment.appointmentId}
-                  className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3"
-                >
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">{appointment.patient.name}</div>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
-                      <span>{formatDateDisplay(appointment.date)}</span>
-                      <span>•</span>
-                      <span>{formatTimeRange(appointment.startTimeMin, appointment.endTimeMin)}</span>
-                    </div>
-                    <div className="mt-1 text-xs text-gray-400">
-                      {appointment.doctor.name} • {appointment.department}
-                    </div>
+      <div className="space-y-6">
+        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 p-8 text-white shadow-2xl">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-16 -top-24 h-56 w-56 rounded-full bg-white/10 blur-3xl"
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -bottom-24 -left-20 h-64 w-64 rounded-full bg-white/10 blur-3xl"
+          />
+          <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-xl">
+              <div className="flex items-center gap-4">
+                {logo ? (
+                  <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-white/10 ring-1 ring-white/30 backdrop-blur">
+                    <img
+                      src={logo}
+                      alt={t('{app} logo', { app: brandName })}
+                      className="h-12 w-12 object-contain"
+                    />
                   </div>
-                  <span
-                    className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${statusVisuals[appointment.status].chip}`}
-                  >
-                    {statusVisuals[appointment.status].label}
+                ) : (
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-2xl font-semibold uppercase tracking-widest">
+                    {brandInitials}
+                  </div>
+                )}
+                <div>
+                  <span className="text-xs font-semibold uppercase tracking-[0.4em] text-white/70">
+                    {t('Today at {app}', { app: brandName })}
                   </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-4 text-sm text-gray-500">{t('No upcoming appointments.')}</p>
-          )}
-        </div>
+                  <p className="mt-1 text-sm text-white/80">{t('Coordinated care made simple')}</p>
+                </div>
+              </div>
+              <h1 className="mt-6 text-3xl font-semibold leading-tight sm:text-4xl">
+                {t('Welcome back, {name}', { name: welcomeName })}
+              </h1>
+              <p className="mt-3 text-base text-white/80 sm:text-lg">
+                {t("Keep the clinic running smoothly with a snapshot of today's schedule and patient flow.")}
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link to="/register" className={quickActionClass}>
+                  <RegisterIcon className="h-4 w-4" />
+                  <span>{t('Register patient')}</span>
+                </Link>
+                <Link to="/patients" className={quickActionClass}>
+                  <SearchIcon className="h-4 w-4" />
+                  <span>{t('Find patient records')}</span>
+                </Link>
+                <Link to="/appointments" className={quickActionClass}>
+                  <CalendarIcon className="h-4 w-4" />
+                  <span>{t('Review schedule')}</span>
+                </Link>
+              </div>
+            </div>
+            <div className="grid w-full gap-4 sm:grid-cols-2 lg:w-80 lg:grid-cols-1">
+              <div className="rounded-2xl border border-white/20 bg-white/10 p-5 shadow-inner backdrop-blur">
+                <span className="text-xs font-semibold uppercase tracking-wider text-white/70">
+                  {t('Appointments')}
+                </span>
+                <div className="mt-2 text-3xl font-semibold text-white">{renderCount(statusTotals.total)}</div>
+                <p className="mt-2 text-sm text-white/70">
+                  {error
+                    ? t('Schedule unavailable.')
+                    : statusTotals.total > 0
+                      ? t('{count} planned today.', { count: statusTotals.total })
+                      : t('No appointments scheduled today.')}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/20 bg-white/10 p-5 shadow-inner backdrop-blur">
+                <span className="text-xs font-semibold uppercase tracking-wider text-white/70">
+                  {t('Checked in')}
+                </span>
+                <div className="mt-2 text-3xl font-semibold text-white">{renderCount(readyCount)}</div>
+                <p className="mt-2 text-sm text-white/70">
+                  {error
+                    ? t('Status unavailable.')
+                    : readyCount > 0
+                      ? t('{count} patients ready for their visit.', { count: readyCount })
+                      : waitingCount > 0
+                        ? t('{count} patients waiting to check in.', { count: waitingCount })
+                        : t('No patients have checked in yet.')}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/20 bg-white/10 p-5 shadow-inner backdrop-blur sm:col-span-2 lg:col-span-1">
+                <span className="text-xs font-semibold uppercase tracking-wider text-white/70">
+                  {t('Running behind')}
+                </span>
+                <div className="mt-2 text-3xl font-semibold text-white">{renderCount(overdueCount)}</div>
+                <p className="mt-2 text-sm text-white/70">
+                  {error
+                    ? t('Status unavailable.')
+                    : overdueCount > 0
+                      ? t('Follow up on overdue visits.')
+                      : t('All appointments are on time.')}
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
 
-        <div className="rounded-2xl bg-white p-6 shadow-sm">
-          <div className="text-lg font-semibold text-gray-900">{t('Task Reminders')}</div>
-          {error ? (
-            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-          ) : loading && !hasAppointments ? (
-            <p className="mt-4 text-sm text-gray-500">{t('Loading appointments...')}</p>
-          ) : tasks.length > 0 ? (
-            <ul className="mt-4 space-y-3">
-              {tasks.map((task) => (
-                <li key={task.key} className="flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-green-600">
-                    <CheckIcon className="h-4 w-4" />
-                  </span>
-                  <span className="text-sm text-gray-700">{task.label}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-4 text-sm text-gray-500">{t('No pending tasks for today.')}</p>
-          )}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className={`${cardClass} flex flex-col`}>
+            <div className="flex items-start gap-4">
+              <div className="rounded-xl bg-blue-500/10 p-3 text-blue-600">
+                <RegisterIcon className="h-6 w-6" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">{t('Register New Patient')}</h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  {t('Capture demographics and intake information for walk-in patients.')}
+                </p>
+              </div>
+            </div>
+            <div className="mt-6">
+              <Link
+                to="/register"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-blue-500"
+              >
+                <RegisterIcon className="h-4 w-4" />
+                {t('Register Patient')}
+              </Link>
+            </div>
+          </div>
+
+          <div className={`${cardClass} flex flex-col`}>
+            <div className="flex items-start gap-4">
+              <div className="rounded-xl bg-blue-500/10 p-3 text-blue-600">
+                <SearchIcon className="h-6 w-6" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">{t('Search Patient Records')}</h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  {t('Look up patients to confirm coverage, history, and contact details.')}
+                </p>
+              </div>
+            </div>
+            <div className="mt-6">
+              <Link
+                to="/patients"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-blue-500"
+              >
+                <SearchIcon className="h-4 w-4" />
+                {t('Search Patient')}
+              </Link>
+            </div>
+          </div>
+
+          <div className={`${cardClass} flex flex-col justify-between`}>
+            <div className="flex items-start gap-4">
+              <div className="rounded-xl bg-blue-500/10 p-3 text-blue-600">
+                <CalendarIcon className="h-6 w-6" />
+              </div>
+              <div>
+                <div className="text-sm font-medium text-gray-500">{t('Appointments Today')}</div>
+                <div className="mt-2 text-4xl font-semibold text-gray-900">{renderCount(statusTotals.total)}</div>
+              </div>
+            </div>
+            <p className="mt-4 text-sm text-gray-600">
+              {error
+                ? error
+                : statusTotals.total > 0
+                  ? t('{upcoming} upcoming · {completed} completed', {
+                      upcoming: upcomingCount,
+                      completed: statusTotals.completed,
+                    })
+                  : t('No appointments scheduled today.')}
+            </p>
+          </div>
+
+          <div className={`${cardClass} flex flex-col justify-between`}>
+            <div className="flex items-start gap-4">
+              <div className="rounded-xl bg-blue-500/10 p-3 text-blue-600">
+                <PatientsIcon className="h-6 w-6" />
+              </div>
+              <div>
+                <div className="text-sm font-medium text-gray-500">{t('Checked-in Patients')}</div>
+                <div className="mt-2 text-4xl font-semibold text-gray-900">{renderCount(readyCount)}</div>
+              </div>
+            </div>
+            <p className="mt-4 text-sm text-gray-600">
+              {error
+                ? error
+                : readyCount > 0
+                  ? t('{count} patients ready for their visit.', { count: readyCount })
+                  : waitingCount > 0
+                    ? t('{count} patients waiting to check in.', { count: waitingCount })
+                    : t('No patients have checked in yet.')}
+            </p>
+          </div>
+
+          <div className={cardClass}>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-lg font-semibold text-gray-900">{t('Upcoming Appointments')}</div>
+                {loading && hasAppointments && (
+                  <p className="text-xs font-medium text-gray-500">{t('Loading appointments...')}</p>
+                )}
+              </div>
+              <Link to="/appointments" className="text-xs font-semibold text-blue-600 hover:underline">
+                {t('View schedule')}
+              </Link>
+            </div>
+            {error ? (
+              <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {error}
+              </div>
+            ) : loading && !hasAppointments ? (
+              <p className="mt-4 text-sm text-gray-500">{t('Loading appointments...')}</p>
+            ) : upcomingAppointments.length > 0 ? (
+              <ul className="mt-4 space-y-3">
+                {upcomingAppointments.map((appointment) => (
+                  <li
+                    key={appointment.appointmentId}
+                    className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3"
+                  >
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">{appointment.patient.name}</div>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
+                        <span>{formatDateDisplay(appointment.date)}</span>
+                        <span>•</span>
+                        <span>{formatTimeRange(appointment.startTimeMin, appointment.endTimeMin)}</span>
+                      </div>
+                      <div className="mt-1 text-xs text-gray-400">
+                        {appointment.doctor.name} • {appointment.department}
+                      </div>
+                    </div>
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold shadow ${statusVisuals[appointment.status].chip}`}
+                    >
+                      {statusVisuals[appointment.status].label}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-4 text-sm text-gray-500">{t('No upcoming appointments.')}</p>
+            )}
+          </div>
+
+          <div className={cardClass}>
+            <div className="text-lg font-semibold text-gray-900">{t('Task Reminders')}</div>
+            {error ? (
+              <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {error}
+              </div>
+            ) : loading && !hasAppointments ? (
+              <p className="mt-4 text-sm text-gray-500">{t('Loading appointments...')}</p>
+            ) : tasks.length > 0 ? (
+              <ul className="mt-4 space-y-3">
+                {tasks.map((task) => (
+                  <li
+                    key={task.key}
+                    className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3"
+                  >
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-green-600">
+                      <CheckIcon className="h-4 w-4" />
+                    </span>
+                    <span className="text-sm text-gray-700">{task.label}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-4 text-sm text-gray-500">{t('No pending tasks for today.')}</p>
+            )}
+          </div>
         </div>
       </div>
     </DashboardLayout>
