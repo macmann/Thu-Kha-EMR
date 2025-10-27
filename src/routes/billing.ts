@@ -65,7 +65,7 @@ const ListInvoicesQuerySchema = z.object({
     ),
 });
 
-router.use(requireAuth);
+router.use('/billing', requireAuth);
 
 router.post(
   '/billing/invoices',
